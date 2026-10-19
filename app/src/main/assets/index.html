@@ -437,7 +437,6 @@ textarea.inp{resize:vertical;min-height:68px}
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="lib/leaflet.js"></script>
 <script>
 (function(){
   /* ---------- rules (2026) ---------- */
@@ -710,6 +709,14 @@ textarea.inp{resize:vertical;min-height:68px}
 
   /* ---------- big map ---------- */
   let bigMap=null,bigLayer=null;
+  // leaflet (150 KB) is loaded the first time a map is opened, not at every start
+  function withLeaflet(cb){
+    if(window.L){cb();return}
+    if(!withLeaflet.q){withLeaflet.q=[];const sc=document.createElement("script");sc.src="lib/leaflet.js";
+      sc.onload=()=>{const q=withLeaflet.q;withLeaflet.q=null;q.forEach(f=>f())};
+      sc.onerror=()=>{withLeaflet.q=null;sc.remove();toast("A térkép nem töltött be.")};document.head.append(sc)}
+    withLeaflet.q.push(cb);
+  }
   function tiles(){return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"})}
   function pinIcon(cls){return L.divIcon({className:"",html:'<div class="pin '+(cls||"")+'"></div>',iconSize:[22,22],iconAnchor:[11,22],popupAnchor:[0,-20]})}
   function renderMap(){
@@ -717,7 +724,7 @@ textarea.inp{resize:vertical;min-height:68px}
     const pts=state.catches.filter(c=>c.y===y&&c.place&&c.place.lat!=null&&state.species.some(s=>s.id===c.sp));
     $("mapTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+" térképen";
     $("mapHint").textContent=pts.length?pts.length+" fogás van helyhez kötve. Koppints egy jelölőre a részletekért.":"Még nincs helyhez kötött fogás ebben az évben. Fogásnál a „Hely megadása térképen” gombbal jelölheted be, hol fogtad.";
-    if(!window.L){$("mapHint").textContent="A térkép nem töltött be.";return}
+    if(!window.L){withLeaflet(()=>{if(state.tab==="map")renderMap()});return}
     if(!bigMap){bigMap=L.map("bigMap",{zoomControl:true}).setView(HU_CENTER,7);tiles().addTo(bigMap);bigLayer=L.layerGroup().addTo(bigMap)}
     setTimeout(()=>bigMap.invalidateSize(),0);
     bigLayer.clearLayers();
@@ -907,7 +914,7 @@ textarea.inp{resize:vertical;min-height:68px}
   /* ---------- map picker ---------- */
   let pickMap=null,pickMarker=null,pick=null;
   function openPicker(){
-    if(!window.L){toast("A térkép nem töltött be.");return}
+    if(!window.L){withLeaflet(()=>{if(ed)openPicker()});return}
     const d=ed.draft;
     pick=d.place&&d.place.lat!=null?{...d.place}:{name:"",lat:null,lng:null};
     $("picker").hidden=false;$("pickName").value=pick.name||"";
@@ -1036,6 +1043,8 @@ textarea.inp{resize:vertical;min-height:68px}
     return co.lat.toFixed(2)+","+co.lng.toFixed(2)+"@"+ymd(d)+"T"+(c.t?pad(Math.min(23,d.getHours()+(d.getMinutes()>=30?1:0))):"12")}
   const trendOf=dp=>dp==null?null:dp>=1?"up":dp<=-1?"down":"flat";
   const TREND_TXT={up:"emelkedő",down:"csökkenő",flat:"stabil"};
+  async function fetchT(url,ms){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||15000);
+    try{return await fetch(url,{signal:ac.signal})}finally{clearTimeout(t)}}
   async function fetchWx(c){
     const co=coordsOf(c);if(!co)return null;
     const d=new Date(c.at),day=ymd(d);const prev=new Date(d);prev.setDate(prev.getDate()-1);
@@ -1043,7 +1052,7 @@ textarea.inp{resize:vertical;min-height:68px}
     const hourly="temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,weather_code,precipitation";
     const base=ageDays>85?"https://archive-api.open-meteo.com/v1/archive":"https://api.open-meteo.com/v1/forecast";
     const url=base+"?latitude="+co.lat.toFixed(4)+"&longitude="+co.lng.toFixed(4)+"&hourly="+hourly+"&start_date="+ymd(prev)+"&end_date="+day+"&timezone=auto&wind_speed_unit=kmh";
-    const r=await fetch(url);if(!r.ok)throw new Error("http "+r.status);
+    const r=await fetchT(url);if(!r.ok)throw new Error("http "+r.status);
     const j=await r.json();const H=j.hourly;if(!H||!H.time)throw new Error("shape");
     const hh=c.t?Math.min(23,d.getHours()+(d.getMinutes()>=30?1:0)):12;
     const i=H.time.indexOf(day+"T"+pad(hh)+":00");if(i<0)throw new Error("hour");
@@ -1117,7 +1126,7 @@ textarea.inp{resize:vertical;min-height:68px}
     try{
       const url="https://api.open-meteo.com/v1/forecast?latitude="+loc.lat.toFixed(3)+"&longitude="+loc.lng.toFixed(3)+
         "&hourly=temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,cloud_cover,weather_code,precipitation_probability&past_days=1&forecast_days=2&timezone=auto&wind_speed_unit=kmh";
-      const r=await fetch(url);if(!r.ok)throw new Error("http");const j=await r.json();if(!j.hourly||!j.hourly.time)throw new Error("shape");
+      const r=await fetchT(url);if(!r.ok)throw new Error("http");const j=await r.json();if(!j.hourly||!j.hourly.time)throw new Error("shape");
       today.data={fetched:Date.now(),lat:loc.lat,lng:loc.lng,h:j.hourly};
       try{localStorage.setItem("fogasnaplo.today",JSON.stringify(today.data))}catch(e){}
     }catch(e){today.err=today.data?"Nincs internet, a legutóbbi adatot látod.":"Nincs internet. Ha lesz kapcsolat, a Frissítés gombbal betöltöm."}
@@ -1210,7 +1219,9 @@ textarea.inp{resize:vertical;min-height:68px}
   }
   $("todayRefresh").onclick=()=>{toast("Helymeghatározás…");requestLoc(r=>{if(r&&!r.error){loadToday(true)}else{toast((r&&r.error)||"Nem sikerült meghatározni a helyed.");loadToday(true)}})};
   window.addEventListener("online",()=>loadToday(false));
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadToday(false)});
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)return;
+    if(ymd(new Date())!==ymd(NOW)&&!ed&&$("picker").hidden){finishDelete();location.reload();return}
+    loadToday(false)});
 
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){

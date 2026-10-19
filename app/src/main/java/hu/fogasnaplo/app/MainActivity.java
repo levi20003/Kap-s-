@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
     private static final String UA = "Fogasnaplo/1.5 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
+    private boolean webDead = false;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -85,6 +87,18 @@ public class MainActivity extends Activity {
                 Uri u = req.getUrl();
                 if ("tile.openstreetmap.org".equals(u.getHost())) return tile(u);
                 return null;
+            }
+
+            // the page renderer can be killed for memory (big photos, long map use): start over instead of crashing
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == web) {
+                    webDead = true;
+                    ((android.view.ViewGroup) view.getParent()).removeView(view);
+                    view.destroy();
+                    recreate();
+                }
+                return true;
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
@@ -145,11 +159,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
-        web.saveState(out);
+        if (!webDead) web.saveState(out);
     }
 
     @Override
     public void onBackPressed() {
+        if (webDead) { finish(); return; }
         web.evaluateJavascript("(window.__fnBack&&window.__fnBack())===true", v -> {
             if (!"true".equals(v)) finish();
         });
@@ -157,7 +172,7 @@ public class MainActivity extends Activity {
 
     private void js(String fn, JSONObject arg) {
         String code = "window." + fn + "&&window." + fn + "(" + arg.toString() + ")";
-        main.post(() -> web.evaluateJavascript(code, null));
+        main.post(() -> { if (!webDead) web.evaluateJavascript(code, null); });
     }
 
     private static JSONObject err(String msg) {
@@ -301,6 +316,7 @@ public class MainActivity extends Activity {
                     else if (ori == ExifInterface.ORIENTATION_ROTATE_270) rot = 270;
                 } catch (Exception ignored) {}
                 Bitmap full = fit(bmp, 1600, rot);
+                if (full != bmp) bmp.recycle();
                 File dir = new File(getFilesDir(), "photos");
                 dir.mkdirs();
                 File outF = new File(dir, UUID.randomUUID().toString() + ".jpg");
@@ -308,6 +324,8 @@ public class MainActivity extends Activity {
                 Bitmap th = fit(full, 240, 0);
                 ByteArrayOutputStream bo = new ByteArrayOutputStream();
                 th.compress(Bitmap.CompressFormat.JPEG, 70, bo);
+                if (th != full) th.recycle();
+                full.recycle();
                 File thF = writeThumb(bo.toByteArray());
                 JSONObject r = new JSONObject();
                 r.put("src", Uri.fromFile(outF).toString());
