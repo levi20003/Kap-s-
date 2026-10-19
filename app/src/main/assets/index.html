@@ -244,7 +244,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .picker-bottom{padding:12px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px;background:var(--surface);border-top:1px solid var(--line-soft)}
 .picker-hint{font-size:.85rem;color:var(--muted)}
 .gps{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(72px + env(safe-area-inset-top,0px));z-index:1200;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:12px;padding:10px 13px;font-weight:600;font-size:.88rem;box-shadow:0 6px 16px rgba(0,0,0,.45)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabbar) + 18px + env(safe-area-inset-bottom,0px));z-index:1300;background:var(--water);color:#05201f;font-weight:600;padding:10px 18px;border-radius:999px;font-size:.9rem;max-width:90vw;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabbar) + 18px + env(safe-area-inset-bottom,0px));z-index:1300;background:var(--water);color:#05201f;font-weight:600;padding:10px 18px;border-radius:999px;font-size:.9rem;width:max-content;max-width:calc(100vw - 32px);text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.toast.act{display:flex;align-items:center;gap:14px;padding:6px 6px 6px 18px}
+.toast button{border:0;border-radius:999px;background:#05201f;color:var(--water);font-weight:700;padding:8px 14px}
 /* moon + sun */
 .moon{display:inline-block;vertical-align:middle;flex:none}
 .moon .dark{fill:#20393f}.moon .lit{fill:#f1ead2}
@@ -309,6 +311,7 @@ textarea.inp{resize:vertical;min-height:68px}
       <button id="nextYear" aria-label="Következő év">›</button>
     </div>
   </header>
+  <p class="note closed" id="saveWarn" role="alert" hidden>A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést fájlba a Számláló alján!</p>
 
   <!-- ===== Számláló ===== -->
   <div id="tab-count" class="wrap" style="gap:22px">
@@ -360,8 +363,9 @@ textarea.inp{resize:vertical;min-height:68px}
         <label for="importFile">Visszatöltés fájlból</label>
         <input type="file" id="importFile" class="vh" accept="application/json,.json">
       </div>
+      <div class="confirm" id="importAsk" hidden></div>
       <p class="hint">Automatikus Google-mentés: a fogásnaplót az Android naponta egyszer menti a Google-fiókodba (töltőn, wifin), és új telefon beállításakor visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük. Ellenőrizd, hogy be van-e kapcsolva: Beállítások → Google → Biztonsági mentés.</p>
-      <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra.</p>
+      <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra. Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
     </section>
 
     <p class="hint">Tilalmi idők és méretkorlátok: a 2026-os országos szabályok (133/2013. VM rendelet), Duna és Tisza esetén az egységes vízterületi szabályokkal. A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
@@ -469,7 +473,9 @@ textarea.inp{resize:vertical;min-height:68px}
   const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   const hm=d=>pad(d.getHours())+":"+pad(d.getMinutes());
   function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
-  function toast(t){const x=$("toast");x.textContent=t;x.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>x.hidden=true,2600)}
+  function toast(t,act){const x=$("toast");x.replaceChildren(t);x.classList.toggle("act",!!act);
+    if(act){const b=el("button",null,act.label);b.type="button";b.onclick=()=>{clearTimeout(toast._t);x.hidden=true;act.fn()};x.append(b)}
+    x.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>x.hidden=true,act?6000:2600)}
   const spName=id=>{const s=state.species.find(s=>s.id===id);return s?s.name:"Ismeretlen faj"};
 
   /* ---------- rules logic ---------- */
@@ -501,10 +507,11 @@ textarea.inp{resize:vertical;min-height:68px}
 
   /* ---------- storage ---------- */
   const KEY="fogasnaplo.v1";
-  let data={species:[],catches:[]};
-  try{const raw=localStorage.getItem(KEY);if(raw)data=JSON.parse(raw)}catch(e){}
+  let data={species:[],catches:[]},loadedOk=false;
+  try{const raw=localStorage.getItem(KEY);if(raw){data=JSON.parse(raw);loadedOk=true}}catch(e){}
   data.species=data.species||[];data.catches=data.catches||[];
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast("A mentés nem sikerült: megtelt a tárhely.")}sync()}
+  function save(){let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
+    $("saveWarn").hidden=ok;if(!ok)toast("A mentés nem sikerült: megtelt a tárhely.");sync()}
   function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
@@ -513,9 +520,19 @@ textarea.inp{resize:vertical;min-height:68px}
     addCatch(obj){const c={id:rid(),...obj};data.catches.push(c);save();return c.id},
     updateCatch(id,patch){data.catches=data.catches.map(c=>c.id===id?{...c,...patch}:c);save()},
     replaceCatch(id,full){data.catches=data.catches.map(c=>c.id===id?{id,...full}:c);save()},
-    deleteCatch(id){const c=data.catches.find(c=>c.id===id);if(c)dropPhoto(c);data.catches=data.catches.filter(c=>c.id!==id);save()}
+    deleteCatch(id,keepPhoto){const c=data.catches.find(c=>c.id===id);if(c&&!keepPhoto)dropPhoto(c);data.catches=data.catches.filter(c=>c.id!==id);save();return c},
+    restoreCatch(c){if(!data.catches.some(x=>x.id===c.id)){data.catches.push(c);save()}}
   };
-  function dropPhoto(c){if(c.photo&&c.photo.src&&ANDROID&&ANDROID.deletePhoto){try{ANDROID.deletePhoto(c.photo.src)}catch(e){}}}
+  function dropPhoto(c){const p=c.photo;if(!p||!ANDROID||!ANDROID.deletePhoto)return;
+    [p.src,p.thumb].forEach(u=>{if(u&&u.startsWith("file:")){try{ANDROID.deletePhoto(u)}catch(e){}}})}
+  // a deleted catch can be brought back for a few seconds; its photo is only removed after that
+  let undoDel=null;
+  function finishDelete(){if(!undoDel)return;clearTimeout(undoDel.timer);dropPhoto(undoDel.c);undoDel=null}
+  function deleteWithUndo(id,msg){
+    finishDelete();const c=store.deleteCatch(id,true);if(!c)return;
+    undoDel={c,timer:setTimeout(finishDelete,6500)};
+    toast(msg,{label:"Visszavonás",fn:()=>{if(!undoDel||undoDel.c!==c)return;clearTimeout(undoDel.timer);undoDel=null;store.restoreCatch(c);toast("Visszaállítva")}});
+  }
 
   /* ---------- derived ---------- */
   function yearsAvailable(){const ys=new Set([NOW_Y]);state.catches.forEach(c=>ys.add(c.y));return[...ys].sort((a,b)=>a-b)}
@@ -740,7 +757,7 @@ textarea.inp{resize:vertical;min-height:68px}
   }
   function removeLatest(sp){
     const mine=state.catches.filter(c=>c.sp===sp&&c.y===state.year).sort((a,b)=>a.at<b.at?1:-1);
-    if(!mine.length)return;store.deleteCatch(mine[0].id);toast(spName(sp)+": utolsó fogás törölve");
+    if(!mine.length)return;deleteWithUndo(mine[0].id,spName(sp)+": utolsó fogás törölve");
   }
   function addSpecies(name){
     name=name.trim().replace(/\s+/g," ");const err=$("addErr");err.hidden=true;if(!name)return;
@@ -845,7 +862,7 @@ textarea.inp{resize:vertical;min-height:68px}
     // delete
     if(ed.mode==="edit"){
       if(ed.confirmDel){const cf=el("div","confirm");cf.append(el("span",null,"Biztosan törlöd ezt a fogást?"));
-        const y=el("button","yes","Törlés");y.onclick=()=>{store.deleteCatch(ed.id);toast("Fogás törölve");closeEditor()};
+        const y=el("button","yes","Törlés");y.onclick=()=>{const id=ed.id;closeEditor();deleteWithUndo(id,"Fogás törölve")};
         const n=el("button","no","Mégse");n.onclick=()=>{ed.confirmDel=false;renderSheet()};cf.append(y,n);sh.append(cf)}
       else{const db=el("button","danger-link","Fogás törlése");db.onclick=()=>{ed.confirmDel=true;renderSheet()};sh.append(db)}
     }
@@ -1206,7 +1223,9 @@ textarea.inp{resize:vertical;min-height:68px}
   /* ---------- backup ---------- */
   $("exportBtn").onclick=async()=>{
     const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,
-      catches:data.catches.map(c=>c.photo?{...c,photo:{thumb:c.photo.thumb,src:c.photo.src&&c.photo.src.startsWith("data:")?undefined:c.photo.src}}:c)};
+      catches:data.catches.map(c=>{if(!c.photo)return c;let th=c.photo.thumb;
+        if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
+        return{...c,photo:{thumb:th,src:c.photo.src&&c.photo.src.startsWith("data:")?undefined:c.photo.src}}})};
     const name="fogasnaplo-"+ymd(new Date())+".json";const json=JSON.stringify(out,null,1);
     if(ANDROID&&ANDROID.saveBackup){ANDROID.saveBackup(json,name);return}
     const blob=new Blob([json],{type:"application/json"});
@@ -1215,14 +1234,53 @@ textarea.inp{resize:vertical;min-height:68px}
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
     $("backupMsg").textContent="Mentés letöltve: "+name;
   };
+  // what a backup file would add: species matched by id or name, catches by id; nothing already here is overwritten
+  function planImport(d){
+    const byId=new Map(data.species.map(s=>[s.id,s])),byName=new Map(data.species.map(s=>[norm(s.name),s]));
+    const spMap=new Map(),newSp=[];
+    d.species.forEach(s=>{if(!s||!s.id||!s.name)return;const hit=byId.get(s.id)||byName.get(norm(s.name));
+      if(hit){spMap.set(s.id,hit.id);return}
+      const ns={id:String(s.id),name:String(s.name).slice(0,40),created:s.created||new Date().toISOString()};newSp.push(ns);spMap.set(s.id,ns.id);byName.set(norm(ns.name),ns)});
+    const have=new Set(data.catches.map(c=>c.id)),newC=[];
+    d.catches.forEach(c=>{if(!c||!c.id||have.has(c.id)||!spMap.has(c.sp)||!c.at||isNaN(new Date(c.at)))return;
+      have.add(c.id);newC.push({...c,sp:spMap.get(c.sp),y:c.y||new Date(c.at).getFullYear()})});
+    return{newSp,newC};
+  }
+  function applyImport(plan){
+    plan.newC.forEach(c=>{const th=c.photo&&c.photo.thumb;
+      if(th&&th.startsWith("data:")&&ANDROID&&ANDROID.saveThumb){try{const u=ANDROID.saveThumb(th);if(u)c.photo={...c.photo,thumb:u}}catch(e){}}});
+    data.species.push(...plan.newSp);data.catches.push(...plan.newC);save();
+  }
   $("importFile").onchange=async e=>{
-    const f=e.target.files[0];if(!f)return;
-    try{const d=JSON.parse(await f.text());if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error();
-      data={species:d.species,catches:d.catches};save();
-      $("backupMsg").textContent=`Visszatöltve: ${d.species.length} halfaj, ${d.catches.length} fogás.`;}
-    catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés. Válaszd a „Mentés fájlba” gombbal készült .json fájlt."}
-    e.target.value="";
+    const f=e.target.files[0];e.target.value="";if(!f)return;
+    const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
+    let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
+    catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés. Válaszd a „Mentés fájlba” gombbal készült .json fájlt.";return}
+    const plan=planImport(d);
+    if(!plan.newC.length&&!plan.newSp.length){$("backupMsg").textContent="Ebben a fájlban nincs új fogás, a naplód már mindent tartalmaz.";return}
+    const what=[plan.newC.length?plan.newC.length+" új fogás":"",plan.newSp.length?plan.newSp.length+" új halfaj":""].filter(Boolean).join(" és ");
+    ask.append(el("span",null,`A fájlból ${what} kerül a naplóba. A meglévő fogásaid nem változnak.`));
+    const yes=el("button","btn-main","Betöltés");yes.type="button";
+    yes.onclick=()=>{ask.hidden=true;applyImport(plan);$("backupMsg").textContent="Visszatöltve: "+what+".";toast("Visszatöltve")};
+    const no=el("button","no","Mégse");no.type="button";no.onclick=()=>{ask.hidden=true};
+    ask.append(yes,no);ask.hidden=false;
   };
+
+  /* ---------- photo files: thumbnails out of localStorage, orphans removed ---------- */
+  // older versions kept every thumbnail as base64 inside the log; localStorage fills up at ~5 MB
+  function migrateThumbs(done){
+    const todo=ANDROID&&ANDROID.saveThumb?data.catches.filter(c=>c.photo&&c.photo.thumb&&c.photo.thumb.startsWith("data:")):[];
+    if(!todo.length){done();return}
+    const step=()=>{let n=0;
+      for(const c of todo.splice(0,40)){try{const u=ANDROID.saveThumb(c.photo.thumb);if(u){c.photo={...c.photo,thumb:u};n++}}catch(e){}}
+      if(n)save();if(todo.length)setTimeout(step,0);else done()};
+    step();
+  }
+  function sweepFiles(){
+    if(!ANDROID||!ANDROID.cleanup||!loadedOk||!data.catches.length)return;
+    const keep=[];data.catches.forEach(c=>{if(c.photo)[c.photo.src,c.photo.thumb].forEach(u=>{if(u&&u.startsWith("file:"))keep.push(u)})});
+    try{ANDROID.cleanup(JSON.stringify(keep))}catch(e){}
+  }
 
   /* ---------- wiring ---------- */
   $("addForm").addEventListener("submit",e=>{e.preventDefault();addSpecies($("newName").value)});
@@ -1234,6 +1292,7 @@ textarea.inp{resize:vertical;min-height:68px}
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});
 
   sync();
+  setTimeout(()=>migrateThumbs(sweepFiles),800);
   setTimeout(retryPendingWx,1500);
   setTimeout(()=>loadToday(false),300);
 })();

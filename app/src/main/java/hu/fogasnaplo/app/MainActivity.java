@@ -28,6 +28,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -38,6 +39,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -47,7 +50,7 @@ public class MainActivity extends Activity {
     private static final int REQ_CAM = 3;
     private static final int REQ_GAL = 4;
     private static final int PERM_LOC = 10;
-    private static final String UA = "Fogasnaplo/1.4 (hu.fogasnaplo.app; Android personal fishing log)";
+    private static final String UA = "Fogasnaplo/1.5 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
@@ -305,14 +308,59 @@ public class MainActivity extends Activity {
                 Bitmap th = fit(full, 240, 0);
                 ByteArrayOutputStream bo = new ByteArrayOutputStream();
                 th.compress(Bitmap.CompressFormat.JPEG, 70, bo);
+                File thF = writeThumb(bo.toByteArray());
                 JSONObject r = new JSONObject();
                 r.put("src", Uri.fromFile(outF).toString());
-                r.put("thumb", "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP));
+                r.put("thumb", thF != null ? Uri.fromFile(thF).toString() : "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP));
                 js("__fnPhoto", r);
             } catch (Throwable t) {
                 js("__fnPhoto", err("A fotót nem sikerült betölteni."));
             }
         }).start();
+    }
+
+    /* ---------- thumbnails as files (localStorage holds only ~5 MB) ---------- */
+    private File thumbDir() {
+        File dir = new File(getFilesDir(), "thumbs");
+        dir.mkdirs();
+        return dir;
+    }
+
+    private File writeThumb(byte[] jpeg) {
+        File f = new File(thumbDir(), UUID.randomUUID().toString() + ".jpg");
+        try (OutputStream os = new FileOutputStream(f)) {
+            os.write(jpeg);
+            return f;
+        } catch (Exception e) {
+            f.delete();
+            return null;
+        }
+    }
+
+    /** The file behind a file:// uri, only if it lives in one of our photo folders. */
+    private File ownFile(String src) {
+        try {
+            File f = new File(Uri.parse(src).getPath()).getCanonicalFile();
+            for (String d : new String[]{"photos", "thumbs"}) {
+                if (f.getPath().startsWith(new File(getFilesDir(), d).getCanonicalPath() + File.separator)) return f;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /** Deletes photos/thumbs nobody refers to any more, and map tiles not used for 60 days. */
+    private void sweepFiles(Set<String> keep) {
+        long now = System.currentTimeMillis();
+        for (File dir : new File[]{new File(getFilesDir(), "photos"), new File(getFilesDir(), "thumbs")}) {
+            File[] fs = dir.listFiles();
+            if (fs == null) continue;
+            for (File f : fs) {
+                // an hour of grace: a photo just taken may not be saved to a catch yet
+                if (!keep.contains(f.getName()) && now - f.lastModified() > 3600000L) f.delete();
+            }
+        }
+        File[] tiles = new File(getCacheDir(), "tiles").listFiles();
+        if (tiles != null) for (File f : tiles) if (now - f.lastModified() > 60L * 24 * 3600 * 1000) f.delete();
     }
 
     private static Bitmap fit(Bitmap src, int max, int rot) {
@@ -381,11 +429,52 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void deletePhoto(String src) {
+            File f = ownFile(src);
+            if (f != null) f.delete();
+        }
+
+        /** data:image/jpeg;base64,... -> file:// uri of a saved thumbnail, or "" on failure. */
+        @JavascriptInterface
+        public String saveThumb(String dataUrl) {
             try {
-                File dir = new File(getFilesDir(), "photos");
-                File f = new File(Uri.parse(src).getPath());
-                if (f.getCanonicalPath().startsWith(dir.getCanonicalPath() + File.separator)) f.delete();
-            } catch (Exception ignored) {}
+                int comma = dataUrl.indexOf(',');
+                if (!dataUrl.startsWith("data:image/") || comma < 0) return "";
+                File f = writeThumb(Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT));
+                return f != null ? Uri.fromFile(f).toString() : "";
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** file:// uri of a thumbnail -> data url, so a backup file carries the picture. "" if missing. */
+        @JavascriptInterface
+        public String readThumb(String src) {
+            File f = ownFile(src);
+            if (f == null || !f.isFile() || f.length() > 512 * 1024) return "";
+            try (InputStream in = new FileInputStream(f)) {
+                byte[] b = new byte[(int) f.length()];
+                int off = 0, n;
+                while (off < b.length && (n = in.read(b, off, b.length - off)) > 0) off += n;
+                return "data:image/jpeg;base64," + Base64.encodeToString(b, 0, off, Base64.NO_WRAP);
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** keepJson: array of every photo/thumb uri still in the log. */
+        @JavascriptInterface
+        public void cleanup(String keepJson) {
+            final Set<String> keep = new HashSet<>();
+            try {
+                JSONArray a = new JSONArray(keepJson);
+                for (int i = 0; i < a.length(); i++) {
+                    String p = Uri.parse(a.getString(i)).getLastPathSegment();
+                    if (p != null) keep.add(p);
+                }
+            } catch (Exception e) {
+                return;
+            }
+            new Thread(() -> sweepFiles(keep)).start();
         }
     }
 }
