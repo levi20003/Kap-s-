@@ -371,6 +371,11 @@ textarea.inp{resize:vertical;min-height:68px}
       <p class="hint err" id="addErr" hidden></p>
     </section>
 
+    <section id="notifySec" hidden>
+      <div class="sechead"><h2>Értesítések</h2></div>
+      <div class="autobk" id="notifyBox"></div>
+    </section>
+
     <section>
       <div class="sechead"><h2>Mentés</h2></div>
       <div class="backup">
@@ -548,11 +553,11 @@ textarea.inp{resize:vertical;min-height:68px}
     spanCache.set(key,out);return out;
   }
   function spanAt(x,date){const n=dayNum(date);return closedSpans(x.p,x.shift,date.getFullYear()).find(s=>dayNum(s.a)<=n&&n<=dayNum(s.b))||null}
-  const endLabel=(x,s)=>!x.shift&&x.p[2]===2&&x.p[3]===29?"febr. végéig":fmtDM(s.b)+"-ig";
+  const endLabel=(x,s)=>!x.shift&&x.p[2]===2&&x.p[3]===29?"febr. végéig":fmtDM(s.b).replace(/\.$/,"")+"-ig"; // "márc. 31-ig"
   function ruleStatus(rule,date){
     if(!rule)return null;
     for(const x of rule.periods){const s=spanAt(x,date);if(s)return{kind:"closed",text:(x.note==="tilalmi idő"?"Tilalom ":"Elviteli tilalom ")+endLabel(x,s),note:x.note,until:endLabel(x,s)}}
-    for(let i=1;i<=14;i++){const d=new Date(date);d.setDate(d.getDate()+i);for(const x of rule.periods){const s=spanAt(x,d);if(s)return{kind:"soon",text:"Tilalom "+fmtDM(s.a)+"-től"}}}
+    for(let i=1;i<=14;i++){const d=new Date(date);d.setDate(d.getDate()+i);for(const x of rule.periods){const s=spanAt(x,d);if(s)return{kind:"soon",text:"Tilalom kezdete: "+fmtDM(s.a)}}}
     return{kind:"ok",text:"Fogható · "+(rule.max?`${rule.min}–${rule.max} cm`:`min. ${rule.min} cm`)};
   }
   const limitKey=name=>{let k=norm(name);k=ALIAS[k]||k;return LIMITED.has(k)?k:null};
@@ -580,7 +585,7 @@ textarea.inp{resize:vertical;min-height:68px}
   data.species=data.species||[];data.catches=data.catches||[];
   function save(){let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
     $("saveWarn").hidden=ok;if(!ok)toast("A mentés nem sikerült: megtelt a tárhely.");sync()}
-  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render()}
+  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
     addSpecies(name){data.species.push({id:rid(),name,created:new Date().toISOString()});save()},
@@ -687,6 +692,7 @@ textarea.inp{resize:vertical;min-height:68px}
       list.append(row);
     });
     renderRecords(st);
+    renderNotify();
     const have=new Set(state.species.map(s=>norm(s.name)));
     const chips=$("chips");chips.replaceChildren();
     COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
@@ -1337,6 +1343,65 @@ textarea.inp{resize:vertical;min-height:68px}
     if(ymd(new Date())!==ymd(NOW)&&!ed&&$("picker").hidden){finishDelete();location.reload();return}
     loadToday(false);maybeAutoBackup()});
 
+  /* ---------- closed-season reminders (Android): evening before a season starts, morning after it ends ---------- */
+  const NOTIFY_KEY="fogasnaplo.notify";
+  const notifyOn=()=>{try{return localStorage.getItem(NOTIFY_KEY)==="1"}catch(e){return false}};
+  const hasNotify=()=>!!(ANDROID&&ANDROID.setReminders);
+  function reminderEvents(){
+    const now=Date.now(),until=now+400*864e5,groups=new Map(),seen=new Set();
+    state.species.forEach(s=>{const rule=ruleFor(s.name);if(!rule)return;
+      rule.periods.forEach(x=>[NOW_Y,NOW_Y+1].forEach(y=>closedSpans(x.p,x.shift,y).forEach(sp=>{
+        const eve=new Date(sp.a);eve.setDate(eve.getDate()-1);eve.setHours(18,0,0,0);
+        const morn=new Date(sp.b);morn.setDate(morn.getDate()+1);morn.setHours(8,0,0,0);
+        [["start",eve.getTime()],["end",morn.getTime()]].forEach(([kind,at])=>{
+          const key=kind+"|"+at;if(at<=now||at>until||seen.has(key+s.id))return;seen.add(key+s.id);
+          if(!groups.has(key))groups.set(key,{at,kind,items:[]});
+          groups.get(key).items.push({name:s.name,until:endLabel(x,sp),min:rule.min,take:x.note!=="tilalmi idő"})});
+      })))});
+    return [...groups.values()].sort((a,b)=>a.at-b.at).slice(0,60).map(g=>{
+      const names=g.items.map(i=>i.name).join(", ");
+      if(g.kind==="start")return{at:g.at,title:"Holnaptól tilalom: "+names,
+        text:g.items.map(i=>`${i.name}: ${i.take?"elviteli tilalom":"tilalmi idő"} ${i.until}`).join("; ")+". A helyi horgászrend szigorúbb lehet."};
+      return{at:g.at,title:"Újra fogható: "+names,text:g.items.map(i=>`${i.name} (min. ${i.min} cm)`).join(", ")+": véget ért a tilalom, mától újra horgászhatod."};
+    });
+  }
+  let lastReminders=null;
+  function pushReminders(){
+    if(!hasNotify())return;const j=notifyOn()?JSON.stringify(reminderEvents()):"[]";
+    if(j===lastReminders)return;lastReminders=j;try{ANDROID.setReminders(j)}catch(e){}
+  }
+  function renderNotify(){
+    $("notifySec").hidden=!hasNotify();if(!hasNotify())return;
+    const box=$("notifyBox");box.replaceChildren();
+    const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b)};
+    if(!notifyOn()){box.append(el("span",null,"Szólok a tilalom előtti estén és amikor újra fogható, a te halfajaidra."));
+      btn("btn-main","Bekapcsolás",()=>ANDROID.enableNotifications());return}
+    const next=reminderEvents()[0];
+    box.append(el("span",null,next?`Bekapcsolva. Következő: ${fmtDM(new Date(next.at))}, ${next.title.charAt(0).toLocaleLowerCase("hu")+next.title.slice(1)}.`:
+      "Bekapcsolva. A következő évben nincs tilalom a halfajaidra."));
+    btn("no","Kikapcsolás",()=>{try{localStorage.removeItem(NOTIFY_KEY)}catch(e){}pushReminders();renderNotify()});
+  }
+  window.__fnNotify=function(r){
+    if(r&&r.error){toast(r.error);return}
+    try{localStorage.setItem(NOTIFY_KEY,"1")}catch(e){}pushReminders();renderNotify();toast("Értesítések bekapcsolva");
+  };
+
+  /* ---------- home-screen shortcuts (Android): "+ species" for the most caught species ---------- */
+  let lastShortcuts=null;
+  function pushShortcuts(){
+    if(!ANDROID||!ANDROID.setShortcuts)return;
+    const n=new Map();state.catches.forEach(c=>n.set(c.sp,(n.get(c.sp)||0)+1));
+    const top=state.species.slice().sort((a,b)=>(n.get(b.id)||0)-(n.get(a.id)||0)||a.name.localeCompare(b.name,"hu")).slice(0,4);
+    const j=JSON.stringify(top.map(s=>({id:s.id,name:s.name})));if(j===lastShortcuts)return;lastShortcuts=j;
+    try{ANDROID.setShortcuts(j)}catch(e){}
+  }
+  window.__fnQuick=function(r){
+    const sp=r&&state.species.find(s=>s.id===r.sp);
+    if(!sp){toast("Ez a halfaj már nincs a listán.");return}
+    if(ed||!$("picker").hidden){toast("Előbb fejezd be a nyitott fogást.");return}
+    state.year=NOW_Y;state.tab="count";state.edit=false;render();window.scrollTo(0,0);quickCatch(sp.id);
+  };
+
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){
     if(!$("picker").hidden){closePicker();return true}
@@ -1474,7 +1539,7 @@ textarea.inp{resize:vertical;min-height:68px}
   $("prevYear").onclick=()=>{state.year--;state.month=null;render()};
   $("nextYear").onclick=()=>{if(state.year<NOW_Y){state.year++;state.month=null;render()}};
   $("editBtn").onclick=()=>{state.edit=!state.edit;state.confirmId=null;render()};
-  $("regionSel").onchange=e=>{state.region=e.target.value;try{localStorage.setItem("fogasnaplo.region",state.region)}catch(_){}render()};
+  $("regionSel").onchange=e=>{state.region=e.target.value;try{localStorage.setItem("fogasnaplo.region",state.region)}catch(_){}render();pushReminders()};
   $("addLater").onclick=()=>openEditor({mode:"create"});
   $("catchSearch").oninput=e=>{state.q=e.target.value;render()};
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});

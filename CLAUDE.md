@@ -21,6 +21,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - A Leaflet (`lib/leaflet.js`) nincs a `<head>`-ben: `withLeaflet(cb)` tölti be, amikor először kell térkép. Új térképes kód is ezen át menjen.
 - Hálózati kérés `fetchT(url, ms)`-sel (15 mp időkorlát), ne nyers `fetch`-csel.
 - Ha az app napváltás után jön előtérbe (és nincs nyitva szerkesztő), újratölti magát, hogy a dátumok és a tilalmi címkék frissek legyenek.
+- Értesítések: a JS számolja ki az eseményeket (`reminderEvents`: tilalom előtti este 18:00, vége utáni reggel 8:00, azonos napiak összevonva),
+  és `ANDROID.setReminders(json)`-nel átadja; a `ReminderReceiver` egyszerre egy riasztást tart, újraindítás után újra élesít.
+  Be/ki: `fogasnaplo.notify` kulcs. Android 13+ engedélyt kér (`POST_NOTIFICATIONS`).
+- Parancsikonok: a 4 leggyakoribb faj „+ Faj” ikonja (`pushShortcuts` → `ShortcutManager`). Koppintásra `__fnQuick({sp})` → `quickCatch`.
+  Az activity `singleTask`; újra létrehozott activity nem rögzít újra fogást.
 - Ha a WebView renderelője összeomlik, a `MainActivity` újraindítja magát (`onRenderProcessGone`).
 
 ## Tesztek és CI

@@ -8,6 +8,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.drawable.Icon;
+import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -66,10 +70,14 @@ public class MainActivity extends Activity {
     private static final int REQ_ZIP_IN = 7;
     private static final int KEEP_BACKUPS = 4;
     private static final int PERM_LOC = 10;
+    private static final int PERM_NOTIF = 11;
+    static final String ACTION_QUICK = "hu.fogasnaplo.app.QUICK";
     private static final String UA = "Fogasnaplo/1.6 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
     private boolean webDead = false;
+    private boolean pageReady = false;
+    private String pendingQuick; // species id from a home-screen shortcut, delivered once the page is loaded
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup;
     private String pendingZipJson;
@@ -90,6 +98,12 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "FogasnaploAndroid");
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageReady = true;
+                deliverQuick();
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 Uri u = req.getUrl();
@@ -137,6 +151,8 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl("file:///android_asset/index.html");
+        // a recreated activity still carries the old intent: only a fresh start may add a catch
+        if (savedInstanceState == null) handleIntent(getIntent());
     }
 
     /* ---------- map tiles with a local cache (works offline for areas seen before) ---------- */
@@ -170,6 +186,45 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
         return new WebResourceResponse("image/png", null, 404, "Not found", null, new java.io.ByteArrayInputStream(new byte[0]));
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        handleIntent(intent);
+    }
+
+    /* ---------- home-screen shortcuts: "+ Csuka" opens straight into a new catch ---------- */
+    private void handleIntent(Intent i) {
+        if (i == null || !ACTION_QUICK.equals(i.getAction())) return;
+        pendingQuick = i.getStringExtra("sp");
+        setIntent(new Intent(this, MainActivity.class));
+        deliverQuick();
+    }
+
+    private void deliverQuick() {
+        if (!pageReady || pendingQuick == null) return;
+        JSONObject o = new JSONObject();
+        try { o.put("sp", pendingQuick); } catch (Exception ignored) {}
+        pendingQuick = null;
+        js("__fnQuick", o);
+    }
+
+    private void setShortcuts(String json) {
+        if (Build.VERSION.SDK_INT < 25) return;
+        try {
+            ShortcutManager sm = getSystemService(ShortcutManager.class);
+            JSONArray a = new JSONArray(json);
+            List<ShortcutInfo> list = new ArrayList<>();
+            for (int i = 0; i < a.length() && i < Math.min(4, sm.getMaxShortcutCountPerActivity()); i++) {
+                JSONObject sp = a.getJSONObject(i);
+                String id = sp.getString("id"), name = sp.getString("name");
+                Intent in = new Intent(this, MainActivity.class).setAction(ACTION_QUICK).putExtra("sp", id);
+                list.add(new ShortcutInfo.Builder(this, "sp-" + id).setShortLabel("+ " + name).setLongLabel("Új fogás: " + name)
+                        .setIcon(Icon.createWithResource(this, R.drawable.ic_shortcut_add)).setIntent(in).build());
+            }
+            sm.setDynamicShortcuts(list);
+        } catch (Exception ignored) {}
     }
 
     @Override
@@ -274,6 +329,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
         super.onRequestPermissionsResult(req, perms, res);
+        if (req == PERM_NOTIF) {
+            boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
+            js("__fnNotify", ok ? new JSONObject() : err("Az értesítések tiltva vannak. A telefon Beállítások → Alkalmazások → Fogásnapló részében engedélyezheted."));
+        }
         if (req == PERM_LOC) {
             boolean ok = false;
             for (int r : res) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
@@ -616,6 +675,28 @@ public class MainActivity extends Activity {
                 i.putExtra(Intent.EXTRA_TITLE, filename);
                 startActivityForResult(i, REQ_SAVE);
             });
+        }
+
+        /** Asks for the notification permission where needed (Android 13+); answers through __fnNotify. */
+        @JavascriptInterface
+        public void enableNotifications() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERM_NOTIF);
+                } else js("__fnNotify", new JSONObject());
+            });
+        }
+
+        /** [{at, title, text}] — every upcoming reminder; "[]" turns them off. */
+        @JavascriptInterface
+        public void setReminders(String json) {
+            ReminderReceiver.save(MainActivity.this, json);
+        }
+
+        /** [{id, name}] of the most used species, for the launcher's long-press menu. */
+        @JavascriptInterface
+        public void setShortcuts(String json) {
+            MainActivity.this.setShortcuts(json);
         }
 
         /** Manual zip backup: the user picks where to save it. */

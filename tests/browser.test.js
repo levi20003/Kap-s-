@@ -182,6 +182,36 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok((await q.locator('#listTitle').textContent()) === 'Idei fogások (4)', 'hónapszűrő törlése, keresés marad: Holt-Tisza 4');
     await ctx.close();
   }
+  // closed-season reminders and home-screen shortcuts
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.clock.setFixedTime(new Date('2027-01-20T10:00:00'));
+    await q.addInitScript(() => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }, { id: 's2', name: 'Domolykó' }, { id: 's3', name: 'Jászkeszeg' }, { id: 's4', name: 'Balin' }, { id: 's5', name: 'Menyhal' }],
+        catches: [1, 2, 3].map(i => ({ id: 'b' + i, sp: 's4', at: '2026-06-0' + i + 'T08:00:00.000Z', y: 2026 })).concat([{ id: 'j1', sp: 's3', at: '2026-07-01T08:00:00.000Z', y: 2026 }]) }));
+      window.__n = { rem: null, sc: null };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
+        setReminders(j) { window.__n.rem = JSON.parse(j); }, setShortcuts(j) { window.__n.sc = JSON.parse(j); },
+        enableNotifications() { setTimeout(() => window.__fnNotify({})); } };
+    });
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    let n = await q.evaluate(() => window.__n);
+    ok(n.rem && n.rem.length === 0, 'értesítés alapból ki: üres lista megy az Androidnak');
+    ok(n.sc && n.sc.map(x => x.name).join() === 'Balin,Jászkeszeg,Csuka,Domolykó', 'parancsikonok: a 4 leggyakoribb faj (' + (n.sc || []).map(x => x.name).join(', ') + ')');
+    await q.locator('#notifyBox .btn-main').click(); await q.waitForTimeout(150);
+    n = await q.evaluate(() => window.__n);
+    const first = n.rem[0], d = new Date(first.at);
+    ok(first.title === 'Holnaptól tilalom: Csuka' && d.getMonth() === 0 && d.getDate() === 31 && d.getHours() === 18, 'első értesítés: jan. 31. 18:00, „Holnaptól tilalom: Csuka”');
+    ok(first.text.includes('márc. 31-ig'), 'szöveg a tilalom végével: ' + first.text);
+    ok(n.rem.some(r => r.title === 'Holnaptól tilalom: Domolykó, Jászkeszeg'), 'azonos napi kezdés egy értesítésben összevonva');
+    ok(n.rem.some(r => r.title === 'Újra fogható: Csuka' && new Date(r.at).getMonth() === 3 && new Date(r.at).getDate() === 1), 'tilalom vége: ápr. 1. reggel „Újra fogható: Csuka”');
+    ok(!n.rem.some(r => r.title.includes('Menyhal')), 'tilalom nélküli fajra nincs értesítés');
+    ok((await q.locator('#notifyBox').innerText()).includes('Következő: jan. 31.'), 'állapot: következő értesítés látszik');
+    await q.evaluate(() => window.__fnQuick({ sp: 's1' })); await q.waitForTimeout(200);
+    const st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).catches.filter(c => c.sp === 's1').length);
+    ok(st === 1 && (await q.locator('#sheet h3').innerText()).toLowerCase().includes('csuka rögzítve'), 'parancsikon: új csukafogás és megnyílt a szerkesztő');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();
