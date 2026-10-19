@@ -369,7 +369,7 @@ public class MainActivity extends Activity {
     private void startCamera() {
         File f = ShotProvider.shotFile(this);
         if (f.exists()) f.delete();
-        Uri out = Uri.parse("content://" + ShotProvider.AUTHORITY + "/shot.jpg");
+        Uri out = Uri.parse("content://" + getPackageName() + ".shot/shot.jpg"); // authority follows the package (test build)
         Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         i.putExtra(MediaStore.EXTRA_OUTPUT, out);
         i.setClipData(ClipData.newRawUri("", out));

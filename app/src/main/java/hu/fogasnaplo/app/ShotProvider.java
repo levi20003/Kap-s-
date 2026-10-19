@@ -13,8 +13,6 @@ import java.io.FileNotFoundException;
 
 /** Hands the camera app a writable file for the photo, without extra libraries. */
 public class ShotProvider extends ContentProvider {
-    static final String AUTHORITY = "hu.fogasnaplo.app.shot";
-
     static File shotFile(android.content.Context ctx) {
         File dir = new File(ctx.getCacheDir(), "cam");
         dir.mkdirs();

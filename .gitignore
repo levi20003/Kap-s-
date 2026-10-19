@@ -23,3 +23,6 @@ build/
 
 # Tesztek függőségei
 node_modules/
+
+# CI-only test signing key (GitHub Actions cache)
+ci-key/

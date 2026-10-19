@@ -1,5 +1,6 @@
 # Every push: web tests (rules + browser) and a full APK build with build.sh.
-# The APK is signed with a throwaway CI key: it cannot be installed over the real app, it only proves the build works.
+# The real build only proves it works. The phone-testable APK is a separate app (hu.fogasnaplo.app.teszt, "Fogásnapló TESZT")
+# that installs next to the real one; its key is a CI-only key kept in the Actions cache so test builds update each other.
 name: CI
 
 on:
@@ -31,18 +32,32 @@ jobs:
           java-version: 17
       - name: SDK (platform 36, build-tools 36.0.0)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
-      - name: Throwaway signing key
+      - uses: actions/cache@v4
+        with:
+          path: ci-key
+          key: ci-test-signing-key-v1
+      - name: CI-only signing key (never the real one)
         run: |
-          keytool -genkeypair -keystore fogasnaplo.keystore -alias fogasnaplo -keyalg RSA -keysize 2048 -validity 2 \
-            -storepass ci-only-123 -keypass ci-only-123 -dname "CN=Fogasnaplo CI"
-          echo ci-only-123 > keystore-jelszo.txt
+          if [ ! -f ci-key/fogasnaplo.keystore ]; then
+            mkdir -p ci-key
+            keytool -genkeypair -keystore ci-key/fogasnaplo.keystore -alias fogasnaplo -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass ci-only-123 -keypass ci-only-123 -dname "CN=Fogasnaplo CI teszt"
+            echo ci-only-123 > ci-key/keystore-jelszo.txt
+          fi
+          cp ci-key/fogasnaplo.keystore ci-key/keystore-jelszo.txt .
       - run: ./build.sh 999 ci
       - name: APK targets API 36 (Google Play requirement)
         run: |
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|sdkVersion|targetSdkVersion)"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "targetSdkVersion:'36'"
+      - name: Test app for the phone (installs next to the real app)
+        run: |
+          APP_ID=hu.fogasnaplo.app.teszt LABEL="Fogásnapló TESZT" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "teszt-${GITHUB_SHA::7}"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|application-label):"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app.teszt'"
+          mv out/Fogasnaplo.apk out/Fogasnaplo-TESZT.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Fogasnaplo-CI-kulccsal
-          path: out/Fogasnaplo.apk
-          retention-days: 7
+          name: Fogasnaplo-TESZT-telefonra
+          path: out/Fogasnaplo-TESZT.apk
+          retention-days: 14
