@@ -161,6 +161,27 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(zc && zc.photo.src === 'file:///new/files/photos/abc-1.jpg' && zc.photo.thumb === 'file:///new/files/thumbs/abc-t.jpg', 'ZIP-visszatöltés: fotók az új telefon mappájára mutatnak');
     await ctx.close();
   }
+  // statistics: per month, per species, search
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear();
+    const cs = Array.from({ length: 12 }, (_, i) => ({ id: 'm' + i, sp: i % 3 ? 's1' : 's2', at: new Date(Y, i < 7 ? 4 : 8, 3 + i, 10).toISOString(), y: Y, t: true,
+      lure: i % 2 ? 'Wobbler' : 'Gumihal', place: { name: i < 4 ? 'Holt-Tisza' : 'Maros', lat: 46.2, lng: 20.1 }, note: i === 9 ? 'hidegfront után' : undefined }));
+    await q.addInitScript(cs => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }, { id: 's2', name: 'Süllő' }], catches: cs })), cs);
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.waitForTimeout(150);
+    ok((await q.locator('#monthStats').innerText()).includes('májusban (7)'), 'havonta: legtöbb fogás májusban (7)');
+    ok((await q.locator('#bestStats').innerText()).includes('Csuka · 8 fogás'), 'fajonként: Csuka · 8 fogás');
+    await q.locator('.months button').nth(8).click();
+    ok((await q.locator('#listTitle').textContent()) === 'Idei fogások (5)', 'hónapra koppintva szűr (szeptember: 5)');
+    await q.locator('#catchSearch').fill('hidegfront');
+    ok((await q.locator('#listTitle').textContent()) === 'Idei fogások (1)', 'keresés a megjegyzésben');
+    await q.locator('#catchSearch').fill('holt-tisza');
+    ok(await q.locator('#catchList .empty').count() === 1, 'nincs találat: üzenet (szeptemberben nem volt Holt-Tisza)');
+    await q.locator('.months button').nth(8).click();
+    ok((await q.locator('#listTitle').textContent()) === 'Idei fogások (4)', 'hónapszűrő törlése, keresés marad: Holt-Tisza 4');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();

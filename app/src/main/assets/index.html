@@ -265,6 +265,19 @@ textarea.inp{resize:vertical;min-height:68px}
 .dp{display:grid;grid-template-columns:86px 1fr 28px;gap:10px;align-items:center;font-size:.88rem}
 .dp .bar{margin:0;height:8px;border-radius:4px}.dp .bar i{border-radius:4px}
 .dp b{text-align:right;font-variant-numeric:tabular-nums}
+/* catches per month: one series, bars from a shared baseline, only the best month labelled */
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;height:120px;align-items:end}
+.months button{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;background:none;border:0;padding:0;color:var(--muted);font-size:.66rem}
+.months i{width:100%;max-width:20px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--water),var(--water-deep));min-height:2px}
+.months i.zero{background:var(--line);min-height:2px;height:2px}
+.months b{font-size:.75rem;color:var(--fg);font-variant-numeric:tabular-nums;min-height:1em}
+.months button.sel span{color:var(--water)}
+.best{display:flex;flex-direction:column}
+.best>div{display:grid;grid-template-columns:1fr;gap:2px;padding:10px 0;border-top:1px solid var(--line-soft);font-size:.9rem}
+.best>div:first-child{border-top:0;padding-top:0}
+.best b{font-size:.95rem}
+.best span{color:var(--muted);font-size:.84rem}
+.search{width:100%}
 
 /* today card */
 .today{position:relative;overflow:hidden;background:linear-gradient(160deg,#173f47 0%,#10282f 70%);border:1px solid var(--line-soft);border-radius:22px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px}
@@ -396,11 +409,20 @@ textarea.inp{resize:vertical;min-height:68px}
       <div class="sechead"><h2>Napszak</h2></div>
       <div class="panel" id="dayStats"></div>
     </section>
+    <section id="monthSec">
+      <div class="sechead"><h2>Havonta</h2></div>
+      <div class="panel" id="monthStats"></div>
+    </section>
+    <section id="bestSec">
+      <div class="sechead"><h2>Fajonként mi működött</h2></div>
+      <div class="panel"><div class="best" id="bestStats"></div></div>
+    </section>
     <section>
       <div class="sechead">
         <h2 id="listTitle">Fogások</h2>
         <button class="linkbtn" id="addLater">+ Fogás utólag</button>
       </div>
+      <input class="inp search" id="catchSearch" type="search" maxlength="40" placeholder="Keresés: csali, hely, megjegyzés…" aria-label="Fogások keresése" hidden>
       <div class="chips" id="spFilter"></div>
       <div id="catchList"></div>
     </section>
@@ -470,7 +492,7 @@ textarea.inp{resize:vertical;min-height:68px}
 
   const ANDROID=window.FogasnaploAndroid||null;
   const NOW=new Date(),NOW_Y=NOW.getFullYear();
-  const state={species:[],catches:[],year:NOW_Y,tab:"count",edit:false,confirmId:null,region:"orszagos",filterSp:null};
+  const state={species:[],catches:[],year:NOW_Y,tab:"count",edit:false,confirmId:null,region:"orszagos",filterSp:null,q:"",month:null};
   try{const r=localStorage.getItem("fogasnaplo.region");if(r==="orszagos"||OVERRIDES[r])state.region=r}catch(e){}
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||"").trim().toLocaleLowerCase("hu").replace(/\s+/g," ");
@@ -729,6 +751,9 @@ textarea.inp{resize:vertical;min-height:68px}
       ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±1,5 óra. Csak az időponttal rögzített fogások számítanak."));
     }
 
+    renderMonths(yearCatches);
+    renderBest(yearCatches);
+
     // filter chips
     const spIds=[...new Set(yearCatches.map(c=>c.sp))];
     if(state.filterSp&&!spIds.includes(state.filterSp))state.filterSp=null;
@@ -736,10 +761,13 @@ textarea.inp{resize:vertical;min-height:68px}
     const mk=(label,val)=>{const b=el("button","chip solid"+(state.filterSp===val?" sel":""),label);b.onclick=()=>{state.filterSp=val;render()};fc.append(b)};
     mk("Mind",null);spIds.map(id=>({id,n:spName(id)})).sort((a,b)=>a.n.localeCompare(b.n,"hu")).forEach(x=>mk(x.n,x.id));
 
-    const shown=yearCatches.filter(c=>!state.filterSp||c.sp===state.filterSp).sort((a,b)=>a.at<b.at?1:-1);
+    $("catchSearch").hidden=yearCatches.length<6&&!state.q;
+    const q=norm(state.q),hit=c=>!q||[spName(c.sp),c.lure,c.place&&c.place.name,c.note].some(t=>t&&norm(t).includes(q));
+    const shown=yearCatches.filter(c=>(!state.filterSp||c.sp===state.filterSp)&&(state.month==null||new Date(c.at).getMonth()===state.month)&&hit(c)).sort((a,b)=>a.at<b.at?1:-1);
     const keptN=shown.filter(c=>c.kept===true).length;
     $("listTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+(shown.length?" ("+shown.length+(keptN?", ebből "+keptN+" elvitt":"")+")":"");
     const box=$("catchList");box.replaceChildren();
+    if(!shown.length&&yearCatches.length){box.append(el("div","empty","Nincs a szűrésnek megfelelő fogás."));return}
     if(!shown.length){const e=el("div","empty");e.innerHTML=state.species.length?"<b>Ebben az évben még nincs fogás.</b><br>A Számlálónál a + gombbal rögzíthetsz, vagy itt fent a „+ Fogás utólag” gombbal.":"<b>Még nincs halfajod.</b><br>Előbb a Számlálónál vegyél fel egy fajt.";box.append(e);return}
     let lastMonth="";
     shown.forEach(c=>{
@@ -753,6 +781,34 @@ textarea.inp{resize:vertical;min-height:68px}
       const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");if(c.kept===true)bits.push("elvitt");else if(c.kept===false)bits.push("visszaengedve");
       mid.append(t1,el("div","t2",bits.join(" · ")));if(c.wx)mid.append(el("div","t3",wxLine(c.wx)));
       it.append(th,mid,el("span","chev","›"));box.append(it);
+    });
+  }
+
+  const MONTHS=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+  const MONTHS_SHORT=["jan","feb","már","ápr","máj","jún","júl","aug","sze","okt","nov","dec"];
+  const MONTHS_LONG=["januárban","februárban","márciusban","áprilisban","májusban","júniusban","júliusban","augusztusban","szeptemberben","októberben","novemberben","decemberben"];
+  function renderMonths(yc){
+    $("monthSec").hidden=yc.length<1;const box=$("monthStats");box.replaceChildren();if(!yc.length)return;
+    const mc=Array(12).fill(0);yc.forEach(c=>mc[new Date(c.at).getMonth()]++);const mx=Math.max(...mc),best=mc.indexOf(mx);
+    const g=el("div","months");g.setAttribute("role","group");g.setAttribute("aria-label","Fogások havonta");
+    mc.forEach((n,i)=>{const b=el("button",state.month===i?"sel":"");b.type="button";b.setAttribute("aria-label",MONTHS[i]+": "+n+" fogás");
+      b.append(el("b",null,i===best||state.month===i?String(n):""));const bar=el("i",n?"":"zero");if(n)bar.style.height=Math.max(4,n/mx*84)+"px";
+      b.append(bar,el("span",null,MONTHS_SHORT[i]));
+      b.onclick=()=>{state.month=state.month===i?null:i;render()};g.append(b)});
+    box.append(g);
+    box.append(el("div","hint",state.month!=null?`${MONTHS_LONG[state.month][0].toUpperCase()+MONTHS_LONG[state.month].slice(1)} ${mc[state.month]} fogás. A lista lent erre a hónapra szűrve; koppints újra a szűrés törléséhez.`:
+      `Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra a fogások szűréséhez.`));
+  }
+  // per species: the lure, place and part of the day that brought most fish (needs 2+ catches)
+  function renderBest(yc){
+    const box=$("bestStats");box.replaceChildren();
+    const top=(arr,key)=>{const m=new Map();arr.forEach(c=>{const k=key(c);if(k)m.set(k,(m.get(k)||0)+1)});let b=null;m.forEach((n,k)=>{if(!b||n>b[1])b=[k,n]});return b};
+    const rows=state.species.map(s=>({s,cs:yc.filter(c=>c.sp===s.id)})).filter(x=>x.cs.length>=2).sort((a,b)=>b.cs.length-a.cs.length);
+    $("bestSec").hidden=!rows.length;
+    rows.forEach(({s,cs})=>{
+      const lure=top(cs,c=>c.lure&&c.lure.trim()),place=top(cs,c=>c.place&&c.place.name),dp=top(cs,c=>{const k=daypart(c);return k==null?null:["Hajnal","Nappal","Alkony","Éjszaka"][k]});
+      const bits=[lure&&`Csali: ${lure[0]} (${lure[1]})`,place&&`Hely: ${place[0]} (${place[1]})`,dp&&`Napszak: ${dp[0]} (${dp[1]})`].filter(Boolean);
+      const r=el("div");r.append(el("b",null,`${s.name} · ${cs.length} fogás`));r.append(el("span",null,bits.length?bits.join(" · "):"Add meg a csalit vagy a helyet, és itt látod, mi vált be."));box.append(r);
     });
   }
 
@@ -1415,11 +1471,12 @@ textarea.inp{resize:vertical;min-height:68px}
 
   /* ---------- wiring ---------- */
   $("addForm").addEventListener("submit",e=>{e.preventDefault();addSpecies($("newName").value)});
-  $("prevYear").onclick=()=>{state.year--;render()};
-  $("nextYear").onclick=()=>{if(state.year<NOW_Y){state.year++;render()}};
+  $("prevYear").onclick=()=>{state.year--;state.month=null;render()};
+  $("nextYear").onclick=()=>{if(state.year<NOW_Y){state.year++;state.month=null;render()}};
   $("editBtn").onclick=()=>{state.edit=!state.edit;state.confirmId=null;render()};
   $("regionSel").onchange=e=>{state.region=e.target.value;try{localStorage.setItem("fogasnaplo.region",state.region)}catch(_){}render()};
   $("addLater").onclick=()=>openEditor({mode:"create"});
+  $("catchSearch").oninput=e=>{state.q=e.target.value;render()};
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});
 
   sync();
