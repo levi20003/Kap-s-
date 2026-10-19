@@ -60,18 +60,25 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Induláskor és előtérbe jövéskor `maybeAutoBackup()`; a mappában a 4 legutóbbi `fogasnaplo-ÉÉÉÉ-HH-NN.zip` marad.
 - Törlés (− gomb, „Fogás törlése”) 6 mp-ig visszavonható (`deleteWithUndo`); a fotó csak utána törlődik.
 
-## Mélyvíz design – színek
+## Zsálya design – két téma
 
-| Token | Érték |
-|---|---|
-| `--bg` | `#0b1a1f` |
-| `--surface` | `#12282f` |
-| `--accent` | `#ff7a45` |
-| `--water` | `#5fd0c5` |
-| `--water-deep` | `#1f6f6c` |
+A paletta (Sage Hint `#DCE6D9`, Mint `#BFCFBB`, Sage `#8EA58C`, Moss `#738A6E`, Evergreen `#344C3D`) + narancs kiemelés.
+Világos és sötét téma: alapból a telefon módját követi (`ANDROID.isNight()`, váltáskor `__fnSysTheme`), kézzel a
+Számláló → Megjelenés részben választható (`fogasnaplo.theme`: `auto` / `light` / `dark`). A téma `<html data-theme>`-ként él;
+a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTheme(light)` a rendszersávok ikonszínét és az ablak hátterét igazítja.
 
-A tokenek az `index.html` `:root` blokkjában vannak; új színt ezekből vagy a mellettük
-lévő származtatott tokenekből (`--bg-2`, `--surface-2`, `--accent-2` …) használj, ne kézzel írt hexet.
+| Token | Sötét | Világos |
+|---|---|---|
+| `--bg` | `#151c17` | `#eef2ec` |
+| `--surface` | `#212d25` | `#ffffff` |
+| `--fg` | `#e9efe6` | `#1f2b23` |
+| `--water` (fő kiemelés: gombok, címek, sávok) | `#bfcfbb` (Mint) | `#344c3d` (Evergreen) |
+| `--water-deep` | `#738a6e` (Moss) | `#8ea58c` (Sage) |
+| `--accent` (+ gomb, értékelés) | `#ff7a45` | `#c4501f` |
+
+- Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
+  ha új szín kell, vegyél fel tokent mindkét blokkba (pl. `--card-a/b`, `--hero-*`, `--tint`, `--tile-filter`).
+- A kontrasztot (WCAG) mindkét témában ellenőrizd: a szöveg legalább 4,5:1, a nagy szöveg és ikon legalább 3:1.
 
 ## Tilalmi idők és méretkorlátok
 

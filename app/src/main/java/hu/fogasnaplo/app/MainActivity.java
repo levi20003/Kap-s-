@@ -10,6 +10,7 @@ import android.database.Cursor;
 import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
+import android.content.res.Configuration;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.graphics.Bitmap;
@@ -27,7 +28,9 @@ import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
@@ -81,6 +84,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private boolean webDead = false;
     private boolean pageReady = false;
+    private FrameLayout root;
     private String pendingQuick; // species id from a home-screen shortcut, delivered once the page is loaded
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup;
@@ -91,8 +95,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF0B1A1F); // shows behind the status and navigation bars
+        root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF151C17); // shows behind the status and navigation bars; the page sets it per theme
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 35) {
@@ -205,6 +209,37 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
         return new WebResourceResponse("image/png", null, 404, "Not found", null, new java.io.ByteArrayInputStream(new byte[0]));
+    }
+
+    /* ---------- theme: the page picks light/dark sage, the window follows ---------- */
+    private boolean isNight() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration c) {
+        super.onConfigurationChanged(c); // uiMode is in configChanges: no restart when the phone switches dark mode
+        JSONObject o = new JSONObject();
+        try { o.put("night", isNight()); } catch (Exception ignored) {}
+        js("__fnSysTheme", o);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyWindowTheme(boolean light) {
+        root.setBackgroundColor(light ? 0xFFEEF2EC : 0xFF151C17);
+        if (Build.VERSION.SDK_INT >= 30) {
+            int bars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+            WindowInsetsController c = getWindow().getInsetsController();
+            if (c != null) c.setSystemBarsAppearance(light ? bars : 0, bars);
+        } else if (Build.VERSION.SDK_INT >= 26) {
+            View d = getWindow().getDecorView();
+            int f = d.getSystemUiVisibility(), m = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            d.setSystemUiVisibility(light ? f | m : f & ~m);
+        }
+        if (Build.VERSION.SDK_INT < 35) { // before edge to edge the bars have their own colour
+            getWindow().setStatusBarColor(light ? 0xFFE4EBE1 : 0xFF1C2A21);
+            getWindow().setNavigationBarColor(light ? 0xFFFFFFFF : 0xFF1A231D);
+        }
     }
 
     @Override
@@ -699,6 +734,17 @@ public class MainActivity extends Activity {
                 i.putExtra(Intent.EXTRA_TITLE, filename);
                 startActivityForResult(i, REQ_SAVE);
             });
+        }
+
+        /** True when the phone is in dark mode (the page's "automatic" theme follows it). */
+        @JavascriptInterface
+        public boolean isNight() {
+            return MainActivity.this.isNight();
+        }
+
+        @JavascriptInterface
+        public void setTheme(boolean light) {
+            runOnUiThread(() -> applyWindowTheme(light));
         }
 
         /** Asks for the notification permission where needed (Android 13+); answers through __fnNotify. */

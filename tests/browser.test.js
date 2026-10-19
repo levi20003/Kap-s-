@@ -261,6 +261,27 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok((await q.locator('#pickHint').innerText()).includes('Ránagyítottam') && await q.locator('#pickMap .pin').count() === 0, 'országos nézetben koppintás: ránagyít, nem tesz le jelölőt');
     await ctx.close();
   }
+  // theme: light / dark sage, automatic by the phone's mode, or chosen by hand
+  {
+    const seedT = () => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [] }));
+    let ctx = await b.newContext({ colorScheme: 'light' }); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(seedT); await q.goto(PAGE); await q.waitForTimeout(200);
+    ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'light', 'böngésző világos módban: világos zsálya');
+    await q.locator('#themeChips .chip', { hasText: 'Sötét' }).click();
+    ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark' && await q.evaluate(() => localStorage.getItem('fogasnaplo.theme')) === 'dark', 'kézi „Sötét” választás megmarad');
+    await q.reload(); await q.waitForTimeout(200);
+    ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'újraindítás után is sötét (a választás felülírja a rendszert)');
+    await ctx.close();
+
+    ctx = await b.newContext({ colorScheme: 'dark' }); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); window.__th = [];
+      window.FogasnaploAndroid = { isNight() { return false; }, setTheme(l) { window.__th.push(l); }, saveThumb() { return ''; }, cleanup() {}, getLocation() {} }; });
+    await q.goto(PAGE); await q.waitForTimeout(200);
+    ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'light' && (await q.evaluate(() => window.__th)).slice(-1)[0] === true, 'Android nappali mód: világos téma, a rendszersávok is világosak');
+    await q.evaluate(() => window.__fnSysTheme({ night: true }));
+    ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark' && (await q.evaluate(() => window.__th)).slice(-1)[0] === false, 'telefon sötét módra vált: az app is átvált');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();
