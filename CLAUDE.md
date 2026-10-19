@@ -48,10 +48,13 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 A tokenek az `index.html` `:root` blokkjában vannak; új színt ezekből vagy a mellettük
 lévő származtatott tokenekből (`--bg-2`, `--surface-2`, `--accent-2` …) használj, ne kézzel írt hexet.
 
-## Tilalmi idők és méretkorlátok (2026)
+## Tilalmi idők és méretkorlátok
 
-- Forrás: a 2026-os országos szabályok, **133/2013. (XII. 29.) VM rendelet**.
-- Duna és Tisza: egységes vízterületi szabályok (szigorúbb minimum és felső méretkorlát, harcsára téli elviteli tilalom).
-- A kódban: `RULES` (országos tilalmi időszakok és minimumméret), `OVERRIDES` (duna / tisza eltérések), `ALIAS` (fajnév-szinonimák) az `index.html`-ben.
-- A helyi horgászrend szigorúbb lehet; az app ezt a felületen jelzi is.
-- Szabálymódosításnál a rendelet aktuális szövegéből dolgozz, és az évszámot (`2026`) is frissítsd ott, ahol a felület mutatja.
+- Forrás: **133/2013. (XII. 29.) VM rendelet**. A `RULES` a rendelet *alapdátumait* tartalmazza (pl. csuka 02.01–03.31), nem egy adott év dátumait.
+- A tényleges dátumot a `closedSpans()` számolja évente: ha az első nap szombat vagy pihenőnap, a következő munkanapon kezdődik;
+  ha az utolsó nap az, az előtte lévő munkanapon ér véget. Ünnepnapok: fix + húsvéthoz kötött (nagypéntek, húsvét, pünkösd).
+- **Évente teendő:** a `BRIDGE_DAYS` táblába beírni a következő év áthelyezett pihenőnapjait, amikor az NGM-rendelet megjelenik
+  (2025-ben pl. máj. 2. hídnap volt, ezért a ponty tilalma máj. 5-én kezdődött).
+- Ellenőrzés: a számítás 2026-ra pontosan a korábbi kézi táblát adja (csuka 02.02., ponty 05.04–05.29. stb.).
+- Duna és Tisza: `OVERRIDES` (szigorúbb minimum és felső méretkorlát, harcsára téli elviteli tilalom). Ezek a helyi szabályok nem tolódnak (`shift:false`).
+- `ALIAS`: fajnév-szinonimák. A helyi horgászrend szigorúbb lehet; az app ezt a felületen jelzi is.

@@ -368,7 +368,7 @@ textarea.inp{resize:vertical;min-height:68px}
       <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra. Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
     </section>
 
-    <p class="hint">Tilalmi idők és méretkorlátok: a 2026-os országos szabályok (133/2013. VM rendelet), Duna és Tisza esetén az egységes vízterületi szabályokkal. A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
+    <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
   </div>
 
   <!-- ===== Fogások ===== -->
@@ -439,13 +439,14 @@ textarea.inp{resize:vertical;min-height:68px}
 
 <script>
 (function(){
-  /* ---------- rules (2026) ---------- */
+  /* ---------- rules: 133/2013. (XII. 29.) VM rendelet ---------- */
+  // statutory closed seasons [fromMonth,fromDay,toMonth,toDay]; the actual dates move every year, see closedSpans()
   const RULES={
-    "csuka":{closed:[[2,2,3,31]],min:40},"balin":{closed:[[3,2,4,30]],min:40},"sügér":{closed:[[3,2,4,30]],min:15},
-    "fogassüllő":{closed:[[3,2,4,30]],min:30},"kősüllő":{closed:[[3,2,6,30]],min:25},"domolykó":{closed:[[4,15,5,29]],min:25},
-    "jászkeszeg":{closed:[[4,15,5,29]],min:20},"garda":{closed:[[4,15,5,29]],min:20},"márna":{closed:[[4,15,5,29]],min:40},
-    "paduc":{closed:[[4,15,5,29]],min:20},"szilvaorrú keszeg":{closed:[[4,15,5,29]],min:20},"ponty":{closed:[[5,4,5,29]],min:30},
-    "compó":{closed:[[5,4,6,15]],min:25},"harcsa":{closed:[[5,4,6,15]],min:60},"sebes pisztráng":{closed:[[10,1,3,31]],min:22},
+    "csuka":{closed:[[2,1,3,31]],min:40},"balin":{closed:[[3,1,4,30]],min:40},"sügér":{closed:[[3,1,4,30]],min:15},
+    "fogassüllő":{closed:[[3,1,4,30]],min:30},"kősüllő":{closed:[[3,1,6,30]],min:25},"domolykó":{closed:[[4,15,5,31]],min:25},
+    "jászkeszeg":{closed:[[4,15,5,31]],min:20},"garda":{closed:[[4,15,5,31]],min:20},"márna":{closed:[[4,15,5,31]],min:40},
+    "paduc":{closed:[[4,15,5,31]],min:20},"szilvaorrú keszeg":{closed:[[4,15,5,31]],min:20},"ponty":{closed:[[5,2,5,31]],min:30},
+    "compó":{closed:[[5,2,6,15]],min:25},"harcsa":{closed:[[5,2,6,15]],min:60},"sebes pisztráng":{closed:[[10,1,3,31]],min:22},
     "menyhal":{closed:[],min:25}
   };
   const OVERRIDES={
@@ -463,7 +464,7 @@ textarea.inp{resize:vertical;min-height:68px}
   try{const r=localStorage.getItem("fogasnaplo.region");if(r==="orszagos"||OVERRIDES[r])state.region=r}catch(e){}
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||"").trim().toLocaleLowerCase("hu").replace(/\s+/g," ");
-  const fmtDay=(m,d)=>new Date(2026,m-1,d).toLocaleDateString("hu-HU",{month:"short",day:"numeric"});
+  const fmtDM=d=>d.toLocaleDateString("hu-HU",{month:"short",day:"numeric"});
   const fmtDate=iso=>new Date(iso).toLocaleDateString("hu-HU",{year:"numeric",month:"short",day:"numeric"});
   const fmtShort=iso=>new Date(iso).toLocaleDateString("hu-HU",{month:"short",day:"numeric"});
   const fmtTime=iso=>new Date(iso).toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"});
@@ -481,20 +482,45 @@ textarea.inp{resize:vertical;min-height:68px}
   function ruleFor(name){
     let k=norm(name);k=ALIAS[k]||k;const base=RULES[k];if(!base)return null;
     const ov=(OVERRIDES[state.region]||{})[k]||{};
-    const r={min:ov.min??base.min,max:ov.max,periods:base.closed.map(p=>({p,note:"tilalmi idő"}))};
-    (ov.extraClosed||[]).forEach(p=>r.periods.push({p,note:ov.extraNote}));return r;
+    const r={min:ov.min??base.min,max:ov.max,periods:base.closed.map(p=>({p,note:"tilalmi idő",shift:true}))};
+    (ov.extraClosed||[]).forEach(p=>r.periods.push({p,note:ov.extraNote,shift:false}));return r;
   }
-  const isLeap=y=>(y%4===0&&y%100!==0)||y%400===0;
-  const md=(m,d)=>m*100+d;
-  function inPeriod(p,date){
-    const t=md(date.getMonth()+1,date.getDate()),a=md(p[0],p[1]),b=md(p[2],p[2]===2&&p[3]===29?(isLeap(date.getFullYear())?29:28):p[3]);
-    return a<=b?(t>=a&&t<=b):(t>=a||t<=b);
+  /* ---------- calendar: closed seasons of a given year ---------- */
+  // 133/2013. VM r.: a closed season starts at 0:00 of its first day and ends at 24:00 of its last day. If the first day
+  // is a Saturday or a rest day it starts on the next working day; if the last day is, it ends on the working day before.
+  // Bridge days (áthelyezett pihenőnap) come from the yearly NGM decree: add next year's when it is published.
+  const BRIDGE_DAYS={2025:["5-2","10-24","12-24"],2026:["1-2","8-21","12-24"],2027:[]};
+  function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
+    h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31);
+    return new Date(y,mo-1,((h+l-7*m+114)%31)+1)}
+  const holidayCache={};
+  function holidays(y){
+    if(holidayCache[y])return holidayCache[y];
+    const set=new Set(["1-1","3-15","5-1","8-20","10-23","11-1","12-25","12-26",...(BRIDGE_DAYS[y]||[])]);
+    const e=easter(y);[-2,0,1,49,50].forEach(k=>{const d=new Date(e);d.setDate(d.getDate()+k);set.add((d.getMonth()+1)+"-"+d.getDate())});
+    return holidayCache[y]=set;
   }
-  const endLabel=p=>p[2]===2&&p[3]===29?"febr. végéig":fmtDay(p[2],p[3])+"-ig";
+  const isWorkday=d=>d.getDay()!==0&&d.getDay()!==6&&!holidays(d.getFullYear()).has((d.getMonth()+1)+"-"+d.getDate());
+  const dayOf=(y,m,d)=>new Date(y,m-1,Math.min(d,new Date(y,m,0).getDate())); // 2/29 means the end of February
+  const dayNum=d=>Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5;
+  const spanCache=new Map();
+  // the spans of one period that touch year y (a season like 10/1-3/31 runs over new year)
+  function closedSpans(p,shift,y){
+    const key=p.join(",")+(shift?"s":"")+y;if(spanCache.has(key))return spanCache.get(key);
+    const wraps=p[2]<p[0]||(p[2]===p[0]&&p[3]<p[1]),out=[];
+    for(const sy of wraps?[y-1,y]:[y]){
+      const a=dayOf(sy,p[0],p[1]),b=dayOf(wraps?sy+1:sy,p[2],p[3]);
+      if(shift){while(!isWorkday(a))a.setDate(a.getDate()+1);while(!isWorkday(b))b.setDate(b.getDate()-1)}
+      out.push({a,b});
+    }
+    spanCache.set(key,out);return out;
+  }
+  function spanAt(x,date){const n=dayNum(date);return closedSpans(x.p,x.shift,date.getFullYear()).find(s=>dayNum(s.a)<=n&&n<=dayNum(s.b))||null}
+  const endLabel=(x,s)=>!x.shift&&x.p[2]===2&&x.p[3]===29?"febr. végéig":fmtDM(s.b)+"-ig";
   function ruleStatus(rule,date){
     if(!rule)return null;
-    for(const x of rule.periods)if(inPeriod(x.p,date))return{kind:"closed",text:(x.note==="tilalmi idő"?"Tilalom ":"Elviteli tilalom ")+endLabel(x.p),note:x.note,period:x.p};
-    for(let i=1;i<=14;i++){const d=new Date(date);d.setDate(d.getDate()+i);for(const x of rule.periods)if(inPeriod(x.p,d))return{kind:"soon",text:"Tilalom "+fmtDay(x.p[0],x.p[1])+"-től"}}
+    for(const x of rule.periods){const s=spanAt(x,date);if(s)return{kind:"closed",text:(x.note==="tilalmi idő"?"Tilalom ":"Elviteli tilalom ")+endLabel(x,s),note:x.note,until:endLabel(x,s)}}
+    for(let i=1;i<=14;i++){const d=new Date(date);d.setDate(d.getDate()+i);for(const x of rule.periods){const s=spanAt(x,d);if(s)return{kind:"soon",text:"Tilalom "+fmtDM(s.a)+"-től"}}}
     return{kind:"ok",text:"Fogható · "+(rule.max?`${rule.min}–${rule.max} cm`:`min. ${rule.min} cm`)};
   }
   function sizeVerdict(rule,l){
@@ -794,7 +820,7 @@ textarea.inp{resize:vertical;min-height:68px}
     sh.append(el("div","sub",ed.fresh?"Minden mező opcionális. Töltsd ki, amit szeretnél, vagy hagyd ki.":"Minden mező opcionális."));
     const dt=new Date(d.at);
     const rs=rule?ruleStatus(rule,dt):null;
-    if(rs&&rs.kind==="closed")sh.append(el("p","note closed",rs.note==="tilalmi idő"?`${s.name}: ${ymd(dt)===ymd(new Date())?"most":"ekkor"} tilalmi idő van (${endLabel(rs.period)}), a halat vissza kell engedni.`:`${s.name}: ezen a vízen elviteli tilalom van, a halat vissza kell engedni.`));
+    if(rs&&rs.kind==="closed")sh.append(el("p","note closed",rs.note==="tilalmi idő"?`${s.name}: ${ymd(dt)===ymd(new Date())?"most":"ekkor"} tilalmi idő van (${rs.until}), a halat vissza kell engedni.`:`${s.name}: ezen a vízen elviteli tilalom van, a halat vissza kell engedni.`));
 
     // species + date/time
     const g1=el("div","fields");
