@@ -2,7 +2,7 @@
 
 Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS oldal
 (`app/src/main/assets/index.html`), a natív rész csak a burok (`MainActivity.java`,
-`ShotProvider.java`). Csomagnév: `hu.fogasnaplo.app`, minSdk 24, targetSdk 34.
+`ShotProvider.java`). Csomagnév: `hu.fogasnaplo.app`, minSdk 24, targetSdk 36 (Google Play: 2026. aug. 31-től kötelező).
 
 ## Build
 
@@ -11,7 +11,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 ```
 
 - Gradle nélkül, közvetlenül az SDK eszközeivel: `aapt2` → `javac` → `d8` → `zipalign` → `apksigner`.
-- Kimenet: `out/Fogasnaplo.apk`. Az SDK helye `ANDROID_HOME` (alapértelmezés `/home/claude/android-sdk`), build-tools 35.0.0, platform android-35.
+- Kimenet: `out/Fogasnaplo.apk`. Az SDK helye `ANDROID_HOME` (alapértelmezés `/home/claude/android-sdk`), build-tools 36.0.0, platform android-36
+  (felülírható: `PLATFORM=35 BUILD_TOOLS=35.0.0 ./build.sh …`, de Play-be csak 36-tal).
 - Aláírás: `fogasnaplo.keystore` + `keystore-jelszo.txt` a projekt gyökerében.
   **Ezek soha nem kerülhetnek a repóba** (`.gitignore` kizárja őket, az `out/`, `*.apk`, `*.zip` mellett).
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
@@ -26,6 +27,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Be/ki: `fogasnaplo.notify` kulcs. Android 13+ engedélyt kér (`POST_NOTIFICATIONS`).
 - Parancsikonok: a 4 leggyakoribb faj „+ Faj” ikonja (`pushShortcuts` → `ShortcutManager`). Koppintásra `__fnQuick({sp})` → `quickCatch`.
   Az activity `singleTask`; újra létrehozott activity nem rögzít újra fogást.
+- Android 15+ teljes képernyő: a WebView egy `FrameLayout`-ban van, ami a rendszersávok és a billentyűzet méretével párnáz (API 35+).
+- Vissza gomb: API 33+ `OnBackInvokedCallback` (Android 16-tól csak ez működik), régebben `onBackPressed`; mindkettő `handleBack()` → `__fnBack`.
 - Ha a WebView renderelője összeomlik, a `MainActivity` újraindítja magát (`onRenderProcessGone`).
 
 ## Tesztek és CI

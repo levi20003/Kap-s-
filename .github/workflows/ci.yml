@@ -29,14 +29,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: SDK (platform 35, build-tools 35.0.0)
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+      - name: SDK (platform 36, build-tools 36.0.0)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: Throwaway signing key
         run: |
           keytool -genkeypair -keystore fogasnaplo.keystore -alias fogasnaplo -keyalg RSA -keysize 2048 -validity 2 \
             -storepass ci-only-123 -keypass ci-only-123 -dname "CN=Fogasnaplo CI"
           echo ci-only-123 > keystore-jelszo.txt
       - run: ./build.sh 999 ci
+      - name: APK targets API 36 (Google Play requirement)
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|sdkVersion|targetSdkVersion)"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "targetSdkVersion:'36'"
       - uses: actions/upload-artifact@v4
         with:
           name: Fogasnaplo-CI-kulccsal

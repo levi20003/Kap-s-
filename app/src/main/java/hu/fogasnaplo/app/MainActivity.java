@@ -14,6 +14,7 @@ import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Insets;
 import android.graphics.Matrix;
 import android.location.Location;
 import android.location.LocationListener;
@@ -26,6 +27,7 @@ import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
@@ -35,7 +37,9 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
+import android.window.OnBackInvokedDispatcher;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -87,12 +91,27 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
-        setContentView(web);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF0B1A1F); // shows behind the status and navigation bars
+        root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        if (Build.VERSION.SDK_INT >= 35) {
+            // Android 15+ draws apps edge to edge: keep the page clear of the system bars and the keyboard
+            root.setOnApplyWindowInsetsListener((v, in) -> {
+                Insets bars = in.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                Insets ime = in.getInsets(WindowInsets.Type.ime());
+                v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
+                return WindowInsets.CONSUMED;
+            });
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Android 13+ (and always from Android 16): back arrives here instead of onBackPressed
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
-        s.setDatabaseEnabled(true);
         s.setAllowFileAccess(true);
         s.setTextZoom(100);
 
@@ -165,7 +184,7 @@ public class MainActivity extends Activity {
             if (f.exists() && System.currentTimeMillis() - f.lastModified() < maxAge) {
                 return new WebResourceResponse("image/png", null, new FileInputStream(f));
             }
-            HttpURLConnection c = (HttpURLConnection) new URL(u.toString()).openConnection();
+            HttpURLConnection c = (HttpURLConnection) java.net.URI.create(u.toString()).toURL().openConnection();
             c.setRequestProperty("User-Agent", UA);
             c.setConnectTimeout(8000);
             c.setReadTimeout(10000);
@@ -235,6 +254,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        handleBack();
+    }
+
+    /** The page closes its own sheets and pickers first; the app closes only when it has nothing left. */
+    private void handleBack() {
         if (webDead) { finish(); return; }
         web.evaluateJavascript("(window.__fnBack&&window.__fnBack())===true", v -> {
             if (!"true".equals(v)) finish();
