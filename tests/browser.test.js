@@ -89,6 +89,28 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
   await p.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await p.waitForTimeout(500);
   ok(await p.locator('#picker').isVisible() && await p.locator('#pickMap.leaflet-container').count() === 1, 'helyválasztó térkép megnyílt');
   await p.locator('#pickCancel').click();
+  // kept / released and the daily limit (fresh page, normal storage)
+  {
+    const ctx2 = await b.newContext(); const q = await ctx2.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const now = Date.now(), at = k => new Date(now - k * 60000).toISOString(), Y = new Date().getFullYear();
+    await q.addInitScript(({ at5, Y }) => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }, { id: 's2', name: 'Süllő' }],
+      catches: at5.map((a, i) => ({ id: 'k' + i, sp: i < 3 ? 's1' : 's2', at: a, y: Y, t: true, kept: true })) })), { at5: [1, 2, 3, 4, 5].map(at), Y });
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    ok((await q.locator('#totalSide').innerText()).includes('Ma elvitt: 5/5'), 'Számláló: „Ma elvitt: 5/5 db”');
+    await q.locator('.tabbar button[data-tab="list"]').click();
+    await q.locator('#addLater').click();
+    await q.locator('#edSp').selectOption('s1');
+    await q.locator('#sheet .chip', { hasText: 'Elvittem' }).click();
+    ok((await q.locator('#sheet .note.warn').innerText()).includes('Fajonként napi 3'), 'negyedik csuka: fajonkénti figyelmeztetés');
+    await q.locator('#edSp').selectOption('s2');
+    ok((await q.locator('#sheet .note.warn').innerText()).includes('Összesen napi 5'), 'hatodik hal: összesített figyelmeztetés');
+    await q.locator('#sheet .chip', { hasText: 'Visszaengedtem' }).click();
+    ok(await q.locator('#sheet .note.warn').count() === 0, 'visszaengedett halra nincs figyelmeztetés');
+    await q.locator('#sheet .btn-main').click();
+    const t = await q.locator('#listTitle').textContent();
+    ok(t.includes('ebből 5 elvitt') && (await q.locator('#catchList').innerText()).includes('visszaengedve'), 'lista: ' + t);
+    await ctx2.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();

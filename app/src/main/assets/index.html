@@ -368,7 +368,7 @@ textarea.inp{resize:vertical;min-height:68px}
       <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra. Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
     </section>
 
-    <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
+    <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
   </div>
 
   <!-- ===== Fogások ===== -->
@@ -454,6 +454,9 @@ textarea.inp{resize:vertical;min-height:68px}
     tisza:{"ponty":{min:35,max:70},"fogassüllő":{min:40,max:70},"csuka":{min:40,max:70},"harcsa":{extraClosed:[[12,1,2,29]],extraNote:"elviteli tilalom"}}
   };
   const ALIAS={"süllő":"fogassüllő","pisztráng":"sebes pisztráng","sebespisztráng":"sebes pisztráng","jász":"jászkeszeg"};
+  // daily catch limit for kept fish: per species and in total, over the species below (local rules can be stricter)
+  const LIMITED=new Set(["csuka","balin","fogassüllő","kősüllő","ponty","harcsa"]);
+  const LIMITS={orszagos:{per:3,total:5},tisza:{per:3,total:5},duna:{per:2,total:4}};
   const COMMON=["Csuka","Süllő","Balin","Sügér","Harcsa","Domolykó","Kősüllő","Jászkeszeg","Sebes pisztráng","Fekete sügér"];
   const LURES=["Wobbler","Gumihal","Támolygó","Körforgó","Twister","Spinnerbait","Popper","Jig"];
   const HU_CENTER=[47.16,19.5];
@@ -522,6 +525,17 @@ textarea.inp{resize:vertical;min-height:68px}
     for(const x of rule.periods){const s=spanAt(x,date);if(s)return{kind:"closed",text:(x.note==="tilalmi idő"?"Tilalom ":"Elviteli tilalom ")+endLabel(x,s),note:x.note,until:endLabel(x,s)}}
     for(let i=1;i<=14;i++){const d=new Date(date);d.setDate(d.getDate()+i);for(const x of rule.periods){const s=spanAt(x,d);if(s)return{kind:"soon",text:"Tilalom "+fmtDM(s.a)+"-től"}}}
     return{kind:"ok",text:"Fogható · "+(rule.max?`${rule.min}–${rule.max} cm`:`min. ${rule.min} cm`)};
+  }
+  const limitKey=name=>{let k=norm(name);k=ALIAS[k]||k;return LIMITED.has(k)?k:null};
+  // kept, limited fish on the day of `at`, leaving out catch `skipId`
+  const keptLimitedOn=(at,skipId)=>{const day=ymd(new Date(at));return state.catches.filter(c=>c.id!==skipId&&c.kept===true&&ymd(new Date(c.at))===day&&limitKey(spName(c.sp)))};
+  function limitVerdict(d,id){
+    if(d.kept!==true)return null;const name=spName(d.sp),k=limitKey(name);if(!k)return null;
+    const L=LIMITS[state.region]||LIMITS.orszagos,others=keptLimitedOn(d.at,id);
+    const same=others.filter(c=>limitKey(spName(c.sp))===k).length+1,total=others.length+1;
+    if(same>L.per)return{cls:"warn",text:`Ezzel ${same} db ${name.toLocaleLowerCase("hu")} lenne aznap elvive. Fajonként napi ${L.per} db vihető el.`};
+    if(total>L.total)return{cls:"warn",text:`Ezzel ${total} korlátozott halat vinnél el aznap. Összesen napi ${L.total} db vihető el.`};
+    return{cls:"good",text:`Aznap elvitt korlátozott hal: ${total}/${L.total} db (${name}: ${same}/${L.per}).`};
   }
   function sizeVerdict(rule,l){
     if(!rule||!l)return null;
@@ -611,7 +625,8 @@ textarea.inp{resize:vertical;min-height:68px}
     let biggest=null,bigSp=null;state.species.forEach(s=>{const r=st[s.id].yrec;if(r&&r.w&&(!biggest||r.w>biggest.w)){biggest=r;bigSp=s}});
     const side=$("totalSide");side.replaceChildren();
     const line=(k,v)=>{const d=el("div");d.append(k+": ");d.append(el("b",null,v));side.append(d)};
-    line("Összesen",allTime+" db");if(top)line("Legtöbb",top.name);if(biggest)line("Legnagyobb",bigSp.name+", "+kg(biggest.w));
+    line("Összesen",allTime+" db");
+    if(y===NOW_Y){const kt=keptLimitedOn(new Date().toISOString(),null).length;if(kt)line("Ma elvitt",kt+"/"+(LIMITS[state.region]||LIMITS.orszagos).total+" db")}if(top)line("Legtöbb",top.name);if(biggest)line("Legnagyobb",bigSp.name+", "+kg(biggest.w));
 
     const list=$("list");list.replaceChildren();
     $("editBtn").hidden=!state.species.length;$("editBtn").textContent=state.edit?"Kész":"Szerkesztés";
@@ -715,7 +730,8 @@ textarea.inp{resize:vertical;min-height:68px}
     mk("Mind",null);spIds.map(id=>({id,n:spName(id)})).sort((a,b)=>a.n.localeCompare(b.n,"hu")).forEach(x=>mk(x.n,x.id));
 
     const shown=yearCatches.filter(c=>!state.filterSp||c.sp===state.filterSp).sort((a,b)=>a.at<b.at?1:-1);
-    $("listTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+(shown.length?" ("+shown.length+")":"");
+    const keptN=shown.filter(c=>c.kept===true).length;
+    $("listTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+(shown.length?" ("+shown.length+(keptN?", ebből "+keptN+" elvitt":"")+")":"");
     const box=$("catchList");box.replaceChildren();
     if(!shown.length){const e=el("div","empty");e.innerHTML=state.species.length?"<b>Ebben az évben még nincs fogás.</b><br>A Számlálónál a + gombbal rögzíthetsz, vagy itt fent a „+ Fogás utólag” gombbal.":"<b>Még nincs halfajod.</b><br>Előbb a Számlálónál vegyél fel egy fajt.";box.append(e);return}
     let lastMonth="";
@@ -727,7 +743,7 @@ textarea.inp{resize:vertical;min-height:68px}
       if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.alt="";im.src=c.photo.thumb||c.photo.src;th.append(im)}else th.textContent=spName(c.sp).charAt(0);
       const mid=el("div");mid.style.minWidth="0";
       const t1=el("div","t1",spName(c.sp));const sz=sizeText(c);if(sz){t1.append(" ");t1.append(el("span",null,sz))}
-      const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");
+      const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");if(c.kept===true)bits.push("elvitt");else if(c.kept===false)bits.push("visszaengedve");
       mid.append(t1,el("div","t2",bits.join(" · ")));if(c.wx)mid.append(el("div","t3",wxLine(c.wx)));
       it.append(th,mid,el("span","chev","›"));box.append(it);
     });
@@ -843,6 +859,15 @@ textarea.inp{resize:vertical;min-height:68px}
       if(w>0)d.w=Math.round(w*100)/100;else delete d.w;if(l>0)d.l=Math.round(l);else delete d.l;
       const v=sizeVerdict(rule,d.l);if(v){verdict.className="note "+v.cls;verdict.textContent=v.text;verdict.hidden=false}else verdict.hidden=true};
     wIn.oninput=upS;lIn.oninput=upS;upS();sh.append(gS);
+
+    // kept or released
+    const gK=el("div","fgroup");gK.append(el("div","flabel","A hal sorsa"));
+    const kc=el("div","chips");
+    [[true,"Elvittem"],[false,"Visszaengedtem"]].forEach(([v,l])=>{const b=el("button","chip solid"+(d.kept===v?" sel":""),l);b.type="button";
+      b.onclick=()=>{if(d.kept===v)delete d.kept;else d.kept=v;renderSheet()};kc.append(b)});
+    gK.append(kc);
+    const lv=limitVerdict(d,ed.mode==="edit"?ed.id:null);if(lv)gK.append(el("p","note "+lv.cls,lv.text));
+    sh.append(gK);
 
     // lure
     const gL=el("div","fgroup");gL.append(el("div","flabel","Csali"));
