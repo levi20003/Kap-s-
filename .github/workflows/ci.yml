@@ -1,0 +1,44 @@
+# Every push: web tests (rules + browser) and a full APK build with build.sh.
+# The APK is signed with a throwaway CI key: it cannot be installed over the real app, it only proves the build works.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: SDK (platform 35, build-tools 35.0.0)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+      - name: Throwaway signing key
+        run: |
+          keytool -genkeypair -keystore fogasnaplo.keystore -alias fogasnaplo -keyalg RSA -keysize 2048 -validity 2 \
+            -storepass ci-only-123 -keypass ci-only-123 -dname "CN=Fogasnaplo CI"
+          echo ci-only-123 > keystore-jelszo.txt
+      - run: ./build.sh 999 ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fogasnaplo-CI-kulccsal
+          path: out/Fogasnaplo.apk
+          retention-days: 7

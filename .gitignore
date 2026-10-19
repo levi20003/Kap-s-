@@ -20,3 +20,6 @@ build/
 .idea/
 *.iml
 .DS_Store
+
+# Tesztek függőségei
+node_modules/
