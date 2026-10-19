@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 6-11: Google backup keeps the catch log, leaves out full-size photos to stay under the 25 MB limit -->
+<full-backup-content>
+    <exclude domain="file" path="photos/" />
+</full-backup-content>

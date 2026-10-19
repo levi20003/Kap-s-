@@ -1,0 +1,8 @@
+# Aláíró kulcs és jelszó: soha ne kerüljön a repóba
+fogasnaplo.keystore
+keystore-jelszo.txt
+
+# Build kimenet
+out/
+*.apk
+*.zip

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: cloud backup skips full-size photos (25 MB limit); phone-to-phone transfer takes everything -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="photos/" />
+    </cloud-backup>
+    <device-transfer />
+</data-extraction-rules>
