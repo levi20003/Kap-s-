@@ -31,6 +31,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Az activity `singleTask`; újra létrehozott activity nem rögzít újra fogást.
 - Android 15+ teljes képernyő: a WebView egy `FrameLayout`-ban van, ami a rendszersávok és a billentyűzet méretével párnáz (API 35+).
 - Vissza gomb: API 33+ `OnBackInvokedCallback` (Android 16-tól csak ez működik), régebben `onBackPressed`; mindkettő `handleBack()` → `__fnBack`.
+- Térkép: a fogás helye `coordsOf(c)` (kézi `place`, ennek híján az automatikus `gps`); a csak GPS-es fogás kék (`.pin.gps`) jelölőt kap.
+- Helyválasztó: a fogás GPS-helyén nyílik, a jelölő előre ott van; 12-es nagyítás alatt a koppintás csak ránagyít (pontatlan jelölés ellen).
+- Számláló: a „Mai horgászidő” alapból kompakt (`fogasnaplo.todayOpen`), hogy a halfajok és a + gombok elsőre látsszanak.
+  Fogások: a statisztika lenyitható blokk, 5 fogás alatt csukva (`fogasnaplo.statsOpen` a felhasználó választása).
 - Ha a WebView renderelője összeomlik, a `MainActivity` újraindítja magát (`onRenderProcessGone`).
 
 ## Tesztek és CI

@@ -174,7 +174,7 @@ select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px so
 /* map */
 #bigMap{height:calc(100vh - 330px - env(safe-area-inset-bottom,0px));min-height:320px;border-radius:22px;border:1px solid var(--line-soft);overflow:hidden;background:#0d2329}
 .leaflet-container{font:inherit;background:#0d2329}
-.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55) sepia(.18)}
+.leaflet-tile-pane{filter:invert(.9) hue-rotate(180deg) brightness(1.18) contrast(.98) saturate(.65) sepia(.1)}
 .leaflet-bar a{background:var(--surface);color:var(--fg);border-color:var(--line)}
 .leaflet-bar a:hover{background:var(--surface-2)}
 .leaflet-control-attribution{background:rgba(11,26,31,.75)!important;color:var(--muted)!important}
@@ -184,6 +184,7 @@ select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px so
 .leaflet-popup-content b{font-weight:600}
 .leaflet-popup-content img{display:block;width:170px;max-width:100%;border-radius:10px;margin-bottom:8px}
 .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.pin.gps{background:radial-gradient(circle at 40% 40%,var(--water),var(--water-deep))}
 .pin{width:24px;height:24px;border-radius:50% 50% 50% 0;background:radial-gradient(circle at 40% 40%,var(--accent-2),var(--accent));border:2px solid #fff3ea;transform:rotate(-45deg);box-shadow:0 3px 10px rgba(0,0,0,.6)}
 
 /* tab bar */
@@ -278,6 +279,15 @@ textarea.inp{resize:vertical;min-height:68px}
 .best b{font-size:.95rem}
 .best span{color:var(--muted);font-size:.84rem}
 .search{width:100%}
+.stack{display:flex;flex-direction:column;gap:22px}
+.statsbar{display:flex;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-card);padding:12px 16px;color:var(--fg);text-align:left}
+.statsbar b{font-family:var(--f-display);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--water)}
+.statsbar span{flex:1;font-size:.84rem;color:var(--muted)}
+.statsbar i{font-style:normal;color:var(--water);transition:transform .2s}
+.statsbar[aria-expanded="true"] i{transform:rotate(180deg)}
+.more summary{color:var(--water);font-size:.86rem;cursor:pointer;padding:4px 0}
+.more p{margin-top:8px}
+.today-more{align-self:flex-start;margin-top:2px}
 
 /* today card */
 .today{position:relative;overflow:hidden;background:linear-gradient(160deg,#173f47 0%,#10282f 70%);border:1px solid var(--line-soft);border-radius:22px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px}
@@ -389,15 +399,22 @@ textarea.inp{resize:vertical;min-height:68px}
       </div>
       <div class="autobk" id="autoBk" hidden></div>
       <div class="confirm" id="importAsk" hidden></div>
-      <p class="hint">Automatikus Google-mentés: a fogásnaplót az Android naponta egyszer menti a Google-fiókodba (töltőn, wifin), és új telefon beállításakor visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük; azokat a fotós (ZIP) mentés viszi. Ellenőrizd, hogy be van-e kapcsolva: Beállítások → Google → Biztonsági mentés.</p>
-      <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra. Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
+      <p class="hint" id="backupMsg">Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
+      <details class="more"><summary>Hogyan működik a mentés?</summary>
+        <p class="hint">Google-mentés: az Android naponta egyszer menti a naplót a Google-fiókodba (töltőn, wifin), és új telefonon visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük; azokat a fotós (ZIP) mentés viszi. Bekapcsolása: Beállítások → Google → Biztonsági mentés.</p>
+        <p class="hint">Mentés fájlba: a napló egy .json fájlba, például a Drive-ra. Mentés fotókkal (ZIP): a napló és minden fotó egy fájlban.</p>
+      </details>
     </section>
 
-    <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
+    <details class="more"><summary>Honnan jönnek a tilalmi idők és korlátok?</summary>
+      <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
+    </details>
   </div>
 
   <!-- ===== Fogások ===== -->
   <div id="tab-list" class="wrap" style="gap:22px" hidden>
+    <button class="statsbar" id="statsToggle" type="button" aria-expanded="false" aria-controls="statsBox"><b>Statisztika</b><span id="statsNote"></span><i>▾</i></button>
+    <div class="stack" id="statsBox" hidden>
     <section id="lureSec">
       <div class="sechead"><h2>Legjobb csalik</h2></div>
       <div class="panel"><div class="lures" id="lures"></div></div>
@@ -422,6 +439,7 @@ textarea.inp{resize:vertical;min-height:68px}
       <div class="sechead"><h2>Fajonként mi működött</h2></div>
       <div class="panel"><div class="best" id="bestStats"></div></div>
     </section>
+    </div>
     <section>
       <div class="sechead">
         <h2 id="listTitle">Fogások</h2>
@@ -759,6 +777,10 @@ textarea.inp{resize:vertical;min-height:68px}
 
     renderMonths(yearCatches);
     renderBest(yearCatches);
+    // statistics: closed by default while there is too little to read from it, then the user's choice
+    const nY=yearCatches.length,pref=statsPref(),open=nY>0&&(pref!=null?pref:nY>=5);
+    $("statsToggle").hidden=nY<1;$("statsBox").hidden=!open;$("statsToggle").setAttribute("aria-expanded",String(open));
+    $("statsNote").textContent=nY+" fogás alapján"+(nY<5?" · kevés még az adat":"");
 
     // filter chips
     const spIds=[...new Set(yearCatches.map(c=>c.sp))];
@@ -790,6 +812,8 @@ textarea.inp{resize:vertical;min-height:68px}
     });
   }
 
+  const STATS_KEY="fogasnaplo.statsOpen";
+  const statsPref=()=>{try{const v=localStorage.getItem(STATS_KEY);return v==null?null:v==="1"}catch(e){return null}};
   const MONTHS=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
   const MONTHS_SHORT=["jan","feb","már","ápr","máj","jún","júl","aug","sze","okt","nov","dec"];
   const MONTHS_LONG=["januárban","februárban","márciusban","áprilisban","májusban","júniusban","júliusban","augusztusban","szeptemberben","októberben","novemberben","decemberben"];
@@ -832,23 +856,25 @@ textarea.inp{resize:vertical;min-height:68px}
   function pinIcon(cls){return L.divIcon({className:"",html:'<div class="pin '+(cls||"")+'"></div>',iconSize:[22,22],iconAnchor:[11,22],popupAnchor:[0,-20]})}
   function renderMap(){
     const y=state.year;
-    const pts=state.catches.filter(c=>c.y===y&&c.place&&c.place.lat!=null&&state.species.some(s=>s.id===c.sp));
+    const pts=state.catches.filter(c=>c.y===y&&coordsOf(c)&&state.species.some(s=>s.id===c.sp));
+    const auto=pts.filter(c=>!(c.place&&c.place.lat!=null)).length;
     $("mapTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+" térképen";
-    $("mapHint").textContent=pts.length?pts.length+" fogás van helyhez kötve. Koppints egy jelölőre a részletekért.":"Még nincs helyhez kötött fogás ebben az évben. Fogásnál a „Hely megadása térképen” gombbal jelölheted be, hol fogtad.";
+    $("mapHint").textContent=pts.length?pts.length+" fogás a térképen"+(auto?` (ebből ${auto} a rögzítéskori GPS-helyen, kék jelölővel)`:"")+". Koppints egy jelölőre a részletekért.":"Még nincs helyhez kötött fogás ebben az évben. Fogásnál a „Hely megadása térképen” gombbal jelölheted be, hol fogtad.";
     if(!window.L){withLeaflet(()=>{if(state.tab==="map")renderMap()});return}
     if(!bigMap){bigMap=L.map("bigMap",{zoomControl:true}).setView(HU_CENTER,7);tiles().addTo(bigMap);bigLayer=L.layerGroup().addTo(bigMap)}
     setTimeout(()=>bigMap.invalidateSize(),0);
     bigLayer.clearLayers();
     const ll=[];
     pts.forEach(c=>{
-      const m=L.marker([c.place.lat,c.place.lng],{icon:pinIcon()}).addTo(bigLayer);ll.push([c.place.lat,c.place.lng]);
+      const co=coordsOf(c),gpsOnly=!(c.place&&c.place.lat!=null);
+      const m=L.marker([co.lat,co.lng],{icon:pinIcon(gpsOnly?"gps":"")}).addTo(bigLayer);ll.push([co.lat,co.lng]);
       const box=el("div");
       if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.src=c.photo.thumb||c.photo.src;box.append(im)}
       const b=el("b",null,spName(c.sp));box.append(b);const sz=sizeText(c);if(sz)box.append(" · "+sz);
       box.append(el("div",null,fmtDate(c.at)+(c.t?" "+fmtTime(c.at):"")));
       if(c.lure)box.append(el("div",null,"Csali: "+c.lure));
       if(c.wx)box.append(el("div",null,wxLine(c.wx)));
-      if(c.place.name)box.append(el("div",null,c.place.name));
+      if(gpsOnly)box.append(el("div",null,"Rögzítéskori GPS-hely"));else if(c.place.name)box.append(el("div",null,c.place.name));
       const ed=el("button","linkbtn","Szerkesztés");ed.onclick=()=>openEditor({mode:"edit",id:c.id});box.append(ed);
       m.bindPopup(box);
     });
@@ -1036,29 +1062,32 @@ textarea.inp{resize:vertical;min-height:68px}
   function openPicker(){
     if(!window.L){withLeaflet(()=>{if(ed)openPicker()});return}
     const d=ed.draft;
-    pick=d.place&&d.place.lat!=null?{...d.place}:{name:"",lat:null,lng:null};
+    pick=d.place&&d.place.lat!=null?{...d.place}:d.gps?{name:"",lat:d.gps.lat,lng:d.gps.lng,auto:true}:{name:"",lat:null,lng:null};
     $("picker").hidden=false;$("pickName").value=pick.name||"";
     if(!pickMap){pickMap=L.map("pickMap").setView(HU_CENTER,7);tiles().addTo(pickMap);
-      pickMap.on("click",e=>setPick(e.latlng.lat,e.latlng.lng))}
+      // from far out a tap cannot be precise: zoom in to it first
+      pickMap.on("click",e=>{if(pickMap.getZoom()<12){pickMap.setView(e.latlng,Math.min(pickMap.getZoom()+4,15));$("pickHint").textContent="Ránagyítottam. Most koppints a pontos helyre.";return}
+        setPick(e.latlng.lat,e.latlng.lng)})}
     setTimeout(()=>{pickMap.invalidateSize();
       if(pick.lat!=null)pickMap.setView([pick.lat,pick.lng],15);
-      else{const kp=knownPlaces();if(kp.length)pickMap.setView([kp[0].lat,kp[0].lng],13);else pickMap.setView(HU_CENTER,7)}
+      else{const h=homeLoc(),kp=knownPlaces();if(h)pickMap.setView([h.lat,h.lng],13);else if(kp.length)pickMap.setView([kp[0].lat,kp[0].lng],13);else pickMap.setView(HU_CENTER,7)}
       drawPick()},30);
     const pp=$("pickPlaces");pp.replaceChildren();
     knownPlaces().filter(p=>p.name).forEach(p=>{const c=el("button","chip solid",p.name);c.onclick=()=>{pick={...p};$("pickName").value=p.name;pickMap.setView([p.lat,p.lng],15);drawPick()};pp.append(c)});
   }
-  function setPick(lat,lng){pick.lat=lat;pick.lng=lng;drawPick()}
+  function setPick(lat,lng){pick.lat=lat;pick.lng=lng;pick.auto=false;drawPick()}
   function drawPick(){
     if(pick.lat==null){if(pickMarker){pickMarker.remove();pickMarker=null}$("pickHint").textContent="Koppints a térképre, ahol a halat fogtad.";return}
-    if(!pickMarker){pickMarker=L.marker([pick.lat,pick.lng],{icon:pinIcon(),draggable:true}).addTo(pickMap);pickMarker.on("dragend",()=>{const p=pickMarker.getLatLng();pick.lat=p.lat;pick.lng=p.lng;drawPick()})}
+    if(!pickMarker){pickMarker=L.marker([pick.lat,pick.lng],{icon:pinIcon(),draggable:true}).addTo(pickMap);pickMarker.on("dragend",()=>{const p=pickMarker.getLatLng();pick.lat=p.lat;pick.lng=p.lng;pick.auto=false;drawPick()})}
     else pickMarker.setLatLng([pick.lat,pick.lng]);
-    $("pickHint").textContent="Kijelölve: "+pick.lat.toFixed(5)+", "+pick.lng.toFixed(5)+". Húzással vagy koppintással módosíthatod.";
+    $("pickHint").textContent=pick.auto?"A rögzítéskori helyed van kijelölve. Ha máshol fogtad, koppints oda vagy húzd a jelölőt, aztán Kész.":
+      "Kijelölve: "+pick.lat.toFixed(5)+", "+pick.lng.toFixed(5)+". Húzással vagy koppintással módosíthatod.";
   }
   function closePicker(){$("picker").hidden=true}
   $("pickCancel").onclick=closePicker;
   $("pickDone").onclick=()=>{
     if(pick.lat==null){toast("Koppints a térképre a hely kijelöléséhez.");return}
-    const name=$("pickName").value.trim();ed.draft.place={name,lat:Math.round(pick.lat*1e6)/1e6,lng:Math.round(pick.lng*1e6)/1e6};
+    const name=$("pickName").value.trim();ed.draft.place={name,lat:Math.round(pick.lat*1e6)/1e6,lng:Math.round(pick.lng*1e6)/1e6};pick.auto=false;
     closePicker();renderSheet();
   };
   $("pickGps").onclick=()=>{
@@ -1315,7 +1344,9 @@ textarea.inp{resize:vertical;min-height:68px}
     sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
     const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));nt.append(el("span",null,dirName(H.wind_direction_10m[i])+" "+Math.round(H.wind_speed_10m[i])+" km/h"));top.append(nt);
     card.append(top);
-    card.append(sparkSvg(H,i));
+    const open=todayOpen(),more=el("button","linkbtn today-more",open?"Kevesebb ▴":"Részletek ▾");more.type="button";
+    more.onclick=()=>{try{localStorage.setItem("fogasnaplo.todayOpen",open?"0":"1")}catch(e){}renderToday()};
+    if(open)card.append(sparkSvg(H,i));
     const facts=el("div","facts");
     const tr=trendOf(sc.dp);facts.append(el("span","fact",Math.round(sc.p)+" hPa "+(tr==="up"?"↑":tr==="down"?"↓":"→")+" "+TREND_TXT[tr]));
     const mp=moonPhase(now);const mf=el("span","fact");mf.append(moonSvg(mp,16));mf.append(moonName(mp));facts.append(mf);
@@ -1323,6 +1354,8 @@ textarea.inp{resize:vertical;min-height:68px}
     if(st){facts.append(el("span","fact","Napkelte "+fmtHM(st.rise)));facts.append(el("span","fact","Napnyugta "+fmtHM(st.set)))}
     const pp=H.precipitation_probability?H.precipitation_probability[i]:null;if(pp!=null&&pp>=30)facts.append(el("span","fact","Eső esélye "+pp+"%"));
     card.append(facts);
+    // compact by default: the counter below is what you need at the water
+    if(!open){card.append(more);box.append(card);return}
     if(st){
       const w=el("div","windows");const add=(lbl,a,b)=>{const x=el("div","win");x.append(el("span",null,lbl));x.append(el("b",null,fmtHM(a)+"–"+fmtHM(b)));w.append(x)};
       const tom=new Date(now);tom.setDate(tom.getDate()+1);const st2=sunTimes(tom,loc.lat,loc.lng);
@@ -1335,8 +1368,9 @@ textarea.inp{resize:vertical;min-height:68px}
     const ul=el("ul","reasons");sc.reasons.forEach(([cls,t])=>ul.append(el("li",cls,t)));card.append(ul);
     const ago=Math.round((Date.now()-D.fetched)/6e4);
     card.append(el("div","foot",(today.err?today.err+" ":"")+"Frissítve "+(ago<1?"most":ago+" perce")+". Tájékoztató becslés a légnyomás, szél, felhőzet és holdfázis alapján. Forrás: Open-Meteo."));
-    box.append(card);
+    card.append(more);box.append(card);
   }
+  const todayOpen=()=>{try{return localStorage.getItem("fogasnaplo.todayOpen")==="1"}catch(e){return false}};
   $("todayRefresh").onclick=()=>{toast("Helymeghatározás…");requestLoc(r=>{if(r&&!r.error){loadToday(true)}else{toast((r&&r.error)||"Nem sikerült meghatározni a helyed.");loadToday(true)}})};
   window.addEventListener("online",()=>loadToday(false));
   document.addEventListener("visibilitychange",()=>{if(document.hidden)return;
@@ -1542,6 +1576,7 @@ textarea.inp{resize:vertical;min-height:68px}
   $("regionSel").onchange=e=>{state.region=e.target.value;try{localStorage.setItem("fogasnaplo.region",state.region)}catch(_){}render();pushReminders()};
   $("addLater").onclick=()=>openEditor({mode:"create"});
   $("catchSearch").oninput=e=>{state.q=e.target.value;render()};
+  $("statsToggle").onclick=()=>{const open=$("statsToggle").getAttribute("aria-expanded")==="true";try{localStorage.setItem(STATS_KEY,open?"0":"1")}catch(e){}render()};
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});
 
   sync();

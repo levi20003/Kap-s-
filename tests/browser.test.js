@@ -212,6 +212,55 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(st === 1 && (await q.locator('#sheet h3').innerText()).toLowerCase().includes('csuka rögzítve'), 'parancsikon: új csukafogás és megnyílt a szerkesztő');
     await ctx.close();
   }
+  // field-test fixes: GPS catches on the map, picker starts at the catch, compact forecast, folded statistics
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear(), now = new Date();
+    const hours = Array.from({ length: 49 }, (_, k) => { const d = new Date(now); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - 24 + k);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + 'T' + String(d.getHours()).padStart(2, '0') + ':00'; });
+    const H = { time: hours, temperature_2m: hours.map(() => 18), pressure_msl: hours.map((_, k) => 1020 - k * 0.1), wind_speed_10m: hours.map(() => 8),
+      wind_direction_10m: hours.map(() => 0), cloud_cover: hours.map(() => 80), weather_code: hours.map(() => 3), precipitation_probability: hours.map(() => 10) };
+    await q.addInitScript(({ Y, H }) => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+        catches: [{ id: 'g1', sp: 's1', at: new Date().toISOString(), y: Y, t: true, gps: { lat: 46.2557, lng: 20.1575 } }] }));
+      localStorage.setItem('fogasnaplo.home', JSON.stringify({ lat: 46.2557, lng: 20.1575, ts: Date.now() }));
+      localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.2557, lng: 20.1575, h: H }));
+    }, { Y, H });
+    await q.goto(PAGE); await q.waitForTimeout(600);
+    ok(await q.locator('#today .today-more').count() === 1 && await q.locator('#today svg.spark').count() === 0, 'előrejelzés alapból kompakt (nincs görbe, van „Részletek”)');
+    await q.locator('#today .today-more').click();
+    ok(await q.locator('#today svg.spark').count() === 1 && (await q.locator('#today .today-more').innerText()).includes('Kevesebb'), 'Részletek: kinyílik a teljes előrejelzés');
+    ok(await q.locator('details.more').count() === 2, 'Mentés és szabályok: hosszú szöveg lenyitható részben');
+
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.waitForTimeout(150);
+    ok(await q.locator('#statsBox').isHidden() && (await q.locator('#statsNote').innerText()).includes('1 fogás alapján'), 'statisztika 1 fogásnál összecsukva');
+    await q.locator('#statsToggle').click();
+    ok(await q.locator('#statsBox').isVisible(), 'statisztika lenyitható');
+    await q.locator('#statsToggle').click();
+
+    await q.locator('.tabbar button[data-tab="map"]').click(); await q.waitForTimeout(800);
+    ok(await q.locator('#bigMap .pin.gps').count() === 1 && (await q.locator('#mapHint').innerText()).includes('GPS'), 'térkép: GPS-es fogás kék jelölővel látszik');
+
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
+    await q.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await q.waitForTimeout(500);
+    ok((await q.locator('#pickHint').innerText()).includes('rögzítéskori helyed'), 'helyválasztó: a rögzítéskori GPS-hely előre kijelölve');
+    ok(await q.evaluate(() => document.querySelector('#pickMap').querySelectorAll('.pin').length) === 1, 'helyválasztó: jelölő a GPS-helyen');
+    await q.locator('#pickDone').click(); await q.locator('#sheet .btn-main').click(); await q.waitForTimeout(150);
+    const pl = (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')))).catches[0].place;
+    ok(pl && Math.abs(pl.lat - 46.2557) < 1e-4, 'Kész után a hely elmentve a GPS-pontra');
+    await ctx.close();
+  }
+  {
+    // no GPS, no home: the picker starts zoomed out, a tap there only zooms in
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [{ id: 'n1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear() }] })));
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click();
+    await q.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await q.waitForTimeout(500);
+    const box = await q.locator('#pickMap').boundingBox(); await q.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await q.waitForTimeout(400);
+    ok((await q.locator('#pickHint').innerText()).includes('Ránagyítottam') && await q.locator('#pickMap .pin').count() === 0, 'országos nézetben koppintás: ránagyít, nem tesz le jelölőt');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();
