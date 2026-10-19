@@ -282,6 +282,23 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark' && (await q.evaluate(() => window.__th)).slice(-1)[0] === false, 'telefon sötét módra vált: az app is átvált');
     await ctx.close();
   }
+  // test build: update banner
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); window.__u = { inst: 0 };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
+        checkUpdate() { setTimeout(() => window.__fnUpdate({ versionCode: 1042, versionName: 'teszt-abc1234', notes: 'Zsálya színvilág' })); },
+        installUpdate() { window.__u.inst++; setTimeout(() => window.__fnUpdateState({ state: 'ready' })); } }; });
+    await q.goto(PAGE); await q.waitForTimeout(2900);
+    ok(await q.locator('#updBar').isVisible() && (await q.locator('#updBar').innerText()).includes('Zsálya színvilág'), 'tesztverzió: frissítés-sáv megjelenik a változás leírásával');
+    await q.locator('#updBar .btn-main').click(); await q.waitForTimeout(100);
+    ok((await q.evaluate(() => window.__u.inst)) === 1 && await q.locator('#updBar').isHidden(), 'Frissítés: letöltés indul, megnyílik a telepítő');
+    await q.reload(); await q.waitForTimeout(2900);
+    await q.locator('#updBar .no').click();
+    await q.reload(); await q.waitForTimeout(2900);
+    ok(await q.locator('#updBar').isHidden(), '„Később”: erre a verzióra nem kérdez újra');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();

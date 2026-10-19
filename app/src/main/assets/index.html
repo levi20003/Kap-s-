@@ -364,6 +364,7 @@ textarea.inp{resize:vertical;min-height:68px}
     </div>
   </header>
   <p class="note closed" id="saveWarn" role="alert" hidden>A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést fájlba a Számláló alján!</p>
+  <div class="autobk" id="updBar" role="status" hidden></div>
 
   <!-- ===== Számláló ===== -->
   <div id="tab-count" class="wrap" style="gap:22px">
@@ -1488,6 +1489,24 @@ textarea.inp{resize:vertical;min-height:68px}
   window.__fnSysTheme=function(r){sysNight=!!(r&&r.night);if(themePref()==="auto")applyTheme()};
   if(!ANDROID)try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",e=>{sysNight=e.matches;if(themePref()==="auto")applyTheme()})}catch(e){}
 
+  /* ---------- test build: one-tap update to the newest CI build ---------- */
+  const UPD_KEY="fogasnaplo.updSkip";
+  window.__fnUpdate=function(v){
+    let skip=null;try{skip=localStorage.getItem(UPD_KEY)}catch(e){}
+    if(!v||String(v.versionCode)===skip)return;
+    const b=$("updBar");b.replaceChildren();
+    b.append(el("span",null,"Új tesztverzió érhető el"+(v.notes?": "+v.notes:"")+"."));
+    const go=el("button","btn-main","Frissítés");go.type="button";
+    go.onclick=()=>{go.disabled=true;go.textContent="Letöltés…";ANDROID.installUpdate()};
+    const later=el("button","no","Később");later.type="button";
+    later.onclick=()=>{try{localStorage.setItem(UPD_KEY,String(v.versionCode))}catch(e){}b.hidden=true};
+    b.append(go,later);b.hidden=false;
+  };
+  window.__fnUpdateState=function(r){
+    const b=$("updBar"),go=b.querySelector(".btn-main");
+    if(r&&r.error){toast(r.error);if(go){go.disabled=false;go.textContent="Újra"}}else b.hidden=true; // installer is open
+  };
+
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){
     if(!$("picker").hidden){closePicker();return true}
@@ -1635,6 +1654,7 @@ textarea.inp{resize:vertical;min-height:68px}
   renderAutoBk();applyTheme();
   setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup()}),800);
   setTimeout(retryPendingWx,1500);
+  setTimeout(()=>{if(ANDROID&&ANDROID.checkUpdate)try{ANDROID.checkUpdate()}catch(e){}},2500);
   setTimeout(()=>loadToday(false),300);
 })();
 </script>

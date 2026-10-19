@@ -79,6 +79,8 @@ public class MainActivity extends Activity {
     private static final int PERM_LOC = 10;
     private static final int PERM_NOTIF = 11;
     static final String ACTION_QUICK = "hu.fogasnaplo.app.QUICK";
+    // test build self-update: CI publishes the latest test APK and its version here
+    private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
     private static final String UA = "Fogasnaplo/1.6 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
@@ -209,6 +211,72 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
         return new WebResourceResponse("image/png", null, 404, "Not found", null, new java.io.ByteArrayInputStream(new byte[0]));
+    }
+
+    /* ---------- test build self-update ---------- */
+    private boolean isTestBuild() { return !getPackageName().equals("hu.fogasnaplo.app"); }
+
+    @SuppressWarnings("deprecation")
+    private long ownVersion() {
+        try {
+            android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+        } catch (Exception e) { return 0; }
+    }
+
+    private static HttpURLConnection open(String url) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) java.net.URI.create(url).toURL().openConnection();
+        c.setRequestProperty("User-Agent", UA);
+        c.setConnectTimeout(10000);
+        c.setReadTimeout(30000);
+        c.setInstanceFollowRedirects(true); // github -> objects.githubusercontent (https to https)
+        return c;
+    }
+
+    private void checkUpdate() {
+        if (!isTestBuild()) return;
+        new Thread(() -> {
+            try {
+                HttpURLConnection c = open(UPDATE_BASE + "version.json");
+                if (c.getResponseCode() != 200) return;
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                try (InputStream in = c.getInputStream()) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0 && bo.size() < 65536) bo.write(buf, 0, n);
+                }
+                JSONObject v = new JSONObject(bo.toString("UTF-8"));
+                if (v.optLong("versionCode") > ownVersion()) js("__fnUpdate", v);
+            } catch (Exception ignored) {} // offline: try again next start
+        }).start();
+    }
+
+    private void installUpdate() {
+        if (!isTestBuild()) return;
+        new Thread(() -> {
+            File apk = UpdateProvider.apk(this), tmp = new File(apk.getPath() + ".part");
+            try {
+                HttpURLConnection c = open(UPDATE_BASE + "Fogasnaplo-TESZT.apk");
+                if (c.getResponseCode() != 200) throw new Exception("http " + c.getResponseCode());
+                try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                }
+                if (!tmp.renameTo(apk)) throw new Exception("rename");
+                Uri u = Uri.parse("content://" + getPackageName() + ".update/Fogasnaplo-TESZT.apk");
+                Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "application/vnd.android.package-archive")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                // the installer only accepts it over this app if it is signed with the same (CI test) key
+                runOnUiThread(() -> {
+                    try { startActivity(i); js("__fnUpdateState", new JSONObject().put("state", "ready")); }
+                    catch (Exception e) { js("__fnUpdateState", err("Nem sikerült megnyitni a telepítőt.")); }
+                });
+            } catch (Exception e) {
+                tmp.delete();
+                js("__fnUpdateState", err("A letöltés nem sikerült. Próbáld újra wifin."));
+            }
+        }).start();
     }
 
     /* ---------- theme: the page picks light/dark sage, the window follows ---------- */
@@ -735,6 +803,16 @@ public class MainActivity extends Activity {
                 startActivityForResult(i, REQ_SAVE);
             });
         }
+
+        /** Test build only: asks GitHub for a newer test version; answers through __fnUpdate if there is one. */
+        @JavascriptInterface
+        public void checkUpdate() { MainActivity.this.checkUpdate(); }
+
+        @JavascriptInterface
+        public void installUpdate() { MainActivity.this.installUpdate(); }
+
+        @JavascriptInterface
+        public boolean isTestBuild() { return MainActivity.this.isTestBuild(); }
 
         /** True when the phone is in dark mode (the page's "automatic" theme follows it). */
         @JavascriptInterface

@@ -18,6 +18,9 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
 - Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Fogásnapló TESZT" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
+- A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,
+  versionCode = 1000 + futásszám). A tesztapp induláskor ezt nézi (`checkUpdate`), és egy koppintással frissít (`installUpdate` → rendszer-telepítő).
+  Csak a tesztbuildben: a manifest `<!--TESZT:…-->` sorait a `build.sh` kapcsolja be (`REQUEST_INSTALL_PACKAGES`, `UpdateProvider`).
 
 ## Működés, amire figyelni kell
 

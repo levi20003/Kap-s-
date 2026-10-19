@@ -11,6 +11,8 @@ cd $P/app/src/main
 sed -e 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="hu.fogasnaplo.app">|' \
     -e "s|android:authorities=\"hu.fogasnaplo.app.shot\"|android:authorities=\"$APP_ID.shot\"|" -e "s|android:label=\"Fogásnapló\"|android:label=\"$LABEL\"|" \
     AndroidManifest.xml > $O/AndroidManifest.xml
+# test build: switch on the self-update parts (install permission, update provider)
+[ "$APP_ID" != hu.fogasnaplo.app ] && sed -i -e 's|<!--TESZT:\(.*\)-->|\1|' -e "s|android:authorities=\"hu.fogasnaplo.app.update\"|android:authorities=\"$APP_ID.update\"|" $O/AndroidManifest.xml
 RENAME=; [ "$APP_ID" != hu.fogasnaplo.app ] && RENAME="--rename-manifest-package $APP_ID" # code and R stay in hu.fogasnaplo.app
 $BT/aapt2 compile --dir res -o $O/res/res.zip
 $BT/aapt2 link -o $O/base.apk -I $JAR --manifest $O/AndroidManifest.xml -A assets \
