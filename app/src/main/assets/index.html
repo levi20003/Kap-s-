@@ -107,6 +107,8 @@ select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px so
 .del{border:1px solid var(--danger);color:var(--danger);background:none;border-radius:10px;padding:8px 12px;font-size:.88rem;font-weight:600}
 .confirm{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .confirm span{flex:1 1 180px}
+.autobk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.autobk span{flex:1 1 220px}
 .yes{background:var(--danger);color:#2a0a08;border:0;border-radius:10px;padding:8px 12px;font-weight:600}
 .no{background:none;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 
@@ -363,8 +365,13 @@ textarea.inp{resize:vertical;min-height:68px}
         <label for="importFile">Visszatöltés fájlból</label>
         <input type="file" id="importFile" class="vh" accept="application/json,.json">
       </div>
+      <div class="backup" id="zipRow" hidden>
+        <button id="zipBtn" type="button">Mentés fotókkal (ZIP)</button>
+        <button id="zipInBtn" type="button">Visszatöltés ZIP-ből</button>
+      </div>
+      <div class="autobk" id="autoBk" hidden></div>
       <div class="confirm" id="importAsk" hidden></div>
-      <p class="hint">Automatikus Google-mentés: a fogásnaplót az Android naponta egyszer menti a Google-fiókodba (töltőn, wifin), és új telefon beállításakor visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük. Ellenőrizd, hogy be van-e kapcsolva: Beállítások → Google → Biztonsági mentés.</p>
+      <p class="hint">Automatikus Google-mentés: a fogásnaplót az Android naponta egyszer menti a Google-fiókodba (töltőn, wifin), és új telefon beállításakor visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük; azokat a fotós (ZIP) mentés viszi. Ellenőrizd, hogy be van-e kapcsolva: Beállítások → Google → Biztonsági mentés.</p>
       <p class="hint" id="backupMsg">Kézi mentés: a fenti gombbal fájlba is mentheted, például a Drive-ra. Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
     </section>
 
@@ -1272,7 +1279,7 @@ textarea.inp{resize:vertical;min-height:68px}
   window.addEventListener("online",()=>loadToday(false));
   document.addEventListener("visibilitychange",()=>{if(document.hidden)return;
     if(ymd(new Date())!==ymd(NOW)&&!ed&&$("picker").hidden){finishDelete();location.reload();return}
-    loadToday(false)});
+    loadToday(false);maybeAutoBackup()});
 
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){
@@ -1318,6 +1325,10 @@ textarea.inp{resize:vertical;min-height:68px}
     const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
     catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés. Válaszd a „Mentés fájlba” gombbal készült .json fájlt.";return}
+    askImport(d);
+  };
+  function askImport(d){
+    const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     const plan=planImport(d);
     if(!plan.newC.length&&!plan.newSp.length){$("backupMsg").textContent="Ebben a fájlban nincs új fogás, a naplód már mindent tartalmaz.";return}
     const what=[plan.newC.length?plan.newC.length+" új fogás":"",plan.newSp.length?plan.newSp.length+" új halfaj":""].filter(Boolean).join(" és ");
@@ -1326,7 +1337,65 @@ textarea.inp{resize:vertical;min-height:68px}
     yes.onclick=()=>{ask.hidden=true;applyImport(plan);$("backupMsg").textContent="Visszatöltve: "+what+".";toast("Visszatöltve")};
     const no=el("button","no","Mégse");no.type="button";no.onclick=()=>{ask.hidden=true};
     ask.append(yes,no);ask.hidden=false;
+  }
+
+  /* ---------- backup with photos (Android): zip by hand, or every week into a chosen folder ---------- */
+  const AUTO_KEY="fogasnaplo.autobackup",WEEK=7*864e5;
+  const hasZip=()=>!!(ANDROID&&ANDROID.zipToFolder);
+  function autoInfo(){try{return JSON.parse(localStorage.getItem(AUTO_KEY)||"null")||{}}catch(e){return{}}}
+  function setAutoInfo(o){try{localStorage.setItem(AUTO_KEY,JSON.stringify(o))}catch(e){}}
+  // photos travel as files in the zip, so the log keeps its file:// uris
+  const zipJson=()=>JSON.stringify({app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,catches:data.catches});
+  const zipName=()=>"fogasnaplo-"+ymd(new Date())+".zip";
+  let zipBusy=false;
+  function backupNow(auto){
+    if(!hasZip()||zipBusy||!ANDROID.backupFolder())return;
+    zipBusy=true;renderAutoBk();ANDROID.zipToFolder(zipJson(),zipName(),!!auto);
+  }
+  function maybeAutoBackup(){
+    if(!hasZip()||!ANDROID.backupFolder()||!data.catches.length)return;
+    const i=autoInfo();if(i.ts&&Date.now()-i.ts<WEEK)return;if(i.failTs&&Date.now()-i.failTs<864e5)return; // after a failure: retry the next day
+    backupNow(true);
+  }
+  window.__fnZipDone=function(r){
+    zipBusy=false;
+    if(r&&r.ok){
+      if(r.name){setAutoInfo({ts:Date.now(),name:r.name,photos:r.photos});if(!r.auto)toast("Mentve a mappába")}
+      else{$("backupMsg").textContent=`ZIP-mentés kész: a napló és ${r.photos} fotó.`;toast("Mentés elkészült")}
+    }else{const msg=(r&&r.error)||"A mentés nem sikerült.";
+      if(r&&r.auto){const i=autoInfo();i.err=msg;i.failTs=Date.now();setAutoInfo(i)}else toast(msg)}
+    renderAutoBk();
   };
+  window.__fnBackupFolder=function(r){
+    if(r&&r.name){setAutoInfo({});backupNow(false)}else if(r&&r.error)toast(r.error);
+    renderAutoBk();
+  };
+  window.__fnZipIn=function(r){
+    if(!r||r.error){$("backupMsg").textContent=(r&&r.error)||"A visszatöltés nem sikerült.";return}
+    let d;try{d=JSON.parse(r.json);if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
+    catch(e){$("backupMsg").textContent="Ez a fájl nem Fogásnapló ZIP-mentés.";return}
+    // the photos were unpacked under their own names into this phone's folders
+    const seg=u=>u.slice(u.lastIndexOf("/")+1);
+    d.catches.forEach(c=>{if(!c||!c.photo)return;const p={...c.photo};
+      if(p.src&&p.src.startsWith("file:"))p.src=r.photos+seg(p.src);if(p.thumb&&p.thumb.startsWith("file:"))p.thumb=r.thumbs+seg(p.thumb);c.photo=p});
+    askImport(d);
+  };
+  function renderAutoBk(){
+    const box=$("autoBk");$("zipRow").hidden=box.hidden=!hasZip();if(box.hidden)return;
+    box.replaceChildren();const f=ANDROID.backupFolder();
+    const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b);return b};
+    if(!f){box.append(el("span",null,"Automatikus heti mentés a fotókkal együtt egy általad választott mappába, pl. a Drive-ra vagy SD-kártyára."));
+      btn("btn-main","Mappa kiválasztása",()=>ANDROID.pickBackupFolder());return}
+    const i=autoInfo();
+    const txt=zipBusy?`Mentés folyamatban ide: ${f}…`:i.err?`Az utolsó automatikus mentés nem sikerült. ${i.err}`:
+      i.ts?`Hetente automatikus mentés ide: ${f}. Utoljára: ${fmtDate(new Date(i.ts).toISOString())}, ${i.photos} fotóval.`:`Hetente automatikus mentés ide: ${f}.`;
+    box.append(el("span",i.err&&!zipBusy?"err":null,txt));
+    btn("no","Mentés most",()=>backupNow(false)).disabled=zipBusy;
+    btn("no","Másik mappa",()=>ANDROID.pickBackupFolder());
+    btn("no","Kikapcsolás",()=>{ANDROID.clearBackupFolder();setAutoInfo({});renderAutoBk()});
+  }
+  $("zipBtn").onclick=()=>{if(hasZip())ANDROID.saveZip(zipJson(),zipName())};
+  $("zipInBtn").onclick=()=>{if(hasZip())ANDROID.restoreZip()};
 
   /* ---------- photo files: thumbnails out of localStorage, orphans removed ---------- */
   // older versions kept every thumbnail as base64 inside the log; localStorage fills up at ~5 MB
@@ -1354,7 +1423,8 @@ textarea.inp{resize:vertical;min-height:68px}
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});
 
   sync();
-  setTimeout(()=>migrateThumbs(sweepFiles),800);
+  renderAutoBk();
+  setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup()}),800);
   setTimeout(retryPendingWx,1500);
   setTimeout(()=>loadToday(false),300);
 })();

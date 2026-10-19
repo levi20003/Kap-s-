@@ -111,6 +111,56 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(t.includes('ebből 5 elvitt') && (await q.locator('#catchList').innerText()).includes('visszaengedve'), 'lista: ' + t);
     await ctx2.close();
   }
+  // backup with photos: folder setup, weekly auto backup, zip restore
+  {
+    const mk = async (opts) => {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(({ seed, opts }) => {
+        localStorage.setItem('fogasnaplo.v1', JSON.stringify(seed));
+        if (opts.lastTs) localStorage.setItem('fogasnaplo.autobackup', JSON.stringify({ ts: opts.lastTs, name: 'x.zip', photos: 1 }));
+        let folder = opts.folder || ''; window.__z = { calls: [], saved: null };
+        window.FogasnaploAndroid = {
+          saveThumb() { return ''; }, readThumb() { return ''; }, deletePhoto() {}, cleanup() {}, getLocation() {}, pickPhoto() {}, saveBackup() {},
+          backupFolder() { return folder; }, clearBackupFolder() { folder = ''; },
+          pickBackupFolder() { folder = 'Drive/Fogások'; setTimeout(() => window.__fnBackupFolder({ name: folder })); },
+          zipToFolder(json, name, auto) { window.__z.calls.push({ name, auto, n: JSON.parse(json).catches.length });
+            setTimeout(() => window.__fnZipDone(opts.fail ? { error: 'A mentési mappa nem érhető el.', auto } : { ok: true, name, photos: 2, auto })); },
+          saveZip(json, name) { window.__z.saved = name; },
+          restoreZip() { setTimeout(() => window.__fnZipIn({ json: JSON.stringify(opts.zip), photos: 'file:///new/files/photos/', thumbs: 'file:///new/files/thumbs/' })); }
+        };
+      }, { seed, opts });
+      await q.goto(PAGE); await q.waitForTimeout(1200); return { ctx, q };
+    };
+    let { ctx, q } = await mk({});
+    ok((await q.locator('#autoBk').innerText()).includes('Mappa kiválasztása'), 'mentés: mappa még nincs, választó gomb látszik');
+    await q.locator('#autoBk .btn-main').click(); await q.waitForTimeout(200);
+    let z = await q.evaluate(() => window.__z);
+    ok(z.calls.length === 1 && z.calls[0].auto === false && z.calls[0].n === 3, 'mappaválasztás után azonnal ment');
+    ok((await q.locator('#autoBk').innerText()).includes('Utoljára'), 'állapot: „Hetente automatikus mentés ide … Utoljára”');
+    await q.locator('#zipBtn').click();
+    ok((await q.evaluate(() => window.__z.saved)) && (await q.evaluate(() => window.__z.saved)).endsWith('.zip'), 'Mentés fotókkal (ZIP) gomb');
+    await ctx.close();
+
+    ({ ctx, q } = await mk({ folder: 'Drive', lastTs: Date.now() - 8 * 864e5 }));
+    z = await q.evaluate(() => window.__z);
+    ok(z.calls.length === 1 && z.calls[0].auto === true, '8 napja volt mentés: induláskor automatikusan ment');
+    await ctx.close();
+    ({ ctx, q } = await mk({ folder: 'Drive', lastTs: Date.now() - 2 * 864e5 }));
+    ok((await q.evaluate(() => window.__z.calls.length)) === 0, '2 napja volt mentés: nem ment újra');
+    await ctx.close();
+    ({ ctx, q } = await mk({ folder: 'Drive', fail: true }));
+    ok(await q.locator('#autoBk .err').count() === 1, 'sikertelen automatikus mentés: hibaüzenet látszik');
+    await ctx.close();
+
+    ({ ctx, q } = await mk({ zip: { species: [{ id: 's1', name: 'Csuka' }], catches: [{ id: 'z1', sp: 's1', at: '2026-05-01T08:00:00.000Z', y: 2026,
+      photo: { src: 'file:///old/phone/files/photos/abc-1.jpg', thumb: 'file:///old/phone/files/thumbs/abc-t.jpg' } }] } }));
+    await q.locator('#zipInBtn').click(); await q.waitForTimeout(200);
+    ok((await q.locator('#importAsk').innerText()).includes('1 új fogás'), 'ZIP-visszatöltés: megerősítést kér');
+    await q.locator('#importAsk .btn-main').click();
+    const zc = (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')))).catches.find(c => c.id === 'z1');
+    ok(zc && zc.photo.src === 'file:///new/files/photos/abc-1.jpg' && zc.photo.thumb === 'file:///new/files/thumbs/abc-t.jpg', 'ZIP-visszatöltés: fotók az új telefon mappájára mutatnak');
+    await ctx.close();
+  }
   ok(errs.length === 0, 'nincs JS-hiba' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await b.close(); console.log(fails ? fails + ' HIBA' : 'MIND RENDBEN'); process.exit(fails ? 1 : 0);
 })();

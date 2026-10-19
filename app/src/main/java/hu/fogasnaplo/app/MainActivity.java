@@ -3,7 +3,10 @@ package hu.fogasnaplo.app;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,6 +19,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
@@ -43,20 +47,32 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 public class MainActivity extends Activity {
     private static final int REQ_SAVE = 1;
     private static final int REQ_OPEN = 2;
     private static final int REQ_CAM = 3;
     private static final int REQ_GAL = 4;
+    private static final int REQ_TREE = 5;
+    private static final int REQ_ZIP_OUT = 6;
+    private static final int REQ_ZIP_IN = 7;
+    private static final int KEEP_BACKUPS = 4;
     private static final int PERM_LOC = 10;
-    private static final String UA = "Fogasnaplo/1.5 (hu.fogasnaplo.app; Android personal fishing log)";
+    private static final String UA = "Fogasnaplo/1.6 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
     private boolean webDead = false;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup;
+    private String pendingZipJson;
     private final Handler main = new Handler(Looper.getMainLooper());
 
     @Override
@@ -416,6 +432,176 @@ public class MainActivity extends Activity {
                 final Uri u = data.getData();
                 processPhoto(() -> getContentResolver().openInputStream(u));
             }
+        } else if (req == REQ_TREE) {
+            if (res == RESULT_OK && data != null && data.getData() != null) setBackupTree(data.getData());
+            else js("__fnBackupFolder", err(""));
+        } else if (req == REQ_ZIP_OUT) {
+            final String json = pendingZipJson;
+            pendingZipJson = null;
+            if (res == RESULT_OK && data != null && data.getData() != null && json != null) {
+                final Uri u = data.getData();
+                new Thread(() -> {
+                    try (OutputStream os = getContentResolver().openOutputStream(u, "w")) {
+                        int n = writeZip(os, json);
+                        js("__fnZipDone", done(null, n, false));
+                    } catch (Exception e) {
+                        js("__fnZipDone", err("A mentés nem sikerült."));
+                    }
+                }).start();
+            }
+        } else if (req == REQ_ZIP_IN) {
+            if (res == RESULT_OK && data != null && data.getData() != null) {
+                final Uri u = data.getData();
+                new Thread(() -> readZip(u)).start();
+            }
+        }
+    }
+
+    /* ---------- backup with photos: zip of the log + photos/ + thumbs/ ---------- */
+    private SharedPreferences prefs() { return getSharedPreferences("fogasnaplo", MODE_PRIVATE); }
+
+    private void setBackupTree(Uri tree) {
+        try {
+            getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            String old = prefs().getString("backupTree", null);
+            if (old != null && !old.equals(tree.toString())) releaseTree(Uri.parse(old));
+            String name = treeName(tree);
+            prefs().edit().putString("backupTree", tree.toString()).putString("backupName", name).apply();
+            JSONObject o = new JSONObject();
+            o.put("name", name);
+            js("__fnBackupFolder", o);
+        } catch (Exception e) {
+            js("__fnBackupFolder", err("Ezt a mappát nem lehet használni. Válassz másikat."));
+        }
+    }
+
+    private void releaseTree(Uri tree) {
+        try {
+            getContentResolver().releasePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        } catch (Exception ignored) {}
+    }
+
+    private String treeName(Uri tree) {
+        Uri doc = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        try (Cursor c = getContentResolver().query(doc, new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst()) return c.getString(0);
+        } catch (Exception ignored) {}
+        return "kiválasztott mappa";
+    }
+
+    /** Writes the log and every photo/thumbnail file; returns the number of photos. */
+    private int writeZip(OutputStream os, String json) throws Exception {
+        int photos = 0;
+        try (ZipOutputStream z = new ZipOutputStream(os)) {
+            z.setLevel(Deflater.BEST_SPEED); // jpegs do not shrink anyway
+            z.putNextEntry(new ZipEntry("fogasnaplo.json"));
+            z.write(json.getBytes(StandardCharsets.UTF_8));
+            z.closeEntry();
+            byte[] buf = new byte[65536];
+            for (String d : new String[]{"photos", "thumbs"}) {
+                File[] fs = new File(getFilesDir(), d).listFiles();
+                if (fs == null) continue;
+                for (File f : fs) {
+                    if (!f.isFile() || !f.getName().endsWith(".jpg")) continue;
+                    z.putNextEntry(new ZipEntry(d + "/" + f.getName()));
+                    try (InputStream in = new FileInputStream(f)) {
+                        int n;
+                        while ((n = in.read(buf)) > 0) z.write(buf, 0, n);
+                    }
+                    z.closeEntry();
+                    if (d.equals("photos")) photos++;
+                }
+            }
+        }
+        return photos;
+    }
+
+    private static JSONObject done(String name, int photos, boolean auto) {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("ok", true);
+            if (name != null) o.put("name", name);
+            o.put("photos", photos);
+            o.put("auto", auto);
+        } catch (Exception ignored) {}
+        return o;
+    }
+
+    /** Backup into the chosen folder, replacing a same-named file and keeping only the newest few. */
+    private void zipToFolder(String json, String name, boolean auto) {
+        String t = prefs().getString("backupTree", null);
+        if (t == null) { js("__fnZipDone", err("Nincs kiválasztva mentési mappa.")); return; }
+        Uri tree = Uri.parse(t);
+        ContentResolver cr = getContentResolver();
+        Uri dir = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        Uri out = null;
+        try {
+            List<String[]> old = backupsIn(tree);
+            for (String[] b : old) if (b[1].equals(name)) DocumentsContract.deleteDocument(cr, DocumentsContract.buildDocumentUriUsingTree(tree, b[0]));
+            out = DocumentsContract.createDocument(cr, dir, "application/zip", name);
+            if (out == null) throw new Exception("create");
+            int n;
+            try (OutputStream os = cr.openOutputStream(out, "w")) { n = writeZip(os, json); }
+            List<String[]> all = backupsIn(tree);
+            for (int i = KEEP_BACKUPS; i < all.size(); i++) DocumentsContract.deleteDocument(cr, DocumentsContract.buildDocumentUriUsingTree(tree, all.get(i)[0]));
+            js("__fnZipDone", done(name, n, auto));
+        } catch (Exception e) {
+            try { if (out != null) DocumentsContract.deleteDocument(cr, out); } catch (Exception ignored) {}
+            JSONObject o = err("A mentési mappa nem érhető el. Válaszd ki újra a Mentés résznél.");
+            try { o.put("auto", auto); } catch (Exception ignored) {}
+            js("__fnZipDone", o);
+        }
+    }
+
+    /** {documentId, name} of our backups in the folder, newest first (names carry the date). */
+    private List<String[]> backupsIn(Uri tree) {
+        List<String[]> out = new ArrayList<>();
+        Uri kids = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        try (Cursor c = getContentResolver().query(kids, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+            while (c != null && c.moveToNext()) {
+                String n = c.getString(1);
+                if (n != null && n.startsWith("fogasnaplo-") && n.endsWith(".zip")) out.add(new String[]{c.getString(0), n});
+            }
+        }
+        Collections.sort(out, (a, b) -> b[1].compareTo(a[1]));
+        return out;
+    }
+
+    /** Unpacks photos (keeping their names) and hands the log to the page, which asks before merging. */
+    private void readZip(Uri u) {
+        String json = null;
+        File photos = new File(getFilesDir(), "photos"), thumbs = new File(getFilesDir(), "thumbs");
+        photos.mkdirs();
+        thumbs.mkdirs();
+        try (ZipInputStream z = new ZipInputStream(getContentResolver().openInputStream(u))) {
+            ZipEntry e;
+            byte[] buf = new byte[65536];
+            while ((e = z.getNextEntry()) != null) {
+                String n = e.getName();
+                if (n.equals("fogasnaplo.json")) {
+                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                    int k;
+                    while ((k = z.read(buf)) > 0) bo.write(buf, 0, k);
+                    json = bo.toString("UTF-8");
+                } else if (n.matches("(photos|thumbs)/[A-Za-z0-9-]+\\.jpg")) {
+                    File f = new File(n.startsWith("photos/") ? photos : thumbs, n.substring(7));
+                    if (f.exists()) continue;
+                    File tmp = new File(f.getPath() + ".tmp");
+                    try (OutputStream os = new FileOutputStream(tmp)) {
+                        int k;
+                        while ((k = z.read(buf)) > 0) os.write(buf, 0, k);
+                    }
+                    tmp.renameTo(f);
+                }
+            }
+            if (json == null) throw new Exception("no log");
+            JSONObject o = new JSONObject();
+            o.put("json", json);
+            o.put("photos", Uri.fromFile(photos) + "/");
+            o.put("thumbs", Uri.fromFile(thumbs) + "/");
+            js("__fnZipIn", o);
+        } catch (Exception ex) {
+            js("__fnZipIn", err("Ez a fájl nem Fogásnapló ZIP-mentés."));
         }
     }
 
@@ -429,6 +615,67 @@ public class MainActivity extends Activity {
                 i.setType("application/json");
                 i.putExtra(Intent.EXTRA_TITLE, filename);
                 startActivityForResult(i, REQ_SAVE);
+            });
+        }
+
+        /** Manual zip backup: the user picks where to save it. */
+        @JavascriptInterface
+        public void saveZip(String json, String filename) {
+            runOnUiThread(() -> {
+                pendingZipJson = json;
+                Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("application/zip");
+                i.putExtra(Intent.EXTRA_TITLE, filename);
+                startActivityForResult(i, REQ_ZIP_OUT);
+            });
+        }
+
+        /** Automatic backup into the chosen folder (background thread). */
+        @JavascriptInterface
+        public void zipToFolder(String json, String filename, boolean auto) {
+            new Thread(() -> MainActivity.this.zipToFolder(json, filename, auto)).start();
+        }
+
+        @JavascriptInterface
+        public void pickBackupFolder() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                try {
+                    startActivityForResult(i, REQ_TREE);
+                } catch (Exception e) {
+                    js("__fnBackupFolder", err("Ezen a telefonon nem lehet mappát választani."));
+                }
+            });
+        }
+
+        /** Display name of the backup folder, or "" when none is set. */
+        @JavascriptInterface
+        public String backupFolder() {
+            return prefs().getString("backupTree", null) == null ? "" : prefs().getString("backupName", "mappa");
+        }
+
+        @JavascriptInterface
+        public void clearBackupFolder() {
+            String t = prefs().getString("backupTree", null);
+            if (t != null) releaseTree(Uri.parse(t));
+            prefs().edit().remove("backupTree").remove("backupName").apply();
+        }
+
+        @JavascriptInterface
+        public void restoreZip() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("*/*");
+                i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip", "application/x-zip-compressed", "application/octet-stream"});
+                try {
+                    startActivityForResult(i, REQ_ZIP_IN);
+                } catch (Exception e) {
+                    js("__fnZipIn", err("Nem sikerült megnyitni a fájlválasztót."));
+                }
             });
         }
 
