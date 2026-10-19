@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.woff2 binary
+# Külső könyvtárak: változatlanul, byte-ra azonosan
+app/src/main/assets/lib/** -text

@@ -1,8 +1,22 @@
 # Aláíró kulcs és jelszó: soha ne kerüljön a repóba
 fogasnaplo.keystore
 keystore-jelszo.txt
+*.keystore
+*.jks
 
 # Build kimenet
 out/
 *.apk
+*.aab
+*.idsig
 *.zip
+
+# Gépfüggő SDK-útvonal
+local.properties
+
+# Gradle / IDE (ha valaha Gradle-lel vagy Android Studióval nyitod meg)
+.gradle/
+build/
+.idea/
+*.iml
+.DS_Store
