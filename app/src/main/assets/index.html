@@ -425,8 +425,8 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxres{display:flex;flex-direction:column;gap:6px}
 .wxopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
 .wxopt small{color:var(--muted);font-size:.76rem}
-.forecast{border:none;padding:0;margin-top:4px}.forecast summary{cursor:pointer;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;user-select:none}
-.forecast summary::marker{color:var(--water)}
+.sun-arc{max-width:100%;height:auto;margin:12px 0}.sun-arc .arc{stroke:var(--water);stroke-width:2;fill:none}.sun-arc .horizon{stroke:var(--muted);stroke-width:1;opacity:.4}.sun-arc .time-dot{fill:var(--water);opacity:.6}.sun-arc .time-label{font-size:11px;text-anchor:middle;fill:var(--muted)}.sun-arc .sun{fill:var(--accent);filter:drop-shadow(0 0 8px var(--glow-accent))}.sun-arc .sun-inner{fill:var(--accent-ink);opacity:.4}
+.forecast{border:none;padding:0;margin-top:4px}.forecast summary{cursor:pointer;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;user-select:none;font-weight:600}.forecast summary::marker{color:var(--water)}
 .forecast[open] summary{margin-bottom:12px}
 @media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 22px 56px 54px 64px;gap:6px;padding:8px}}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
@@ -1617,6 +1617,37 @@ button{transition:transform .15s}
     }
     return box;
   }
+  function sunArcEl(rise,set,now){
+    if(!rise||!set)return el("div");
+    const ns="http://www.w3.org/2000/svg",W=360,H=140,R=100,cx=W/2,cy=120;
+    const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.setAttribute("class","sun-arc");svg.setAttribute("role","img");svg.setAttribute("aria-label","Napkelte és napnyugta");
+    // dawn: 1h before rise, dusk: 1h after set
+    const dawn=new Date(rise);dawn.setHours(dawn.getHours()-1);
+    const dusk=new Date(set);dusk.setHours(dusk.getHours()+1);
+    const dayStart=dawn.getTime(),dayEnd=dusk.getTime(),dayLen=dayEnd-dayStart;
+    const risePos=(rise.getTime()-dayStart)/dayLen,setPos=(set.getTime()-dayStart)/dayLen,nowPos=(now.getTime()-dayStart)/dayLen;
+    const angle=p=>Math.PI*(1-p);
+    const pt=(a)=>[cx+R*Math.cos(a),cy-R*Math.sin(a)];
+    // arc from dawn to dusk
+    const p1=pt(angle(0)),p2=pt(angle(1));
+    const path=document.createElementNS(ns,"path");path.setAttribute("d",`M${p1[0]},${p1[1]} A${R},${R} 0 0 1 ${p2[0]},${p2[1]}`);path.setAttribute("class","arc");svg.append(path);
+    // horizon line
+    const hline=document.createElementNS(ns,"line");hline.setAttribute("x1","20");hline.setAttribute("y1",cy);hline.setAttribute("x2",W-20);hline.setAttribute("y2",cy);hline.setAttribute("class","horizon");svg.append(hline);
+    // time markers: dawn, rise, set, dusk
+    const times=[{t:dawn,lbl:"Hajnal"},{t:rise,lbl:"Napkelte"},{t:set,lbl:"Napnyugta"},{t:dusk,lbl:"Alkonyat"}];
+    times.forEach(({t,lbl})=>{
+      const p=pt(angle((t.getTime()-dayStart)/dayLen)),g=document.createElementNS(ns,"g");
+      const dot=document.createElementNS(ns,"circle");dot.setAttribute("cx",p[0]);dot.setAttribute("cy",p[1]);dot.setAttribute("r","5");dot.setAttribute("class","time-dot");g.append(dot);
+      const txt=document.createElementNS(ns,"text");txt.setAttribute("x",p[0]);txt.setAttribute("y",p[1]+24);txt.setAttribute("class","time-label");txt.textContent=fmtHM(t);g.append(txt);
+      svg.append(g);
+    });
+    // sun position
+    if(nowPos>=0&&nowPos<=1){
+      const sp=pt(angle(Math.max(0,Math.min(1,nowPos)))),sun=document.createElementNS(ns,"circle");sun.setAttribute("cx",sp[0]);sun.setAttribute("cy",sp[1]);sun.setAttribute("r","12");sun.setAttribute("class","sun");svg.append(sun);
+      const inner=document.createElementNS(ns,"circle");inner.setAttribute("cx",sp[0]);inner.setAttribute("cy",sp[1]);inner.setAttribute("r","8");inner.setAttribute("class","sun-inner");svg.append(inner);
+    }
+    return svg;
+  }
   function explainEl(){
     const d=el("details","more wx-explain");d.append(el("summary",null,"Mit jelent az értékelés és a hPa?"));
     const b=el("div","wx-ex");
@@ -1680,16 +1711,17 @@ button{transition:transform .15s}
     // the chosen day: its sunrise/sunset, rain and wind, then its hours
     const dayDates=D.time.map(parseLocal).filter(d=>ymd(d)>=ymd(now)),di=Math.min(wxDay,dayDates.length-1),selDate=dayDates[di]||now;
     const dk=D.time.findIndex(t=>t.slice(0,10)===ymd(selDate));
-    const facts=el("div","facts");
     const st=sunTimes(selDate,loc.lat,loc.lng);
     const rise=dk>=0&&D.sunrise?parseLocal(D.sunrise[dk]):st&&st.rise,set=dk>=0&&D.sunset?parseLocal(D.sunset[dk]):st&&st.set;
+    card.append(el("div","wx-sub",dayName(selDate,now)+" · "+pad(selDate.getMonth()+1)+"."+pad(selDate.getDate())+"."));
+    if(rise&&set)card.append(sunArcEl(rise,set,now));
+    const facts=el("div","facts");
     const fact=(ic,t,cls)=>{const f=el("span","fact"+(cls?" "+cls:""));f.append(mkIc(ic));f.append(t);facts.append(f)};
     if(rise)fact("sunrise","Napkelte "+fmtHM(rise));
     if(set)fact("sunset","Napnyugta "+fmtHM(set));
     if(dk>=0){const rs=D.precipitation_sum[dk]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[dk]:null;
       fact("drop",(rs>=0.1?"Eső "+mm(rs)+" mm":"Nem esik")+(rp!=null?" ("+rp+"%)":""),rs>=1?"wet":"");
       fact("wind","Szél max "+Math.round(D.wind_speed_10m_max[dk])+" km/h"+(D.wind_gusts_10m_max?", lökés "+Math.round(D.wind_gusts_10m_max[dk]):""))}
-    card.append(el("div","wx-sub",dayName(selDate,now)+" · "+pad(selDate.getMonth()+1)+"."+pad(selDate.getDate())+"."));
     card.append(facts);
     let from,to;
     if(di===0){from=i;to=i+24}else{const k0=H.time.indexOf(ymd(selDate)+"T04:00");from=k0;to=k0+19}
