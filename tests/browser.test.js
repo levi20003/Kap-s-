@@ -251,6 +251,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#today .hours .hr').count() === 25 && (await q.locator('#today .hours .hr').first().innerText()).includes('Most'), 'időjárás: óránkénti sáv a következő 24 órára');
     const facts = await q.locator('#today .facts').first().innerText();
     ok(facts.includes('Napkelte 06:58') && facts.includes('Napnyugta 17:44') && facts.includes('Eső 2,4 mm') && facts.includes('Szél max 21 km/h'), 'időjárás: napkelte, napnyugta, eső, szél');
+    ok(await q.locator('#today details.forecast').count() === 1, 'előrejelzés: lenyitható details');
+    await q.locator('#today details.forecast').evaluate(d => d.open = true);
     ok(await q.locator('#today .days .day').count() === 3 && await q.locator('#today svg.spark').count() === 0, 'előrejelzés alapból kompakt: 3 nap, nincs légnyomás-görbe');
     await q.locator('#today .days .day').nth(1).click();
     ok((await q.locator('#today .wx-sub').first().textContent()).startsWith('Holnap') && (await q.locator('#today .hours .hr').first().innerText()).includes('04:00'), 'napra koppintva annak az órái látszanak');

@@ -425,6 +425,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxres{display:flex;flex-direction:column;gap:6px}
 .wxopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
 .wxopt small{color:var(--muted);font-size:.76rem}
+.forecast{border:none;padding:0;margin-top:4px}.forecast summary{cursor:pointer;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;user-select:none}
+.forecast summary::marker{color:var(--water)}
+.forecast[open] summary{margin-bottom:12px}
 @media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 22px 56px 54px 64px;gap:6px;padding:8px}}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 /* motion: tabs rise in, bars grow, the hero ripples; all of it off for reduced-motion */
@@ -1606,7 +1609,8 @@ button{transition:transform .15s}
       const ic=el("span","d-ic");ic.innerHTML=icoSvg(wxIconName(D.weather_code[k]));row.append(ic);
       const tp=el("span","d-temp");tp.append(el("b",null,Math.round(D.temperature_2m_max[k])+"°"));tp.append(el("small",null," / "+Math.round(D.temperature_2m_min[k])+"°"));row.append(tp);
       const rs=D.precipitation_sum[k]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[k]:null;
-      row.append(el("span","d-rain"+(rs>=1?" wet":""),rs>=0.1?mm(rs)+" mm":(rp!=null?rp+"%":"–")));
+      let rainText="–";if(rs>=0.1)rainText=mm(rs)+" mm"+(rp!=null?" ("+rp+"%)":"");else if(rp!=null)rainText=rp+"%";
+      row.append(el("span","d-rain"+(rs>=1?" wet":""),rainText));
       const wd=el("span","d-wind");wd.append(windArrow(D.wind_direction_10m_dominant[k]));wd.append(Math.round(D.wind_speed_10m_max[k])+" km/h");row.append(wd);
       row.onclick=()=>{wxDay=idx;renderToday()};
       box.append(row);
@@ -1691,8 +1695,9 @@ button{transition:transform .15s}
     if(di===0){from=i;to=i+24}else{const k0=H.time.indexOf(ymd(selDate)+"T04:00");from=k0;to=k0+19}
     if(from>=0)card.append(hoursEl(H,from,to,di===0));
     const open=todayOpen();
-    card.append(el("div","wx-sub","Előrejelzés"));
-    card.append(daysEl(D,H,now,open?7:3));
+    const fcst=el("details","forecast"+(open?"":" closed"));fcst.open=open;
+    fcst.append(el("summary",null,"Előrejelzés"));fcst.append(daysEl(D,H,now,open?7:3));
+    card.append(fcst);
     const more=el("button","linkbtn today-more",open?"Kevesebb ▴":"7 nap és horgászrészletek ▾");more.type="button";
     more.onclick=()=>{try{localStorage.setItem("fogasnaplo.todayOpen",open?"0":"1")}catch(e){}renderToday()};
     if(!open){card.append(more);box.append(card);return}
