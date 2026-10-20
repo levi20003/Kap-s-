@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: ./build.sh <versionCode> <versionName>   -> out/Fogasnaplo.apk
-# A side-by-side test app: APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás TESZT" ./build.sh ...
+# A side-by-side test app: APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh ...
 set -e
 VC=${1:?versionCode}; VN=${2:?versionName}; APP_ID=${APP_ID:-hu.fogasnaplo.app}; LABEL=${LABEL:-Kapás}
 ANDROID_HOME=${ANDROID_HOME:-/home/claude/android-sdk}; API=${PLATFORM:-36}; BTV=${BUILD_TOOLS:-36.0.0}

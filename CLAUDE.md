@@ -16,7 +16,7 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Aláírás: `fogasnaplo.keystore` + `keystore-jelszo.txt` a projekt gyökerében.
   **Ezek soha nem kerülhetnek a repóba** (`.gitignore` kizárja őket, az `out/`, `*.apk`, `*.zip` mellett).
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
-- Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás TESZT" ./build.sh …` (külön csomagnév, külön adatok).
+- Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
 - A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,
   versionCode = 1000 + futásszám). A tesztapp induláskor ezt nézi (`checkUpdate`), és egy koppintással frissít (`installUpdate` → rendszer-telepítő).

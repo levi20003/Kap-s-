@@ -1,5 +1,5 @@
 # Every push: web tests (rules + browser) and a full APK build with build.sh.
-# The real build only proves it works. The phone-testable APK is a separate app (hu.fogasnaplo.app.teszt, "Kapás TESZT")
+# The real build only proves it works. The phone-testable APK is a separate app (hu.fogasnaplo.app.teszt, "Kapás")
 # that installs next to the real one; its key is a CI-only key kept in the Actions cache so test builds update each other.
 name: CI
 
@@ -54,7 +54,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "targetSdkVersion:'36'"
       - name: Test app for the phone (installs next to the real app)
         run: |
-          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás TESZT" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "teszt-${GITHUB_SHA::7}"
+          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "teszt-${GITHUB_SHA::7}"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|application-label):"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app.teszt'"
           mv out/Fogasnaplo.apk out/Fogasnaplo-TESZT.apk
@@ -71,7 +71,7 @@ jobs:
         run: |
           python3 -c 'import json,os,subprocess; print(json.dumps({"versionCode":1000+int(os.environ["GITHUB_RUN_NUMBER"]),"versionName":"teszt-"+os.environ["GITHUB_SHA"][:7],"notes":subprocess.check_output(["git","log","-1","--pretty=%s"],text=True).strip()[:120],"sha":os.environ["GITHUB_SHA"]},ensure_ascii=False))' > out/version.json
           cat out/version.json
-          gh release view teszt > /dev/null 2>&1 || gh release create teszt --prerelease --target "$GITHUB_SHA" --title "Kapás TESZT – legfrissebb" \
+          gh release view teszt > /dev/null 2>&1 || gh release create teszt --prerelease --target "$GITHUB_SHA" --title "Kapás – tesztbuild" \
             --notes "A legutóbbi tesztverzió. Telefonon: koppints a Fogasnaplo-TESZT.apk fájlra. A valódi app mellé települ, annak adataihoz nem nyúl."
           gh release upload teszt out/Fogasnaplo-TESZT.apk --clobber   # the APK first, so version.json never points ahead of it
           gh release upload teszt out/version.json --clobber
