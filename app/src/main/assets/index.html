@@ -42,6 +42,9 @@
   --card-a:#2c3d31; --card-b:#1f2a22; --thumb-a:#738a6e; --thumb-b:#344c3d; --thumb-fg:#dce6d9;
   --map-bg:#1f2a22; --attr-bg:rgba(21,28,23,.75); --tabbar-bg:rgba(26,35,29,.9); --moon-dark:#2f3d33; --moon-lit:#f1ead2; --grid:rgba(255,255,255,.06);
   --tile-filter:invert(.9) hue-rotate(180deg) brightness(1.18) contrast(.98) saturate(.5) sepia(.15);
+  --edge:rgba(191,207,187,.17); --glow-water:rgba(191,207,187,.1); --glow-accent:rgba(255,122,69,.18);
+  --shadow-card:0 1px 0 rgba(255,255,255,.07) inset,0 18px 30px -18px rgba(0,0,0,.85),0 2px 5px -2px rgba(0,0,0,.4);
+  --shadow-pop:0 1px 0 rgba(255,255,255,.12) inset,0 26px 44px -18px rgba(0,0,0,.9);
   --r-card:18px; --r-ctl:12px;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -52,7 +55,7 @@
   color-scheme:light;
   --bg:#eef2ec; --bg-2:#e4ebe1; --surface:#ffffff; --surface-2:#f4f7f2; --line:#cfdacb; --line-soft:rgba(52,76,61,.14);
   --fg:#1f2b23; --muted:#56665a; --faint:#6f7f72;
-  --accent:#c4501f; --accent-2:#de6a35;
+  --accent:#c4501f; --accent-2:#de6a35; --accent-ink:#ffffff;
   --water:#344c3d; --water-deep:#8ea58c; --water-soft:#dce6d9;
   --danger:#b3261e; --danger-soft:#fbe4e1; --ok:#2e6b3f; --ok-soft:#dcefe0; --warn:#8a5a00; --warn-soft:#fbefd2;
   --scrim:rgba(20,30,24,.45);
@@ -61,6 +64,9 @@
   --card-a:#e4ece1; --card-b:#ffffff; --thumb-a:#8ea58c; --thumb-b:#344c3d; --thumb-fg:#ffffff;
   --map-bg:#e4ebe1; --attr-bg:rgba(255,255,255,.8); --tabbar-bg:rgba(255,255,255,.92); --moon-dark:#cfd8cc; --moon-lit:#d6c27e; --grid:rgba(31,43,35,.08);
   --tile-filter:saturate(.8) sepia(.08);
+  --edge:rgba(52,76,61,.17); --glow-water:rgba(52,76,61,.08); --glow-accent:rgba(196,80,31,.14);
+  --shadow-card:0 1px 0 #fff inset,0 1px 2px rgba(52,76,61,.1),0 18px 28px -18px rgba(52,76,61,.5);
+  --shadow-pop:0 1px 0 #fff inset,0 26px 42px -18px rgba(52,76,61,.6);
 }
 *{box-sizing:border-box}
 html{background:var(--bg)}
@@ -71,86 +77,108 @@ body{margin:0;color:var(--fg);font-family:var(--f-body);font-size:16px;line-heig
   padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:calc(var(--tabbar) + 36px + env(safe-area-inset-bottom,0px))}
 [hidden]{display:none!important}
 .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.wrap .wrap{width:100%} /* margin:auto would shrink a nested column to its content */
 section{display:flex;flex-direction:column;gap:12px}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-visible{outline:2px solid var(--water);outline-offset:2px}
 ::placeholder{color:var(--faint)}
 
 /* header */
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.brand{font-family:var(--f-display);font-weight:700;font-size:2rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase}
-.brand small{display:block;font-family:var(--f-body);font-weight:500;font-size:.74rem;letter-spacing:.12em;color:var(--water);text-transform:uppercase;margin-top:6px;opacity:.85}
-.yearbar{display:flex;align-items:center;gap:2px;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:3px}
-.yearbar button{border:0;background:none;width:38px;height:38px;border-radius:50%;font-size:1.25rem;display:grid;place-items:center;color:var(--muted)}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:1.75rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase}
+.hright{display:flex;align-items:center;gap:8px}
+.yearbar{display:flex;align-items:center;gap:0;background:var(--tint);border:1px solid var(--edge);border-radius:999px;padding:3px}
+.yearbar button{border:0;background:none;width:34px;height:34px;border-radius:50%;font-size:1.2rem;display:grid;place-items:center;color:var(--muted)}
 .yearbar button:active{background:var(--water-soft)}
 .yearbar button:disabled{opacity:.25;cursor:default}
-.yearlabel{font-family:var(--f-display);font-weight:600;font-size:1.3rem;min-width:78px;text-align:center;font-variant-numeric:tabular-nums}
+.yearlabel{font-family:var(--f-display);font-weight:600;font-size:1.25rem;min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+/* sun / moon: the icon shows the mode you are in, tap to switch */
+.themebtn{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--edge);background:linear-gradient(180deg,var(--surface-2),var(--surface));color:var(--water);display:grid;place-items:center;box-shadow:var(--shadow-card);transition:transform .25s cubic-bezier(.3,1.6,.5,1),color .4s}
+.themebtn:active{transform:scale(.88) rotate(-14deg)}
+:root[data-theme="light"] .themebtn{color:var(--accent)}
+.themebtn svg{width:24px;height:24px;overflow:visible}
+.themebtn .sun,.themebtn .moon{transform-box:fill-box;transform-origin:center;transition:transform .65s cubic-bezier(.3,1.5,.5,1),opacity .4s}
+:root:not([data-theme="light"]) .themebtn .sun{transform:rotate(110deg) scale(.1);opacity:0}
+:root[data-theme="light"] .themebtn .moon{transform:rotate(-110deg) scale(.1);opacity:0}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
 
 /* season card */
-.total{position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  padding:20px 22px 22px;border-radius:24px;color:var(--fg);
-  background:linear-gradient(140deg,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%);box-shadow:0 18px 40px -16px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
-.total::before{content:"";position:absolute;width:420px;height:420px;left:-150px;bottom:-290px;border-radius:50%;
-  background:repeating-radial-gradient(circle,rgba(255,255,255,0) 0 18px,rgba(255,255,255,.07) 19px 20px);pointer-events:none}
+.total{position:relative;overflow:hidden;display:grid;gap:12px;padding:18px 20px 18px;border-radius:26px;color:#fff;
+  background:linear-gradient(140deg,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%);box-shadow:var(--shadow-pop)}
+.total::before{content:"";position:absolute;width:440px;height:440px;right:-170px;top:-250px;border-radius:50%;
+  background:repeating-radial-gradient(circle,rgba(255,255,255,0) 0 18px,rgba(255,255,255,.08) 19px 20px);pointer-events:none}
+.total::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.22);pointer-events:none}
 .total>*{position:relative}
-.total .n{font-family:var(--f-display);font-weight:700;font-size:4.8rem;line-height:.82;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.total .lbl{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--hero-lbl);margin-bottom:8px}
-.total .side{text-align:right;font-size:.86rem;color:var(--hero-side);display:flex;flex-direction:column;gap:3px;margin-left:auto}
-.total .side b{font-weight:600;color:#fff}
+.total .fishmark{position:absolute;right:14px;bottom:10px;width:118px;height:118px;color:#fff;opacity:.13;transform:rotate(-10deg);pointer-events:none}
+.total .n{font-family:var(--f-display);font-weight:700;font-size:4.4rem;line-height:.85;font-variant-numeric:tabular-nums;letter-spacing:-.01em;text-shadow:0 2px 14px rgba(0,0,0,.25)}
+.total .lbl{font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--hero-lbl);margin-bottom:8px}
+.hero-stats{display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 96px)}
+.hero-stats span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:4px 11px;font-size:.78rem;color:var(--hero-side)}
+.hero-stats b{font-weight:600;color:#fff}
 
 /* section heads */
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.sechead h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;color:var(--water)}
+.sechead h2{margin:0;display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-weight:600;font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;color:var(--water)}
+.ic{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--water-soft);color:var(--water);flex:none}
+.ic svg{width:16px;height:16px}
+.ic.acc{background:var(--glow-accent);color:var(--accent)}
 .linkbtn{border:0;background:none;color:var(--water);font-weight:600;font-size:.9rem;padding:6px 2px}
 .region{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
 select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 12px}
 .region select{font-size:.86rem;padding:7px 9px;background:var(--tint)}
 
 /* species cards */
-.list{display:flex;flex-direction:column;gap:10px}
-.row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 12px;padding:14px 14px 14px 16px;
-  background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--line-soft);border-radius:var(--r-card)}
-.row .info{min-width:0;display:flex;flex-direction:column;gap:4px}
-.nameline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
-.row .name{font-weight:600;font-size:1.1rem;overflow-wrap:anywhere}
-.meta{font-size:.82rem;color:var(--muted)}
-.rec{font-size:.82rem;color:var(--fg)}
-.rec b{font-weight:600;color:var(--accent-2)}
+.list{display:flex;flex-direction:column;gap:12px}
+.row{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 12px 14px 18px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--edge);border-radius:22px;box-shadow:var(--shadow-card);transition:transform .18s}
+.row::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--water),var(--water-deep))}
+.row.closed::before{background:var(--danger)}.row.soon::before{background:var(--warn)}
+.badge{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;flex:none;font-family:var(--f-display);font-weight:700;font-size:1.55rem;color:var(--thumb-fg);
+  background:linear-gradient(140deg,var(--thumb-a),var(--thumb-b));box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 14px -8px rgba(0,0,0,.6)}
+.badge.sm{width:36px;height:36px;border-radius:12px;font-size:1.2rem}
+.row .info{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.row .name{font-weight:700;font-size:1.12rem;line-height:1.15;overflow-wrap:anywhere}
+@media (max-width:380px){.badge:not(.sm){display:none}.row{grid-template-columns:minmax(0,1fr) auto;padding-left:16px}}
+.addrow{border:1.5px dashed var(--line);background:none;border-radius:20px;padding:13px;color:var(--water);font-weight:600;font-size:.92rem}
 .bar{height:4px;border-radius:2px;background:var(--track);margin-top:4px;overflow:hidden}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--water-deep),var(--water));border-radius:2px}
 .chip-rule{font-size:.7rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
 .chip-rule.ok{background:var(--ok-soft);color:var(--ok)}
 .chip-rule.closed{background:var(--danger-soft);color:var(--danger)}
 .chip-rule.soon{background:var(--warn-soft);color:var(--warn)}
-.counter{display:flex;align-items:center;gap:6px}
-.counter .val{font-family:var(--f-display);font-weight:700;font-size:2.1rem;min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
-.minus{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;font-size:1.25rem;line-height:1;color:var(--muted)}
+.counter{display:flex;align-items:center;gap:2px;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:4px}
+.counter .val{font-family:var(--f-display);font-weight:700;font-size:1.9rem;min-width:36px;text-align:center;font-variant-numeric:tabular-nums}
+.minus{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;font-size:1.2rem;line-height:1;color:var(--muted)}
 .minus:disabled{opacity:.3;cursor:default}
-.plus{width:54px;height:54px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,var(--accent-2),var(--accent));color:var(--accent-ink);
-  font-size:1.8rem;font-weight:600;line-height:1;box-shadow:0 8px 18px -6px rgba(255,122,69,.6)}
-.plus:active{transform:scale(.94)}
-.bump{animation:bump .28s ease}
-@keyframes bump{50%{transform:scale(1.3);color:var(--accent-2)}}
+.plus{width:50px;height:50px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 28%,var(--accent-2),var(--accent));color:var(--accent-ink);
+  font-size:1.8rem;font-weight:600;line-height:1;box-shadow:0 10px 18px -6px var(--glow-accent),0 6px 14px -4px rgba(255,122,69,.55),inset 0 1px 0 rgba(255,255,255,.4);transition:transform .15s cubic-bezier(.3,1.6,.5,1)}
+.plus:active{transform:scale(.88)}
+.bump{animation:bump .34s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{40%{transform:scale(1.4);color:var(--accent-2)}}
 .del{border:1px solid var(--danger);color:var(--danger);background:none;border-radius:10px;padding:8px 12px;font-size:.88rem;font-weight:600}
 .confirm{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .confirm span{flex:1 1 180px}
-.autobk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.autobk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .autobk span{flex:1 1 220px}
 .yes{background:var(--danger);color:var(--on-danger);border:0;border-radius:10px;padding:8px 12px;font-weight:600}
 .no{background:none;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 
-/* records */
-.records{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-card);padding:4px 14px}
-.recrow{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px 0;border:0;border-bottom:1px solid var(--line-soft);width:100%;text-align:left;background:none}
-.recrow:last-child{border-bottom:0}
-.recrow .rank{font-family:var(--f-display);font-weight:700;font-size:1.25rem;color:var(--faint)}
-.recrow:first-child .rank{color:var(--accent-2)}
-.recrow .who{min-width:0}
-.recrow .who b{font-weight:600}
-.recrow .who div{font-size:.8rem;color:var(--muted)}
-.recrow .big{font-family:var(--f-display);font-weight:700;font-size:1.4rem;text-align:right;white-space:nowrap}
-.recrow .big small{display:block;font-family:var(--f-body);font-weight:500;font-size:.76rem;color:var(--muted)}
-.records .empty{padding:14px 0}
+/* records: a swipeable row of trophy cards */
+.recs{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:6px 16px 18px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.recs::-webkit-scrollbar{display:none}
+.recs .empty-card{flex:1 0 100%}
+.rcard{flex:0 0 150px;scroll-snap-align:start;text-align:left;display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:22px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--edge);box-shadow:var(--shadow-card);transition:transform .18s}
+.rcard:active{transform:scale(.97)}
+.rcard .medal{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1rem;background:var(--water-soft);color:var(--water)}
+.rcard .big{font-family:var(--f-display);font-weight:700;font-size:2.15rem;line-height:1;margin-top:12px;font-variant-numeric:tabular-nums}
+.rcard .sp{font-weight:700;margin-top:2px}
+.rcard small{font-size:.74rem;color:var(--muted);overflow-wrap:anywhere}
+.rcard.gold{flex-basis:176px;background:linear-gradient(160deg,var(--glow-accent),transparent 70%),linear-gradient(180deg,var(--surface-2),var(--surface));border-color:var(--glow-accent)}
+.rcard.gold .medal{background:linear-gradient(140deg,var(--accent-2),var(--accent));color:var(--accent-ink);box-shadow:0 6px 12px -4px var(--glow-accent)}
+.rcard.gold .big{color:var(--accent-2);font-size:2.5rem}
+.rcard::after{content:"";position:absolute;right:-26px;top:-26px;width:90px;height:90px;border-radius:50%;background:var(--glow-water);pointer-events:none}
+.rcard.gold::after{background:var(--glow-accent)}
 
 /* inputs, chips, buttons */
 .add{display:flex;gap:8px}
@@ -170,33 +198,42 @@ select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px so
 .backup button,.backup label{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-ctl);padding:10px 14px;font-size:.9rem;cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 
-/* stats panels (list tab) */
-.panel{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-card);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.lures{display:flex;flex-direction:column;gap:8px}
+/* stats */
+.panel{background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--edge);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-card)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:20px;background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--edge);box-shadow:var(--shadow-card)}
+.kpi::after{content:"";position:absolute;right:-22px;top:-22px;width:70px;height:70px;border-radius:50%;background:var(--glow-water);pointer-events:none}
+.kpi.acc::after{background:var(--glow-accent)}
+.kpi b{font-family:var(--f-display);font-weight:700;font-size:1.85rem;line-height:1.05;margin-top:10px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi span{font-size:.72rem;color:var(--muted);line-height:1.25}
+.lures{display:flex;flex-direction:column;gap:10px}
 .lure{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;font-size:.92rem}
-.lure .bar{grid-column:1/-1;margin:0}
+.lure .bar{grid-column:1/-1;margin:0;height:6px;border-radius:3px}.lure .bar i{border-radius:3px}
 .lure b{font-variant-numeric:tabular-nums;color:var(--water)}
 .trend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.trend div{background:var(--bg-2);border-radius:12px;padding:10px;text-align:center}
+.trend div{background:var(--bg-2);border-radius:14px;padding:10px;text-align:center}
 .trend b{display:block;font-family:var(--f-display);font-size:1.7rem;line-height:1;font-variant-numeric:tabular-nums}
 .trend span{font-size:.76rem;color:var(--muted)}
-.trend .top{outline:1px solid var(--water)}
+.trend .top{outline:1.5px solid var(--water)}
 .trend .top b{color:var(--water)}
 
 /* catch list */
-.month{font-family:var(--f-display);font-weight:600;font-size:.92rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:10px 2px 2px}
-#catchList{display:flex;flex-direction:column;gap:8px}
-.citem{display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:center;padding:10px 12px 10px 10px;width:100%;text-align:left;
-  background:var(--surface);border:1px solid var(--line-soft);border-radius:16px}
-.citem:active{background:var(--surface-2)}
-.thumb{width:58px;height:58px;border-radius:12px;background:linear-gradient(140deg,var(--thumb-a),var(--thumb-b));display:grid;place-items:center;overflow:hidden;
-  font-family:var(--f-display);font-weight:700;font-size:1.5rem;color:var(--thumb-fg)}
+.month{font-family:var(--f-display);font-weight:600;font-size:.92rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:12px 2px 2px}
+#catchList{display:flex;flex-direction:column;gap:10px}
+.citem{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:10px 14px 10px 10px;width:100%;text-align:left;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--edge);border-radius:22px;box-shadow:var(--shadow-card);transition:transform .18s}
+.citem:active{transform:scale(.985)}
+.thumb{width:64px;height:64px;border-radius:16px;background:linear-gradient(140deg,var(--thumb-a),var(--thumb-b));display:grid;place-items:center;overflow:hidden;
+  font-family:var(--f-display);font-weight:700;font-size:1.7rem;color:var(--thumb-fg);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
 .thumb img{width:100%;height:100%;object-fit:cover}
-.citem .t1{font-weight:600}
-.citem .t1 span{font-weight:600;color:var(--accent-2)}
+.citem .t1{font-weight:700;font-size:1.02rem}
 .citem .t2{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
 .citem .t3{font-size:.78rem;color:var(--water);margin-top:2px}
-.citem .chev{color:var(--faint);font-size:1.4rem}
+.citem .cside{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.citem .csize{font-family:var(--f-display);font-weight:700;font-size:1.3rem;color:var(--accent-2);white-space:nowrap}
+.citem .cfate{font-size:.66rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--tint);color:var(--muted)}
+.citem .cfate.kept{background:var(--ok-soft);color:var(--ok)}
+.citem .chev{color:var(--faint);font-size:1.4rem;line-height:1}
 
 /* map */
 #bigMap{height:calc(100vh - 330px - env(safe-area-inset-bottom,0px));min-height:320px;border-radius:22px;border:1px solid var(--line-soft);overflow:hidden;background:var(--map-bg)}
@@ -216,13 +253,16 @@ select,.inp{font:inherit;color:var(--fg);background:var(--surface);border:1px so
 
 /* tab bar */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;justify-content:center;
-  background:var(--tabbar-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line-soft);
-  padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px))}
-.tabbar .in{display:flex;width:100%;max-width:560px}
-.tabbar button{flex:1;border:0;background:none;height:var(--tabbar);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.76rem;font-weight:600;color:var(--faint);position:relative}
-.tabbar button svg{width:24px;height:24px}
+  background:var(--tabbar-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--edge);
+  padding:0 max(4px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(4px,env(safe-area-inset-left,0px))}
+.tabbar .in{position:relative;display:flex;width:100%;max-width:560px}
+.tabbar button{flex:1;min-width:0;border:0;background:none;height:var(--tabbar);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.68rem;font-weight:600;color:var(--faint);transition:color .25s}
+.tabbar button svg{width:23px;height:23px}
 .tabbar button[aria-selected="true"]{color:var(--water)}
-.tabbar button[aria-selected="true"]::before{content:"";position:absolute;top:0;width:34px;height:3px;border-radius:0 0 3px 3px;background:var(--water)}
+.tabbar button[aria-selected="true"] svg{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+.tabind{position:absolute;top:0;left:0;width:20%;height:3px;pointer-events:none;transform:translateX(calc(var(--ti,0)*100%));transition:transform .5s cubic-bezier(.3,1.35,.5,1)}
+.tabind::after{content:"";display:block;margin:0 auto;width:34px;height:3px;border-radius:0 0 3px 3px;background:var(--water)}
+@keyframes pop{0%{transform:scale(.7) translateY(3px)}55%{transform:scale(1.2) translateY(-2px)}100%{transform:none}}
 
 /* bottom sheet */
 .overlay{position:fixed;inset:0;z-index:1000;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
@@ -306,18 +346,24 @@ textarea.inp{resize:vertical;min-height:68px}
 .best b{font-size:.95rem}
 .best span{color:var(--muted);font-size:.84rem}
 .search{width:100%}
-.stack{display:flex;flex-direction:column;gap:22px}
-.statsbar{display:flex;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-card);padding:12px 16px;color:var(--fg);text-align:left}
-.statsbar b{font-family:var(--f-display);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--water)}
-.statsbar span{flex:1;font-size:.84rem;color:var(--muted)}
-.statsbar i{font-style:normal;color:var(--water);transition:transform .2s}
-.statsbar[aria-expanded="true"] i{transform:rotate(180deg)}
 .more summary{color:var(--water);font-size:.86rem;cursor:pointer;padding:4px 0}
 .more p{margin-top:8px}
 .today-more{align-self:flex-start;margin-top:2px}
+.wxic{flex:none;width:44px;height:44px;color:var(--water)}.wxic svg{width:100%;height:100%}.wxic.hot{color:var(--accent)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.btnrow .btn-main,.btnrow .btn-ghost{flex:1 1 140px;padding:13px 16px;font-weight:700}
+.hint.lead{font-size:.9rem;color:var(--fg)}
+.mylist{display:flex;flex-direction:column}
+.myrow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft)}
+.myrow:last-child{border-bottom:0}
+.myrow .mytxt{flex:1;min-width:0;display:flex;flex-direction:column}
+.myrow .mytxt span{font-size:.78rem;color:var(--muted)}
+.myrow .confirm{flex:1 1 100%}
 
 /* today card */
-.today{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--card-a) 0%,var(--card-b) 70%);border:1px solid var(--line-soft);border-radius:22px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px}
+.today{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--card-a) 0%,var(--card-b) 70%);border:1px solid var(--edge);border-radius:24px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-card)}
+.today::after{content:"";position:absolute;right:-60px;top:-70px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,var(--glow-water),transparent 70%);pointer-events:none}
+.today.s4::after,.today.s5::after{background:radial-gradient(circle,var(--glow-accent),transparent 70%)}
 .today-top{display:flex;align-items:center;gap:14px}
 .score{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:1}
 .score .lbl{font-family:var(--f-display);font-weight:700;font-size:1.9rem;line-height:1;text-transform:uppercase;letter-spacing:.01em}
@@ -350,37 +396,60 @@ textarea.inp{resize:vertical;min-height:68px}
 .win b{font-family:var(--f-display);font-size:1.25rem;font-variant-numeric:tabular-nums}
 .today .foot{font-size:.72rem;color:var(--faint)}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+/* motion: tabs rise in, bars grow, the hero ripples; all of it off for reduced-motion */
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}}
+@keyframes growY{from{transform:scaleY(0)}}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-12px,8px) scale(1.06)}}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,14px) scale(.94)}}
+.enter>*{animation:rise .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*70ms)}
+.enter .bar i{transform-origin:left;animation:grow .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:.3s}
+.enter .months i{transform-origin:bottom;animation:growY .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.25s + var(--k,0)*35ms)}
+.enter .recs>*{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.3s + var(--k,0)*80ms)}
+.enter .kpis>*{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0)*80ms)}
+.total::before{animation:drift 18s ease-in-out infinite}
+.toast{animation:toastin .3s cubic-bezier(.2,.9,.3,1.3)}
+button{transition:transform .15s}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">Fogásnapló<small>Pergető fogások évente</small></div>
-    <div class="yearbar" role="group" aria-label="Év választása">
-      <button id="prevYear" aria-label="Előző év">‹</button>
-      <div class="yearlabel" id="yearLabel">2026</div>
-      <button id="nextYear" aria-label="Következő év">›</button>
+    <div class="brand">Fogásnapló</div>
+    <div class="hright">
+      <div class="yearbar" id="yearbar" role="group" aria-label="Év választása">
+        <button id="prevYear" aria-label="Előző év">‹</button>
+        <div class="yearlabel" id="yearLabel">2026</div>
+        <button id="nextYear" aria-label="Következő év">›</button>
+      </div>
+      <button class="themebtn" id="themeBtn" type="button" aria-label="Téma váltása">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g class="sun" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></g>
+          <path class="moon" fill="currentColor" d="M20.6 14.2A8.6 8.6 0 1 1 9.8 3.4a6.9 6.9 0 0 0 10.8 10.8z"/>
+        </svg>
+      </button>
     </div>
   </header>
-  <p class="note closed" id="saveWarn" role="alert" hidden>A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést fájlba a Számláló alján!</p>
+  <p class="note closed" id="saveWarn" role="alert" hidden>A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést: Beállítások → Biztonsági mentés.</p>
   <div class="autobk" id="updBar" role="status" hidden></div>
 
-  <!-- ===== Számláló ===== -->
-  <div id="tab-count" class="wrap" style="gap:22px">
+  <!-- ===== Kezdőlap ===== -->
+  <div id="tab-home" class="wrap" style="gap:22px">
     <section class="total" aria-live="polite">
+      <svg class="fishmark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.8 12c3-4.7 8.8-5.7 13-2.7L21.2 6v12l-5.4-3.3C11.6 17.7 5.8 16.7 2.8 12z"/></svg>
       <div><div class="lbl" id="totalLbl">Fogások idén</div><div class="n" id="totalN">0</div></div>
-      <div class="side" id="totalSide"></div>
+      <div class="hero-stats" id="totalSide"></div>
     </section>
 
     <section id="todaySec">
-      <div class="sechead"><h2>Mai horgászidő</h2><button class="linkbtn" id="todayRefresh">◎ Helyem frissítése</button></div>
+      <div class="sechead"><h2><span class="ic" data-ic="cloud"></span>Mai horgászidő</h2><button class="linkbtn" id="todayRefresh">◎ Helyem frissítése</button></div>
       <div id="today"></div>
     </section>
 
     <section>
       <div class="sechead">
-        <h2>Halfajok</h2>
+        <h2><span class="ic" data-ic="fish"></span>Halfajok</h2>
         <div class="region">
           <label for="regionSel">Víz</label>
           <select id="regionSel">
@@ -388,118 +457,127 @@ textarea.inp{resize:vertical;min-height:68px}
             <option value="tisza">Tisza / Tisza-tó</option>
             <option value="duna">Duna</option>
           </select>
-          <button class="linkbtn" id="editBtn" hidden>Szerkesztés</button>
         </div>
       </div>
       <div class="list" id="list"></div>
     </section>
 
-    <section>
-      <div class="sechead"><h2>Rekordok</h2></div>
-      <div class="records" id="records"></div>
+    <section id="recSec">
+      <div class="sechead"><h2><span class="ic acc" data-ic="trophy"></span>Rekordok</h2></div>
+      <div class="recs" id="records"></div>
     </section>
-
-    <section>
-      <div class="sechead"><h2>Új halfaj</h2></div>
-      <form class="add" id="addForm" autocomplete="off">
-        <input id="newName" maxlength="40" placeholder="pl. Domolykó" aria-label="Halfaj neve">
-        <button type="submit">Hozzáad</button>
-      </form>
-      <div class="chips" id="chips"></div>
-      <p class="hint err" id="addErr" hidden></p>
-    </section>
-
-    <section id="notifySec" hidden>
-      <div class="sechead"><h2>Értesítések</h2></div>
-      <div class="autobk" id="notifyBox"></div>
-    </section>
-
-    <section>
-      <div class="sechead"><h2>Megjelenés</h2></div>
-      <div class="chips" id="themeChips" role="group" aria-label="Téma"></div>
-    </section>
-
-    <section>
-      <div class="sechead"><h2>Mentés</h2></div>
-      <div class="backup">
-        <button id="exportBtn" type="button">Mentés fájlba</button>
-        <label for="importFile">Visszatöltés fájlból</label>
-        <input type="file" id="importFile" class="vh" accept="application/json,.json">
-      </div>
-      <div class="backup" id="zipRow" hidden>
-        <button id="zipBtn" type="button">Mentés fotókkal (ZIP)</button>
-        <button id="zipInBtn" type="button">Visszatöltés ZIP-ből</button>
-      </div>
-      <div class="autobk" id="autoBk" hidden></div>
-      <div class="confirm" id="importAsk" hidden></div>
-      <p class="hint" id="backupMsg">Visszatöltéskor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
-      <details class="more"><summary>Hogyan működik a mentés?</summary>
-        <p class="hint">Google-mentés: az Android naponta egyszer menti a naplót a Google-fiókodba (töltőn, wifin), és új telefonon visszaállítja. A teljes méretű fotók nem kerülnek bele, csak az előnézetük; azokat a fotós (ZIP) mentés viszi. Bekapcsolása: Beállítások → Google → Biztonsági mentés.</p>
-        <p class="hint">Mentés fájlba: a napló egy .json fájlba, például a Drive-ra. Mentés fotókkal (ZIP): a napló és minden fotó egy fájlban.</p>
-      </details>
-    </section>
-
-    <details class="more"><summary>Honnan jönnek a tilalmi idők és korlátok?</summary>
-      <p class="hint">Tilalmi idők és méretkorlátok: az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
-    </details>
   </div>
 
   <!-- ===== Fogások ===== -->
-  <div id="tab-list" class="wrap" style="gap:22px" hidden>
-    <button class="statsbar" id="statsToggle" type="button" aria-expanded="false" aria-controls="statsBox"><b>Statisztika</b><span id="statsNote"></span><i>▾</i></button>
-    <div class="stack" id="statsBox" hidden>
-    <section id="lureSec">
-      <div class="sechead"><h2>Legjobb csalik</h2></div>
-      <div class="panel"><div class="lures" id="lures"></div></div>
-    </section>
-    <section id="wxSec">
-      <div class="sechead"><h2>Légnyomás fogáskor</h2></div>
-      <div class="panel" id="wxStats"></div>
-    </section>
-    <section id="moonSec">
-      <div class="sechead"><h2>Holdfázis fogáskor</h2></div>
-      <div class="panel" id="moonStats"></div>
-    </section>
-    <section id="daySec">
-      <div class="sechead"><h2>Napszak</h2></div>
-      <div class="panel" id="dayStats"></div>
-    </section>
-    <section id="monthSec">
-      <div class="sechead"><h2>Havonta</h2></div>
-      <div class="panel" id="monthStats"></div>
-    </section>
-    <section id="bestSec">
-      <div class="sechead"><h2>Fajonként mi működött</h2></div>
-      <div class="panel"><div class="best" id="bestStats"></div></div>
-    </section>
-    </div>
+  <div id="tab-list" class="wrap" style="gap:16px" hidden>
     <section>
       <div class="sechead">
-        <h2 id="listTitle">Fogások</h2>
+        <h2><span class="ic" data-ic="list"></span><span id="listTitle">Fogások</span></h2>
         <button class="linkbtn" id="addLater">+ Fogás utólag</button>
       </div>
       <input class="inp search" id="catchSearch" type="search" maxlength="40" placeholder="Keresés: csali, hely, megjegyzés…" aria-label="Fogások keresése" hidden>
+      <div class="chips" id="activeFilters"></div>
       <div class="chips" id="spFilter"></div>
       <div id="catchList"></div>
     </section>
   </div>
 
+  <!-- ===== Statisztika ===== -->
+  <div id="tab-stats" class="wrap" style="gap:22px" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
+    <section id="monthSec">
+      <div class="sechead"><h2><span class="ic" data-ic="calendar"></span>Havonta</h2></div>
+      <div class="panel" id="monthStats"></div>
+    </section>
+    <section id="lureSec">
+      <div class="sechead"><h2><span class="ic acc" data-ic="bolt"></span>Legjobb csalik</h2></div>
+      <div class="panel"><div class="lures" id="lures"></div></div>
+    </section>
+    <section id="bestSec">
+      <div class="sechead"><h2><span class="ic" data-ic="target"></span>Fajonként mi működött</h2></div>
+      <div class="panel"><div class="best" id="bestStats"></div></div>
+    </section>
+    <section id="daySec">
+      <div class="sechead"><h2><span class="ic" data-ic="clock"></span>Napszak</h2></div>
+      <div class="panel" id="dayStats"></div>
+    </section>
+    <section id="wxSec">
+      <div class="sechead"><h2><span class="ic" data-ic="gauge"></span>Légnyomás fogáskor</h2></div>
+      <div class="panel" id="wxStats"></div>
+    </section>
+    <section id="moonSec">
+      <div class="sechead"><h2><span class="ic" data-ic="moon"></span>Holdfázis fogáskor</h2></div>
+      <div class="panel" id="moonStats"></div>
+    </section>
+  </div>
+
   <!-- ===== Térkép ===== -->
   <div id="tab-map" class="wrap" style="gap:12px" hidden>
-    <div class="sechead"><h2 id="mapTitle">Fogások térképen</h2></div>
+    <div class="sechead"><h2><span class="ic" data-ic="pin"></span><span id="mapTitle">Fogások térképen</span></h2></div>
     <div id="bigMap"></div>
     <p class="hint" id="mapHint"></p>
+  </div>
+
+  <!-- ===== Beállítások ===== -->
+  <div id="tab-more" class="wrap" style="gap:22px" hidden>
+    <section>
+      <div class="sechead"><h2><span class="ic" data-ic="fish"></span>Halfajaim</h2></div>
+      <div class="panel">
+        <div class="mylist" id="myList"></div>
+        <form class="add" id="addForm" autocomplete="off">
+          <input id="newName" maxlength="40" placeholder="Új halfaj, pl. Domolykó" aria-label="Halfaj neve">
+          <button type="submit">Hozzáad</button>
+        </form>
+        <div class="chips" id="chips"></div>
+        <p class="hint err" id="addErr" hidden></p>
+      </div>
+    </section>
+
+    <section id="notifySec" hidden>
+      <div class="sechead"><h2><span class="ic" data-ic="bell"></span>Értesítések</h2></div>
+      <div class="autobk" id="notifyBox"></div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2><span class="ic" data-ic="shield"></span>Biztonsági mentés</h2></div>
+      <div class="panel">
+        <p class="hint lead">A fogásaid csak ezen a telefonon vannak. Ha elveszik vagy cserélni kell, a mentésből vissza tudod állítani őket.</p>
+        <div class="autobk" id="autoBk" hidden></div>
+        <div class="btnrow">
+          <button class="btn-main" id="saveBtn" type="button">Mentés most</button>
+          <button class="btn-ghost" id="restoreBtn" type="button">Visszaállítás</button>
+          <input type="file" id="importFile" class="vh" accept="application/json,.json">
+        </div>
+        <div class="confirm" id="importAsk" hidden></div>
+        <p class="hint" id="backupMsg"></p>
+        <details class="more"><summary>Hogyan működik?</summary>
+          <p class="hint">A mentés egy fájl a naplóddal és a fotóiddal, amit te választasz ki, hová kerüljön (pl. Drive). Visszaállításkor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
+          <p class="hint">Az Android emellett naponta egyszer a Google-fiókodba is menti a naplót (töltőn, wifin), de a teljes méretű fotókat nem. Bekapcsolása: telefon Beállítások → Google → Biztonsági mentés.</p>
+        </details>
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2><span class="ic" data-ic="info"></span>Az appról</h2></div>
+      <div class="panel">
+        <p class="hint">Verzió: <b id="verLine">–</b></p>
+        <details class="more"><summary>Honnan jönnek a tilalmi idők és korlátok?</summary>
+          <p class="hint">Az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
+        </details>
+      </div>
+    </section>
   </div>
 </div>
 
 <nav class="tabbar" role="tablist">
   <div class="in">
-    <button role="tab" data-tab="count" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5v14M9 5v14M14 5v14M3 15l14-6"/><path d="M20 5v14"/></svg>Számláló</button>
-    <button role="tab" data-tab="list" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Fogások</button>
-    <button role="tab" data-tab="map" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Térkép</button>
+    <i class="tabind" id="tabind" aria-hidden="true"></i>
+    <button role="tab" data-tab="home" aria-selected="true"><span data-ic="home"></span>Kezdőlap</button>
+    <button role="tab" data-tab="list" aria-selected="false"><span data-ic="list"></span>Fogások</button>
+    <button role="tab" data-tab="stats" aria-selected="false"><span data-ic="stats"></span>Statisztika</button>
+    <button role="tab" data-tab="map" aria-selected="false"><span data-ic="pin"></span>Térkép</button>
+    <button role="tab" data-tab="more" aria-selected="false"><span data-ic="more"></span>Beállítások</button>
   </div>
 </nav>
 
@@ -548,7 +626,7 @@ textarea.inp{resize:vertical;min-height:68px}
 
   const ANDROID=window.FogasnaploAndroid||null;
   const NOW=new Date(),NOW_Y=NOW.getFullYear();
-  const state={species:[],catches:[],year:NOW_Y,tab:"count",edit:false,confirmId:null,region:"orszagos",filterSp:null,q:"",month:null};
+  const state={species:[],catches:[],year:NOW_Y,tab:"home",edit:false,confirmId:null,region:"orszagos",filterSp:null,q:"",month:null};
   try{const r=localStorage.getItem("fogasnaplo.region");if(r==="orszagos"||OVERRIDES[r])state.region=r}catch(e){}
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||"").trim().toLocaleLowerCase("hu").replace(/\s+/g," ");
@@ -684,87 +762,194 @@ textarea.inp{resize:vertical;min-height:68px}
     const out=[...used];LURES.forEach(l=>{if(!out.some(u=>norm(u)===norm(l)))out.push(l)});return out.slice(0,12);
   }
 
+  /* ---------- icons ---------- */
+  const ICONS={
+    home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.2V20h4.3v-5.6h4.4V20h4.3v-9.8"/>',
+    list:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+    stats:'<path d="M5 20v-7M12 20V5M19 20v-10"/>',
+    pin:'<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    more:'<path d="M3 6h8M17.5 6H21M3 12h3M12.5 12H21M3 18h10M19.5 18H21"/><circle cx="14.2" cy="6" r="2.7"/><circle cx="9.2" cy="12" r="2.7"/><circle cx="16.2" cy="18" r="2.7"/>',
+    trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5.5a1 1 0 0 0-1 1c0 2 1.5 3.5 3.8 3.6M16 6h2.5a1 1 0 0 1 1 1c0 2-1.5 3.5-3.8 3.6"/><path d="M12 13v4M8 20h8M9.5 17h5"/>',
+    cloud:'<path d="M7 18.5h9.8a4 4 0 0 0 .5-7.97A5.7 5.7 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>',
+    fish:'<path d="M2.8 12c3-4.7 8.8-5.7 13-2.7L21.2 6v12l-5.4-3.3C11.6 17.7 5.8 16.7 2.8 12z"/><circle cx="8" cy="11" r=".9" fill="currentColor"/>',
+    bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.7 2H4.3z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+    shield:'<path d="M12 3l8 3v5.5c0 4.6-3.2 8.2-8 9.5-4.8-1.3-8-4.9-8-9.5V6z"/><path d="M8.6 12.2l2.5 2.5 4.4-4.9"/>',
+    info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>',
+    calendar:'<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    bolt:'<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
+    target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>',
+    clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    gauge:'<path d="M4.5 16a8 8 0 1 1 15 0"/><path d="M12 14l4-4"/>',
+    moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.7 6.7 0 0 0 10.5 10.5z"/>',
+    check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    sunny:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+    rain:'<path d="M7 15h9.8a4 4 0 0 0 .5-7.97A5.7 5.7 0 0 0 6.3 6.2 4.4 4.4 0 0 0 7 15z"/><path d="M8 18.5l-1 2M12 18.5l-1 2M16 18.5l-1 2"/>',
+    storm:'<path d="M7 14h9.8a4 4 0 0 0 .5-7.97A5.7 5.7 0 0 0 6.3 5.2 4.4 4.4 0 0 0 7 14z"/><path d="M12.7 14l-2.4 4h3l-1.6 3"/>',
+    fog:'<path d="M4 8h16M6 12h12M4 16h16M8 20h8"/>',
+    snow:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>'
+  };
+  const icoSvg=(n,c)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(c?' class="'+c+'"':'')+'>'+ICONS[n]+'</svg>';
+  const mkIc=(n,acc)=>{const s=el("span","ic"+(acc?" acc":""));s.innerHTML=icoSvg(n);return s};
+  document.querySelectorAll("[data-ic]").forEach(n=>{n.innerHTML=icoSvg(n.dataset.ic)});
+  const wxIconName=c=>c<=1?"sunny":c<=3?"cloud":(c===45||c===48)?"fog":(c>=71&&c<=77)||c===85||c===86?"snow":c>=95?"storm":"rain";
+
+  /* ---------- navigation + motion ---------- */
+  const TABS=["home","list","stats","map","more"];
+  const reduced=()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){return false}};
+  let enterNext=true; // the first paint animates too
+  function go(tab){
+    const changed=state.tab!==tab;state.tab=tab;state.confirmId=null;
+    if(changed){enterNext=true;if(tab==="home")$("totalN").dataset.v="0"}
+    render();if(changed)window.scrollTo(0,0);
+  }
+  // the cards of a tab rise in one after the other; bars grow from their baseline
+  function playEnter(box){
+    if(reduced())return;
+    [...box.children].forEach((c,i)=>c.style.setProperty("--i",Math.min(i,7)));
+    box.querySelectorAll(".recs>*,.kpis>*,.months i").forEach((c,i)=>c.style.setProperty("--k",i%12));
+    box.classList.remove("enter");void box.offsetWidth;box.classList.add("enter");
+    clearTimeout(playEnter.t);playEnter.t=setTimeout(()=>box.classList.remove("enter"),1400);
+  }
+  function countTo(node,to){
+    const from=Number(node.dataset.v||0);node.dataset.v=to;cancelAnimationFrame(node._raf);
+    if(from===to||reduced()){node.textContent=to;return}
+    const t0=performance.now(),dur=600;
+    const step=t=>{const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);node.textContent=Math.round(from+(to-from)*e);if(p<1)node._raf=requestAnimationFrame(step)};
+    node._raf=requestAnimationFrame(step);
+  }
+
   /* ---------- render ---------- */
   function render(){
     const y=state.year,ys=yearsAvailable();
     $("yearLabel").textContent=y;
     $("prevYear").disabled=y<=Math.min(ys[0],NOW_Y-5);
     $("nextYear").disabled=y>=NOW_Y;
+    $("yearbar").hidden=state.tab==="more";
     document.querySelectorAll(".tabbar button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
-    $("tab-count").hidden=state.tab!=="count";$("tab-list").hidden=state.tab!=="list";$("tab-map").hidden=state.tab!=="map";
+    $("tabind").style.setProperty("--ti",TABS.indexOf(state.tab));
+    TABS.forEach(t=>{$("tab-"+t).hidden=state.tab!==t});
     const st=stats(y);
-    if(state.tab==="count")renderCount(st);
+    if(state.tab==="home")renderHome(st);
     if(state.tab==="list")renderList();
+    if(state.tab==="stats")renderStats();
     if(state.tab==="map")renderMap();
+    if(state.tab==="more")renderMore(st);
+    if(enterNext){enterNext=false;if(state.tab!=="map")playEnter($("tab-"+state.tab))}
   }
 
-  function renderCount(st){
+  const badgeEl=(name,cls)=>el("div","badge"+(cls?" "+cls:""),name.charAt(0).toLocaleUpperCase("hu"));
+
+  /* ---------- home: season total, forecast, species counters, records ---------- */
+  function renderHome(st){
     const y=state.year;
     $("todaySec").hidden=y!==NOW_Y;if(y===NOW_Y)renderToday();
     $("regionSel").value=state.region;
     const total=state.species.reduce((a,s)=>a+st[s.id].n,0);
-    $("totalN").textContent=total;
+    countTo($("totalN"),total);
     $("totalLbl").textContent=y===NOW_Y?"Fogások idén":"Fogások "+y+"-ben";
     const allTime=state.species.reduce((a,s)=>a+st[s.id].all,0);
     let top=null;state.species.forEach(s=>{if(st[s.id].n&&(!top||st[s.id].n>st[top.id].n))top=s});
     let biggest=null,bigSp=null;state.species.forEach(s=>{const r=st[s.id].yrec;if(r&&r.w&&(!biggest||r.w>biggest.w)){biggest=r;bigSp=s}});
     const side=$("totalSide");side.replaceChildren();
-    const line=(k,v)=>{const d=el("div");d.append(k+": ");d.append(el("b",null,v));side.append(d)};
-    line("Összesen",allTime+" db");
-    if(y===NOW_Y){const kt=keptLimitedOn(new Date().toISOString(),null).length;if(kt)line("Ma elvitt",kt+"/"+(LIMITS[state.region]||LIMITS.orszagos).total+" db")}if(top)line("Legtöbb",top.name);if(biggest)line("Legnagyobb",bigSp.name+", "+kg(biggest.w));
+    const pill=(k,v)=>{const d=el("span");d.append(k+": ");d.append(el("b",null,v));side.append(d)};
+    pill("Összesen",allTime+" db");
+    if(y===NOW_Y){const kt=keptLimitedOn(new Date().toISOString(),null).length;if(kt)pill("Ma elvitt",kt+"/"+(LIMITS[state.region]||LIMITS.orszagos).total+" db")}
+    if(top)pill("Legtöbb",top.name);if(biggest)pill("Legnagyobb",bigSp.name+", "+kg(biggest.w));
 
     const list=$("list");list.replaceChildren();
-    $("editBtn").hidden=!state.species.length;$("editBtn").textContent=state.edit?"Kész":"Szerkesztés";
-    if(!state.species.length){const e=el("div","empty");e.innerHTML="<b>Még nincs halfajod.</b><br>Írd be lent az első fajt, vagy koppints egy ragadozóra a listából.";list.append(e)}
-    const max=Math.max(1,...state.species.map(s=>st[s.id].n));
+    if(!state.species.length){
+      const e=el("div","empty-card");e.append(el("b",null,"Még nincs halfajod."),el("p","hint","Koppints egy ragadozóra, és már számolhatod is a fogásokat."));
+      const chips=el("div","chips");COMMON.forEach(n=>{const b=el("button","chip solid","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});e.append(chips);list.append(e);
+    }
     state.species.slice().sort((a,b)=>st[b.id].n-st[a.id].n||a.name.localeCompare(b.name,"hu")).forEach(s=>{
       const c=st[s.id],rule=ruleFor(s.name),rs=ruleStatus(rule,NOW);
-      const row=el("div","row"),info=el("div","info");
-      const nl=el("div","nameline");nl.append(el("span","name",s.name));if(rs)nl.append(el("span","chip-rule "+rs.kind,rs.text));info.append(nl);
-      info.append(el("div","meta",c.last?"Utolsó: "+fmtShort(c.last)+(c.all!==c.n?" · összesen "+c.all:""):(c.all?"Ebben az évben nincs · összesen "+c.all:"Még nincs fogás")));
-      if(c.rec){const r=el("div","rec");r.append("Rekord: ");r.append(el("b",null,sizeText(c.rec)));r.append(" ("+fmtDate(c.rec.at)+")");info.append(r)}
-      const bar=el("div","bar"),bi=el("i");bi.style.width=(c.n/max*100)+"%";bar.append(bi);info.append(bar);row.append(info);
-      if(state.edit){
-        const d=el("button","del","Törlés");d.onclick=()=>{state.confirmId=s.id;render()};row.append(d);
-        if(state.confirmId===s.id){
-          const cf=el("div","confirm");cf.append(el("span",null,c.all?`Törlöd: ${s.name}? A ${c.all} rögzített fogása is törlődik.`:`Törlöd: ${s.name}?`));
-          const yes=el("button","yes","Igen, törlöm");yes.onclick=()=>{store.deleteSpecies(s.id);state.confirmId=null;render()};
-          const no=el("button","no","Mégse");no.onclick=()=>{state.confirmId=null;render()};cf.append(yes,no);row.append(cf);
-        }
-      }else{
-        const ctr=el("div","counter");
-        const minus=el("button","minus","−");minus.disabled=c.n===0;minus.setAttribute("aria-label",s.name+": utolsó fogás visszavonása");
-        const val=el("div","val",c.n);
-        const plus=el("button","plus","+");plus.setAttribute("aria-label",s.name+": új fogás");
-        plus.onclick=()=>quickCatch(s.id);minus.onclick=()=>removeLatest(s.id);
-        ctr.append(minus,val,plus);row.append(ctr);
-        if(bumpId===s.id){val.classList.add("bump");bumpId=null}
-      }
+      const row=el("div","row"+(rs&&rs.kind==="closed"?" closed":rs&&rs.kind==="soon"?" soon":""));
+      row.append(badgeEl(s.name));
+      const info=el("div","info");info.append(el("div","name",s.name));if(rs)info.append(el("span","chip-rule "+rs.kind,rs.text));row.append(info);
+      const ctr=el("div","counter");
+      const minus=el("button","minus","−");minus.disabled=c.n===0;minus.setAttribute("aria-label",s.name+": utolsó fogás visszavonása");
+      const val=el("div","val",c.n);
+      const plus=el("button","plus","+");plus.setAttribute("aria-label",s.name+": új fogás");
+      plus.onclick=()=>quickCatch(s.id);minus.onclick=()=>removeLatest(s.id);
+      ctr.append(minus,val,plus);row.append(ctr);
+      if(bumpId===s.id){val.classList.add("bump");bumpId=null}
       list.append(row);
     });
+    if(state.species.length){const m=el("button","addrow","+ Halfajok hozzáadása és törlése");m.type="button";m.onclick=()=>go("more");list.append(m)}
     renderRecords(st);
-    renderNotify();
-    const have=new Set(state.species.map(s=>norm(s.name)));
-    const chips=$("chips");chips.replaceChildren();
-    COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
   }
 
   function renderRecords(st){
     const box=$("records");box.replaceChildren();
-    const recs=state.species.filter(s=>st[s.id].rec).map(s=>({s,r:st[s.id].rec})).sort((a,b)=>(b.r.w||0)-(a.r.w||0)||(b.r.l||0)-(a.r.l||0));
-    if(!recs.length){box.append(el("div","empty","Ha megadod a hal súlyát vagy hosszát, itt látod fajonként a legnagyobbat."));return}
+    const recs=state.species.filter(s=>st[s.id].rec).map(s=>({s,r:st[s.id].rec})).sort((a,b)=>(b.r.w||0)-(a.r.w||0)||(b.r.l||0)-(a.r.l||0)).slice(0,6);
+    if(!recs.length){box.append(el("div","empty-card","Ha megadod a hal súlyát vagy hosszát, itt látod fajonként a legnagyobbat."));return}
     recs.forEach((x,i)=>{
-      const row=el("button","recrow");row.style.cssText="width:100%;text-align:left;background:none;border-left:0;border-right:0;border-top:0";
-      row.onclick=()=>openEditor({mode:"edit",id:x.r.id});
-      row.append(el("div","rank",i+1));
-      const who=el("div","who");who.append(el("b",null,x.s.name));who.append(el("div",null,fmtDate(x.r.at)+(x.r.lure?" · "+x.r.lure:"")));row.append(who);
-      const big=el("div","big",x.r.w?kg(x.r.w):x.r.l+" cm");if(x.r.w&&x.r.l)big.append(el("small",null,x.r.l+" cm"));row.append(big);box.append(row);
+      const b=el("button","rcard"+(i===0?" gold":""));b.type="button";b.onclick=()=>openEditor({mode:"edit",id:x.r.id});
+      b.append(el("span","medal",i+1));
+      b.append(el("div","big",x.r.w?kg(x.r.w):x.r.l+" cm"));
+      b.append(el("div","sp",x.s.name));
+      b.append(el("small",null,[x.r.w&&x.r.l?x.r.l+" cm":null,fmtDate(x.r.at),x.r.lure].filter(Boolean).join(" · ")));
+      box.append(b);
     });
   }
 
+  /* ---------- catches tab ---------- */
   function renderList(){
     const y=state.year;
     const yearCatches=state.catches.filter(c=>c.y===y&&state.species.some(s=>s.id===c.sp));
+    const af=$("activeFilters");af.replaceChildren();af.hidden=state.month==null;
+    if(state.month!=null){const b=el("button","chip sel",MONTHS_NOM[state.month]+" ✕");b.type="button";b.setAttribute("aria-label","Hónap szűrő törlése");b.onclick=()=>{state.month=null;render()};af.append(b)}
+    const spIds=[...new Set(yearCatches.map(c=>c.sp))];
+    if(state.filterSp&&!spIds.includes(state.filterSp))state.filterSp=null;
+    const fc=$("spFilter");fc.replaceChildren();fc.hidden=spIds.length<2;
+    const mk=(label,val)=>{const b=el("button","chip solid"+(state.filterSp===val?" sel":""),label);b.onclick=()=>{state.filterSp=val;render()};fc.append(b)};
+    mk("Mind",null);spIds.map(id=>({id,n:spName(id)})).sort((a,b)=>a.n.localeCompare(b.n,"hu")).forEach(x=>mk(x.n,x.id));
+
+    $("catchSearch").hidden=yearCatches.length<6&&!state.q;
+    const q=norm(state.q),hit=c=>!q||[spName(c.sp),c.lure,c.place&&c.place.name,c.note].some(t=>t&&norm(t).includes(q));
+    const shown=yearCatches.filter(c=>(!state.filterSp||c.sp===state.filterSp)&&(state.month==null||new Date(c.at).getMonth()===state.month)&&hit(c)).sort((a,b)=>a.at<b.at?1:-1);
+    const keptN=shown.filter(c=>c.kept===true).length;
+    $("listTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+(shown.length?" ("+shown.length+(keptN?", ebből "+keptN+" elvitt":"")+")":"");
+    const box=$("catchList");box.replaceChildren();
+    if(!shown.length&&yearCatches.length){box.append(el("div","empty","Nincs a szűrésnek megfelelő fogás."));return}
+    if(!shown.length){const e=el("div","empty");e.innerHTML=state.species.length?"<b>Ebben az évben még nincs fogás.</b><br>A Kezdőlapon a + gombbal rögzíthetsz, vagy itt fent a „+ Fogás utólag” gombbal.":"<b>Még nincs halfajod.</b><br>Előbb a Kezdőlapon vegyél fel egy fajt.";box.append(e);return}
+    let lastMonth="";
+    shown.forEach(c=>{
+      const d=new Date(c.at),mkey=d.getFullYear()+"-"+d.getMonth();
+      if(mkey!==lastMonth){lastMonth=mkey;box.append(el("div","month",d.toLocaleDateString("hu-HU",{year:"numeric",month:"long"})))}
+      const it=el("button","citem");it.onclick=()=>openEditor({mode:"edit",id:c.id});
+      const th=el("div","thumb");
+      if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.alt="";im.src=c.photo.thumb||c.photo.src;th.append(im)}else th.textContent=spName(c.sp).charAt(0);
+      const mid=el("div");mid.style.minWidth="0";
+      const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");
+      mid.append(el("div","t1",spName(c.sp)),el("div","t2",bits.join(" · ")));if(c.wx)mid.append(el("div","t3",wxLine(c.wx)));
+      const side=el("div","cside");
+      if(c.l||c.w){side.append(el("span","csize",c.l?c.l+" cm":kg(c.w)));if(c.l&&c.w)side.append(el("span","cfate",kg(c.w)))}
+      if(c.kept===true)side.append(el("span","cfate kept","elvitt"));else if(c.kept===false)side.append(el("span","cfate","elengedve"));
+      if(!side.children.length)side.append(el("span","chev","›"));
+      it.append(th,mid,side);box.append(it);
+    });
+  }
+
+  /* ---------- statistics tab ---------- */
+  const MONTHS=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+  const MONTHS_SHORT=["jan","feb","már","ápr","máj","jún","júl","aug","sze","okt","nov","dec"];
+  const MONTHS_LONG=["januárban","februárban","márciusban","áprilisban","májusban","júniusban","júliusban","augusztusban","szeptemberben","októberben","novemberben","decemberben"];
+  const MONTHS_NOM=["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
+  function renderStats(){
+    const y=state.year;
+    const yearCatches=state.catches.filter(c=>c.y===y&&state.species.some(s=>s.id===c.sp));
+    $("statsEmpty").hidden=yearCatches.length>0;
+    // headline numbers
+    const kp=$("kpis");kp.replaceChildren();
+    if(yearCatches.length){
+      const kept=yearCatches.filter(c=>c.kept===true).length,rel=yearCatches.filter(c=>c.kept===false).length;
+      let big=null;yearCatches.forEach(c=>{if((c.w||c.l)&&better(c,big))big=c});
+      const tile=(icn,acc,val,label)=>{const t=el("div","kpi"+(acc?" acc":""));t.append(mkIc(icn,acc),el("b",null,val),el("span",null,label));kp.append(t)};
+      tile("fish",false,yearCatches.length,"fogás "+(y===NOW_Y?"idén":y+"-ben"));
+      tile("check",false,kept||rel?String(kept):"–",kept||rel?"elvitt"+(rel?" · "+rel+" elengedve":""):"nincs megjelölve");
+      tile("trophy",true,big?(big.w?kg(big.w):big.l+" cm"):"–",big?spName(big.sp):"legnagyobb hal");
+    }
     // lure stats
     const lc=new Map();yearCatches.forEach(c=>{if(c.lure){const k=c.lure.trim();lc.set(k,(lc.get(k)||0)+1)}});
     const lures=[...lc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
@@ -807,49 +992,9 @@ textarea.inp{resize:vertical;min-height:68px}
       ["Hajnal","Nappal","Alkony","Éjszaka"].forEach((l,i)=>{const r=el("div","dp");r.append(el("span",null,l));const bar=el("div","bar"),bi=el("i");bi.style.width=(dc[i]/dmx*100)+"%";bar.append(bi);r.append(bar);r.append(el("b",null,dc[i]));wrap.append(r)});
       ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±1,5 óra. Csak az időponttal rögzített fogások számítanak."));
     }
-
     renderMonths(yearCatches);
     renderBest(yearCatches);
-    // statistics: closed by default while there is too little to read from it, then the user's choice
-    const nY=yearCatches.length,pref=statsPref(),open=nY>0&&(pref!=null?pref:nY>=5);
-    $("statsToggle").hidden=nY<1;$("statsBox").hidden=!open;$("statsToggle").setAttribute("aria-expanded",String(open));
-    $("statsNote").textContent=nY+" fogás alapján"+(nY<5?" · kevés még az adat":"");
-
-    // filter chips
-    const spIds=[...new Set(yearCatches.map(c=>c.sp))];
-    if(state.filterSp&&!spIds.includes(state.filterSp))state.filterSp=null;
-    const fc=$("spFilter");fc.replaceChildren();fc.hidden=spIds.length<2;
-    const mk=(label,val)=>{const b=el("button","chip solid"+(state.filterSp===val?" sel":""),label);b.onclick=()=>{state.filterSp=val;render()};fc.append(b)};
-    mk("Mind",null);spIds.map(id=>({id,n:spName(id)})).sort((a,b)=>a.n.localeCompare(b.n,"hu")).forEach(x=>mk(x.n,x.id));
-
-    $("catchSearch").hidden=yearCatches.length<6&&!state.q;
-    const q=norm(state.q),hit=c=>!q||[spName(c.sp),c.lure,c.place&&c.place.name,c.note].some(t=>t&&norm(t).includes(q));
-    const shown=yearCatches.filter(c=>(!state.filterSp||c.sp===state.filterSp)&&(state.month==null||new Date(c.at).getMonth()===state.month)&&hit(c)).sort((a,b)=>a.at<b.at?1:-1);
-    const keptN=shown.filter(c=>c.kept===true).length;
-    $("listTitle").textContent=(y===NOW_Y?"Idei fogások":y+" fogásai")+(shown.length?" ("+shown.length+(keptN?", ebből "+keptN+" elvitt":"")+")":"");
-    const box=$("catchList");box.replaceChildren();
-    if(!shown.length&&yearCatches.length){box.append(el("div","empty","Nincs a szűrésnek megfelelő fogás."));return}
-    if(!shown.length){const e=el("div","empty");e.innerHTML=state.species.length?"<b>Ebben az évben még nincs fogás.</b><br>A Számlálónál a + gombbal rögzíthetsz, vagy itt fent a „+ Fogás utólag” gombbal.":"<b>Még nincs halfajod.</b><br>Előbb a Számlálónál vegyél fel egy fajt.";box.append(e);return}
-    let lastMonth="";
-    shown.forEach(c=>{
-      const d=new Date(c.at),mkey=d.getFullYear()+"-"+d.getMonth();
-      if(mkey!==lastMonth){lastMonth=mkey;box.append(el("div","month",d.toLocaleDateString("hu-HU",{year:"numeric",month:"long"})))}
-      const it=el("button","citem");it.onclick=()=>openEditor({mode:"edit",id:c.id});
-      const th=el("div","thumb");
-      if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.alt="";im.src=c.photo.thumb||c.photo.src;th.append(im)}else th.textContent=spName(c.sp).charAt(0);
-      const mid=el("div");mid.style.minWidth="0";
-      const t1=el("div","t1",spName(c.sp));const sz=sizeText(c);if(sz){t1.append(" ");t1.append(el("span",null,sz))}
-      const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");if(c.kept===true)bits.push("elvitt");else if(c.kept===false)bits.push("visszaengedve");
-      mid.append(t1,el("div","t2",bits.join(" · ")));if(c.wx)mid.append(el("div","t3",wxLine(c.wx)));
-      it.append(th,mid,el("span","chev","›"));box.append(it);
-    });
   }
-
-  const STATS_KEY="fogasnaplo.statsOpen";
-  const statsPref=()=>{try{const v=localStorage.getItem(STATS_KEY);return v==null?null:v==="1"}catch(e){return null}};
-  const MONTHS=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
-  const MONTHS_SHORT=["jan","feb","már","ápr","máj","jún","júl","aug","sze","okt","nov","dec"];
-  const MONTHS_LONG=["januárban","februárban","márciusban","áprilisban","májusban","júniusban","júliusban","augusztusban","szeptemberben","októberben","novemberben","decemberben"];
   function renderMonths(yc){
     $("monthSec").hidden=yc.length<1;const box=$("monthStats");box.replaceChildren();if(!yc.length)return;
     const mc=Array(12).fill(0);yc.forEach(c=>mc[new Date(c.at).getMonth()]++);const mx=Math.max(...mc),best=mc.indexOf(mx);
@@ -857,10 +1002,10 @@ textarea.inp{resize:vertical;min-height:68px}
     mc.forEach((n,i)=>{const b=el("button",state.month===i?"sel":"");b.type="button";b.setAttribute("aria-label",MONTHS[i]+": "+n+" fogás");
       b.append(el("b",null,i===best||state.month===i?String(n):""));const bar=el("i",n?"":"zero");if(n)bar.style.height=Math.max(4,n/mx*84)+"px";
       b.append(bar,el("span",null,MONTHS_SHORT[i]));
-      b.onclick=()=>{state.month=state.month===i?null:i;render()};g.append(b)});
+      b.onclick=()=>{state.month=i;go("list")}; // straight to that month's catches
+      g.append(b)});
     box.append(g);
-    box.append(el("div","hint",state.month!=null?`${MONTHS_LONG[state.month][0].toUpperCase()+MONTHS_LONG[state.month].slice(1)} ${mc[state.month]} fogás. A lista lent erre a hónapra szűrve; koppints újra a szűrés törléséhez.`:
-      `Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra a fogások szűréséhez.`));
+    box.append(el("div","hint",`Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra, és megnézheted a fogásait.`));
   }
   // per species: the lure, place and part of the day that brought most fish (needs 2+ catches)
   function renderBest(yc){
@@ -873,6 +1018,30 @@ textarea.inp{resize:vertical;min-height:68px}
       const bits=[lure&&`Csali: ${lure[0]} (${lure[1]})`,place&&`Hely: ${place[0]} (${place[1]})`,dp&&`Napszak: ${dp[0]} (${dp[1]})`].filter(Boolean);
       const r=el("div");r.append(el("b",null,`${s.name} · ${cs.length} fogás`));r.append(el("span",null,bits.length?bits.join(" · "):"Add meg a csalit vagy a helyet, és itt látod, mi vált be."));box.append(r);
     });
+  }
+
+  /* ---------- settings tab: my species, notifications, backup, about ---------- */
+  function renderMore(st){
+    const box=$("myList");box.replaceChildren();
+    if(!state.species.length)box.append(el("div","empty","Még nincs halfajod. Adj hozzá egyet lent."));
+    state.species.slice().sort((a,b)=>a.name.localeCompare(b.name,"hu")).forEach(s=>{
+      const all=st[s.id].all;
+      const row=el("div","myrow");row.append(badgeEl(s.name,"sm"));
+      const t=el("div","mytxt");t.append(el("b",null,s.name),el("span",null,all?all+" rögzített fogás":"még nincs fogás"));row.append(t);
+      const d=el("button","del","Törlés");d.type="button";d.onclick=()=>{state.confirmId=s.id;render()};row.append(d);
+      if(state.confirmId===s.id){
+        const cf=el("div","confirm");cf.append(el("span",null,all?`Törlöd: ${s.name}? A ${all} rögzített fogása is törlődik.`:`Törlöd: ${s.name}?`));
+        const yes=el("button","yes","Igen, törlöm");yes.type="button";yes.onclick=()=>{store.deleteSpecies(s.id);state.confirmId=null;render()};
+        const no=el("button","no","Mégse");no.type="button";no.onclick=()=>{state.confirmId=null;render()};cf.append(yes,no);row.append(cf);
+      }
+      box.append(row);
+    });
+    const have=new Set(state.species.map(s=>norm(s.name)));
+    const chips=$("chips");chips.replaceChildren();
+    COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
+    renderNotify();renderAutoBk();
+    let v="böngésző";try{if(ANDROID&&ANDROID.appVersion)v=ANDROID.appVersion()}catch(e){}
+    $("verLine").textContent=v;
   }
 
   /* ---------- big map ---------- */
@@ -1375,6 +1544,7 @@ textarea.inp{resize:vertical;min-height:68px}
     const top=el("div","today-top");
     const sco=el("div","score");sco.append(el("div","lbl",LEVELS[sc.level]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=sc.level?"on":""));sco.append(dots);
     sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
+    const wi=el("span","wxic"+(sc.level>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));top.append(wi);
     const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));nt.append(el("span",null,dirName(H.wind_direction_10m[i])+" "+Math.round(H.wind_speed_10m[i])+" km/h"));top.append(nt);
     card.append(top);
     const open=todayOpen(),more=el("button","linkbtn today-more",open?"Kevesebb ▴":"Részletek ▾");more.type="button";
@@ -1466,7 +1636,7 @@ textarea.inp{resize:vertical;min-height:68px}
     const sp=r&&state.species.find(s=>s.id===r.sp);
     if(!sp){toast("Ez a halfaj már nincs a listán.");return}
     if(ed||!$("picker").hidden){toast("Előbb fejezd be a nyitott fogást.");return}
-    state.year=NOW_Y;state.tab="count";state.edit=false;render();window.scrollTo(0,0);quickCatch(sp.id);
+    state.year=NOW_Y;go("home");window.scrollTo(0,0);quickCatch(sp.id);
   };
 
   /* ---------- theme: light / dark sage, automatic by the phone's mode ---------- */
@@ -1478,14 +1648,24 @@ textarea.inp{resize:vertical;min-height:68px}
     const t=themePref(),light=(t==="auto"?(systemNight()?"dark":"light"):t)==="light";
     document.documentElement.dataset.theme=light?"light":"dark";
     document.querySelector('meta[name="theme-color"]').content=light?"#eef2ec":"#151c17";
+    $("themeBtn").setAttribute("aria-label",light?"Váltás sötét módra":"Váltás világos módra");
     if(ANDROID&&ANDROID.setTheme){try{ANDROID.setTheme(light)}catch(e){}} // status bar icons and window colour
-    renderThemeChips();
   }
-  function renderThemeChips(){
-    const box=$("themeChips");box.replaceChildren();const t=themePref();
-    [["auto","Automatikus"],["light","Világos"],["dark","Sötét"]].forEach(([k,l])=>{const b=el("button","chip solid"+(t===k?" sel":""),l);b.type="button";
-      b.setAttribute("aria-pressed",String(t===k));b.onclick=()=>{try{localStorage.setItem(THEME_KEY,k)}catch(e){}applyTheme()};box.append(b)});
+  // a circular reveal from the button where the browser supports view transitions
+  function swapTheme(apply,x,y){
+    if(reduced()||!document.startViewTransition){apply();return}
+    let t;try{t=document.startViewTransition(apply)}catch(e){apply();return}
+    t.ready.then(()=>{const r=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
+      document.documentElement.animate({clipPath:["circle(0px at "+x+"px "+y+"px)","circle("+r+"px at "+x+"px "+y+"px)"]},
+        {duration:600,easing:"cubic-bezier(.4,0,.2,1)",pseudoElement:"::view-transition-new(root)"})}).catch(()=>{});
   }
+  // the button flips light <-> dark; landing on the phone's own mode goes back to "follow the phone"
+  $("themeBtn").onclick=e=>{
+    const toLight=document.documentElement.dataset.theme!=="light",sysLight=!systemNight();
+    const pref=toLight===sysLight?"auto":(toLight?"light":"dark");
+    const r=e.currentTarget.getBoundingClientRect();
+    swapTheme(()=>{try{if(pref==="auto")localStorage.removeItem(THEME_KEY);else localStorage.setItem(THEME_KEY,pref)}catch(_){}applyTheme()},r.left+r.width/2,r.top+r.height/2);
+  };
   window.__fnSysTheme=function(r){sysNight=!!(r&&r.night);if(themePref()==="auto")applyTheme()};
   if(!ANDROID)try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",e=>{sysNight=e.matches;if(themePref()==="auto")applyTheme()})}catch(e){}
 
@@ -1511,12 +1691,12 @@ textarea.inp{resize:vertical;min-height:68px}
   window.__fnBack=function(){
     if(!$("picker").hidden){closePicker();return true}
     if(ed){closeEditor();return true}
-    if(state.tab!=="count"){state.tab="count";render();window.scrollTo(0,0);return true}
+    if(state.tab!=="home"){go("home");return true}
     return false;
   };
 
   /* ---------- backup ---------- */
-  $("exportBtn").onclick=async()=>{
+  async function exportJson(){
     const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,
       catches:data.catches.map(c=>{if(!c.photo)return c;let th=c.photo.thumb;
         if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
@@ -1528,7 +1708,7 @@ textarea.inp{resize:vertical;min-height:68px}
       if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Fogásnapló mentés"});return}}catch(e){if(e&&e.name==="AbortError")return}
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
     $("backupMsg").textContent="Mentés letöltve: "+name;
-  };
+  }
   // what a backup file would add: species matched by id or name, catches by id; nothing already here is overwritten
   function planImport(d){
     const byId=new Map(data.species.map(s=>[s.id,s])),byName=new Map(data.species.map(s=>[norm(s.name),s]));
@@ -1550,7 +1730,7 @@ textarea.inp{resize:vertical;min-height:68px}
     const f=e.target.files[0];e.target.value="";if(!f)return;
     const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
-    catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés. Válaszd a „Mentés fájlba” gombbal készült .json fájlt.";return}
+    catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés.";return}
     askImport(d);
   };
   function askImport(d){
@@ -1607,21 +1787,25 @@ textarea.inp{resize:vertical;min-height:68px}
     askImport(d);
   };
   function renderAutoBk(){
-    const box=$("autoBk");$("zipRow").hidden=box.hidden=!hasZip();if(box.hidden)return;
+    $("saveBtn").disabled=zipBusy;
+    const box=$("autoBk");box.hidden=!hasZip();if(box.hidden)return;
     box.replaceChildren();const f=ANDROID.backupFolder();
     const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b);return b};
-    if(!f){box.append(el("span",null,"Automatikus heti mentés a fotókkal együtt egy általad választott mappába, pl. a Drive-ra vagy SD-kártyára."));
-      btn("btn-main","Mappa kiválasztása",()=>ANDROID.pickBackupFolder());return}
+    if(!f){box.append(el("span",null,"Automatikus heti mentés: válassz egy mappát (pl. Drive vagy SD-kártya), és a fotókkal együtt oda ment."));
+      btn("btn-ghost","Mappa kiválasztása",()=>ANDROID.pickBackupFolder());return}
     const i=autoInfo();
     const txt=zipBusy?`Mentés folyamatban ide: ${f}…`:i.err?`Az utolsó automatikus mentés nem sikerült. ${i.err}`:
       i.ts?`Hetente automatikus mentés ide: ${f}. Utoljára: ${fmtDate(new Date(i.ts).toISOString())}, ${i.photos} fotóval.`:`Hetente automatikus mentés ide: ${f}.`;
     box.append(el("span",i.err&&!zipBusy?"err":null,txt));
-    btn("no","Mentés most",()=>backupNow(false)).disabled=zipBusy;
     btn("no","Másik mappa",()=>ANDROID.pickBackupFolder());
     btn("no","Kikapcsolás",()=>{ANDROID.clearBackupFolder();setAutoInfo({});renderAutoBk()});
   }
-  $("zipBtn").onclick=()=>{if(hasZip())ANDROID.saveZip(zipJson(),zipName())};
-  $("zipInBtn").onclick=()=>{if(hasZip())ANDROID.restoreZip()};
+  // "Mentés most": into the chosen folder, else a file you pick; the browser gets a .json download
+  $("saveBtn").onclick=()=>{
+    if(hasZip()){if(ANDROID.backupFolder())backupNow(false);else ANDROID.saveZip(zipJson(),zipName());return}
+    exportJson();
+  };
+  $("restoreBtn").onclick=()=>{if(hasZip())ANDROID.restoreZip();else $("importFile").click()};
 
   /* ---------- photo files: thumbnails out of localStorage, orphans removed ---------- */
   // older versions kept every thumbnail as base64 inside the log; localStorage fills up at ~5 MB
@@ -1643,12 +1827,10 @@ textarea.inp{resize:vertical;min-height:68px}
   $("addForm").addEventListener("submit",e=>{e.preventDefault();addSpecies($("newName").value)});
   $("prevYear").onclick=()=>{state.year--;state.month=null;render()};
   $("nextYear").onclick=()=>{if(state.year<NOW_Y){state.year++;state.month=null;render()}};
-  $("editBtn").onclick=()=>{state.edit=!state.edit;state.confirmId=null;render()};
   $("regionSel").onchange=e=>{state.region=e.target.value;try{localStorage.setItem("fogasnaplo.region",state.region)}catch(_){}render();pushReminders()};
   $("addLater").onclick=()=>openEditor({mode:"create"});
   $("catchSearch").oninput=e=>{state.q=e.target.value;render()};
-  $("statsToggle").onclick=()=>{const open=$("statsToggle").getAttribute("aria-expanded")==="true";try{localStorage.setItem(STATS_KEY,open?"0":"1")}catch(e){}render()};
-  document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.edit=false;render();window.scrollTo(0,0)});
+  document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 
   sync();
   renderAutoBk();applyTheme();

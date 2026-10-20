@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
     static final String ACTION_QUICK = "hu.fogasnaplo.app.QUICK";
     // test build self-update: CI publishes the latest test APK and its version here
     private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
-    private static final String UA = "Fogasnaplo/1.6 (hu.fogasnaplo.app; Android personal fishing log)";
+    private static final String UA = "Fogasnaplo/1.7 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
     private boolean webDead = false;
@@ -753,32 +753,38 @@ public class MainActivity extends Activity {
         return out;
     }
 
-    /** Unpacks photos (keeping their names) and hands the log to the page, which asks before merging. */
+    /** Zip backup: unpacks the photos (keeping their names). A plain .json backup works too. The page asks before merging. */
     private void readZip(Uri u) {
-        String json = null;
         File photos = new File(getFilesDir(), "photos"), thumbs = new File(getFilesDir(), "thumbs");
         photos.mkdirs();
         thumbs.mkdirs();
-        try (ZipInputStream z = new ZipInputStream(getContentResolver().openInputStream(u))) {
-            ZipEntry e;
-            byte[] buf = new byte[65536];
-            while ((e = z.getNextEntry()) != null) {
-                String n = e.getName();
-                if (n.equals("fogasnaplo.json")) {
-                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                    int k;
-                    while ((k = z.read(buf)) > 0) bo.write(buf, 0, k);
-                    json = bo.toString("UTF-8");
-                } else if (n.matches("(photos|thumbs)/[A-Za-z0-9-]+\\.jpg")) {
-                    File f = new File(n.startsWith("photos/") ? photos : thumbs, n.substring(7));
-                    if (f.exists()) continue;
-                    File tmp = new File(f.getPath() + ".tmp");
-                    try (OutputStream os = new FileOutputStream(tmp)) {
-                        int k;
-                        while ((k = z.read(buf)) > 0) os.write(buf, 0, k);
+        try (java.io.BufferedInputStream in = new java.io.BufferedInputStream(getContentResolver().openInputStream(u))) {
+            in.mark(8);
+            byte[] head = new byte[4];
+            int got = in.read(head);
+            in.reset();
+            String json = null;
+            if (got == 4 && head[0] == 'P' && head[1] == 'K') {
+                ZipInputStream z = new ZipInputStream(in);
+                ZipEntry e;
+                byte[] buf = new byte[65536];
+                while ((e = z.getNextEntry()) != null) {
+                    String n = e.getName();
+                    if (n.equals("fogasnaplo.json")) {
+                        json = readAll(z, buf);
+                    } else if (n.matches("(photos|thumbs)/[A-Za-z0-9-]+\\.jpg")) {
+                        File f = new File(n.startsWith("photos/") ? photos : thumbs, n.substring(7));
+                        if (f.exists()) continue;
+                        File tmp = new File(f.getPath() + ".tmp");
+                        try (OutputStream os = new FileOutputStream(tmp)) {
+                            int k;
+                            while ((k = z.read(buf)) > 0) os.write(buf, 0, k);
+                        }
+                        tmp.renameTo(f);
                     }
-                    tmp.renameTo(f);
                 }
+            } else {
+                json = readAll(in, new byte[65536]); // a .json backup: no photo files to unpack
             }
             if (json == null) throw new Exception("no log");
             JSONObject o = new JSONObject();
@@ -787,8 +793,15 @@ public class MainActivity extends Activity {
             o.put("thumbs", Uri.fromFile(thumbs) + "/");
             js("__fnZipIn", o);
         } catch (Exception ex) {
-            js("__fnZipIn", err("Ez a fájl nem Fogásnapló ZIP-mentés."));
+            js("__fnZipIn", err("Ez a fájl nem Fogásnapló mentés."));
         }
+    }
+
+    private static String readAll(InputStream in, byte[] buf) throws Exception {
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        int k;
+        while ((k = in.read(buf)) > 0 && bo.size() < 64 * 1024 * 1024) bo.write(buf, 0, k);
+        return bo.toString("UTF-8");
     }
 
     private class Bridge {
@@ -813,6 +826,17 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public boolean isTestBuild() { return MainActivity.this.isTestBuild(); }
+
+        /** "1.6 (12)" style version of this install, for the settings page. */
+        @JavascriptInterface
+        public String appVersion() {
+            try {
+                android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+                return pi.versionName + " (" + ownVersion() + ")" + (isTestBuild() ? " · teszt" : "");
+            } catch (Exception e) {
+                return "–";
+            }
+        }
 
         /** True when the phone is in dark mode (the page's "automatic" theme follows it). */
         @JavascriptInterface
@@ -898,8 +922,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("*/*");
-                i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip", "application/x-zip-compressed", "application/octet-stream"});
+                i.setType("*/*"); // the zip or the .json backup: the file's first bytes decide
                 try {
                     startActivityForResult(i, REQ_ZIP_IN);
                 } catch (Exception e) {

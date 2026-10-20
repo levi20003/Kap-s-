@@ -7,7 +7,7 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 ## Build
 
 ```
-./build.sh <versionCode> <versionName>     # pl. ./build.sh 7 1.6
+./build.sh <versionCode> <versionName>     # pl. ./build.sh 8 1.7
 ```
 
 - Gradle nélkül, közvetlenül az SDK eszközeivel: `aapt2` → `javac` → `d8` → `zipalign` → `apksigner`.
@@ -36,8 +36,18 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Vissza gomb: API 33+ `OnBackInvokedCallback` (Android 16-tól csak ez működik), régebben `onBackPressed`; mindkettő `handleBack()` → `__fnBack`.
 - Térkép: a fogás helye `coordsOf(c)` (kézi `place`, ennek híján az automatikus `gps`); a csak GPS-es fogás kék (`.pin.gps`) jelölőt kap.
 - Helyválasztó: a fogás GPS-helyén nyílik, a jelölő előre ott van; 12-es nagyítás alatt a koppintás csak ránagyít (pontatlan jelölés ellen).
-- Számláló: a „Mai horgászidő” alapból kompakt (`fogasnaplo.todayOpen`), hogy a halfajok és a + gombok elsőre látsszanak.
-  Fogások: a statisztika lenyitható blokk, 5 fogás alatt csukva (`fogasnaplo.statsOpen` a felhasználó választása).
+- **Öt fül** (`TABS` = home, list, stats, map, more; `go(tab)` vált, `render()` rajzolja az aktívat):
+  Kezdőlap (hős-összesítő, mai horgászidő, halfaj-számlálók, rekordok), Fogások (lista, keresés, szűrők), Statisztika (összefoglaló csempék + diagramok),
+  Térkép, Beállítások (halfajaim, értesítések, biztonsági mentés, verzió). A Kezdőlapon csak az kell, ami a vízparton: régebbi fogások adatai nem.
+  Új funkciónak először a helyét döntsd el, ne a Kezdőlapra tedd alapból.
+- Kezdőlap: a „Mai horgászidő” alapból kompakt (`fogasnaplo.todayOpen`), hogy a halfajok és a + gombok elsőre látsszanak.
+  Üres naplónál a Kezdőlap a gyakori halfajokat kínálja egy koppintásra.
+- Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).
+- Beállítások → halfaj törlése megerősítéssel (a hozzá tartozó fogások is törlődnek).
+- Elrendezés: a tab-konténerek `.wrap` elemek egymásban, ezért `.wrap .wrap{width:100%}` kell (a `margin:auto` különben a tartalom szélességére zsugorítaná,
+  és a kártyák kilógnának a képernyőből). A tesztek minden fülön ellenőrzik, hogy 360 és 412 px-en nincs vízszintes túlcsordulás.
+- Animáció: `playEnter` a fülváltáskor `.enter` osztályt ad a konténernek (kártyák felcsúsznak, sávok nőnek), `countTo` számlál a hős-számnál.
+  Minden `prefers-reduced-motion` alatt kikapcsol (a tesztek is ezzel futnak, hogy determinisztikusak legyenek).
 - Ha a WebView renderelője összeomlik, a `MainActivity` újraindítja magát (`onRenderProcessGone`).
 
 ## Tesztek és CI
@@ -54,10 +64,13 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   1.4-ig az előnézet base64-ként a localStorage-ban volt; induláskor `migrateThumbs` átköltözteti (a localStorage ~5 MB-nál megtelik).
   Új adatot soha ne tegyél base64-ként a naplóba.
 - Induláskor `sweepFiles` → `ANDROID.cleanup` törli a naplóban nem szereplő fotókat (1 óra türelmi idővel), üres naplónál nem fut.
+- Biztonsági mentés (Beállítások): két gomb. „Mentés most”: Androidon ZIP (napló + fotók; ha van kiválasztott mappa, oda, különben fájlválasztóval),
+  böngészőben .json. „Visszaállítás”: Androidon a fájl első bájtjai döntik el, hogy ZIP vagy .json; böngészőben fájlválasztó. A heti automatikus mentés
+  (mappa) a háttérben megy, a Beállításokban csak állapotsor és „Másik mappa” / „Kikapcsolás”.
 - Mentésfájl (`version: 2`): az előnézetek beágyazva (data url). Visszatöltés = összefésülés megerősítés után, meglévő fogást nem ír felül.
 - Fogás `kept`: `true` = elvitt, `false` = visszaengedett, hiányzik = nincs megadva. A napi darabszám-figyelmeztetés (`LIMITS`, `LIMITED`, `limitVerdict`)
   csak az elvitt halakat számolja: fajonként 3, összesen 5 db (Duna: 2 / 4). Csak figyelmeztet, nem tilt.
-- Fotós mentés (Android): ZIP = `fogasnaplo.json` (a napló `file://` uri-kkal) + `photos/` + `thumbs/`. Visszatöltéskor a fotók a saját nevükkel
+- ZIP-mentés (Android): ZIP = `fogasnaplo.json` (a napló `file://` uri-kkal) + `photos/` + `thumbs/`. Visszatöltéskor a fotók a saját nevükkel
   kicsomagolódnak, a JS átírja az uri-kat az új telefon mappáira, és az összefésülés ugyanúgy megerősítést kér.
 - Heti automatikus mentés: a mappa SAF tree uri-ja a `SharedPreferences`-ben (`backupTree`), állapot a `fogasnaplo.autobackup` kulcsban.
   Induláskor és előtérbe jövéskor `maybeAutoBackup()`; a mappában a 4 legutóbbi `fogasnaplo-ÉÉÉÉ-HH-NN.zip` marad.
@@ -66,8 +79,9 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 ## Zsálya design – két téma
 
 A paletta (Sage Hint `#DCE6D9`, Mint `#BFCFBB`, Sage `#8EA58C`, Moss `#738A6E`, Evergreen `#344C3D`) + narancs kiemelés.
-Világos és sötét téma: alapból a telefon módját követi (`ANDROID.isNight()`, váltáskor `__fnSysTheme`), kézzel a
-Számláló → Megjelenés részben választható (`fogasnaplo.theme`: `auto` / `light` / `dark`). A téma `<html data-theme>`-ként él;
+Világos és sötét téma: alapból a telefon módját követi (`ANDROID.isNight()`, váltáskor `__fnSysTheme`). Kézzel a fejléc nap/hold gombja váltja
+(`#themeBtn`): ha a gomb a telefon módjától eltérőre vált, `fogasnaplo.theme` = `light`/`dark` (felülbírálás), ha a telefon módjára, a kulcs törlődik
+(újra követi a telefont). Váltáskor körkörös átváltás (View Transitions, ahol van). A téma `<html data-theme>`-ként él;
 a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTheme(light)` a rendszersávok ikonszínét és az ablak hátterét igazítja.
 
 | Token | Sötét | Világos |
@@ -78,6 +92,10 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 | `--water` (fő kiemelés: gombok, címek, sávok) | `#bfcfbb` (Mint) | `#344c3d` (Evergreen) |
 | `--water-deep` | `#738a6e` (Moss) | `#8ea58c` (Sage) |
 | `--accent` (+ gomb, értékelés) | `#ff7a45` | `#c4501f` |
+| `--edge` / `--shadow-card` / `--shadow-pop` | kártyák peremfénye és mélysége (emelkedés) | ugyanazok, világos árnyékkal |
+
+- Kártyák: minden kártya a `--edge` peremet, a `--shadow-card` árnyékot és enyhe fényátmenetet kapja; a hős-kártya `--shadow-pop`. A fajták
+  különböznek: halfaj-kártya (bal csík + jelvény + számláló-pirula), rekord (vízszintesen görgethető trófea-sor, az első arany), statisztika-csempe, fogás-kártya.
 
 - Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
   ha új szín kell, vegyél fel tokent mindkét blokkba (pl. `--card-a/b`, `--hero-*`, `--tint`, `--tile-filter`).
