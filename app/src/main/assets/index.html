@@ -10,7 +10,7 @@
   try{var A=window.FogasnaploAndroid;n=A&&A.isNight?A.isNight():matchMedia("(prefers-color-scheme: dark)").matches}catch(e){}
   document.documentElement.dataset.theme=t==="auto"?(n?"dark":"light"):t})();
 </script>
-<title>Fogásnapló</title>
+<title>Kapás</title>
 <link rel="stylesheet" href="lib/leaflet.css">
 <style>
 @font-face{font-family:"Figtree";font-weight:400;font-display:swap;src:url(fonts/figtree-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
@@ -85,7 +85,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* header */
 header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{font-family:var(--f-display);font-weight:700;font-size:1.75rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase}
+.logo{width:1.9rem;height:1.9rem;flex:none}
+.brand{display:flex;align-items:center;gap:.5rem;font-family:var(--f-display);font-weight:700;font-size:1.75rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase}
 .hright{display:flex;align-items:center;gap:8px}
 .yearbar{display:flex;align-items:center;gap:0;background:var(--tint);border:1px solid var(--edge);border-radius:999px;padding:3px}
 .yearbar button{border:0;background:none;width:34px;height:34px;border-radius:50%;font-size:1.2rem;display:grid;place-items:center;color:var(--muted)}
@@ -416,7 +417,7 @@ button{transition:transform .15s}
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">Fogásnapló</div>
+    <div class="brand"><svg class="logo" viewBox="14 14 80 80" aria-hidden="true"><path d="M36,90C60,86 78,78 68,64S34,58 42,48S52,44 58,42" fill="none" stroke="var(--water)" stroke-width="9" stroke-linecap="round"/><g fill="none" stroke="var(--accent)" stroke-width="3"><ellipse cx="71" cy="42" rx="15" ry="5.5"/><ellipse cx="71" cy="42" rx="9" ry="3"/></g><circle cx="71" cy="28.5" r="6.5" fill="var(--accent)"/></svg><span>Kapás</span></div>
     <div class="hright">
       <div class="yearbar" id="yearbar" role="group" aria-label="Év választása">
         <button id="prevYear" aria-label="Előző év">‹</button>
@@ -1705,7 +1706,7 @@ button{transition:transform .15s}
     if(ANDROID&&ANDROID.saveBackup){ANDROID.saveBackup(json,name);return}
     const blob=new Blob([json],{type:"application/json"});
     try{const file=new File([blob],name,{type:"application/json"});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Fogásnapló mentés"});return}}catch(e){if(e&&e.name==="AbortError")return}
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Kapás mentés"});return}}catch(e){if(e&&e.name==="AbortError")return}
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
     $("backupMsg").textContent="Mentés letöltve: "+name;
   }
@@ -1730,7 +1731,7 @@ button{transition:transform .15s}
     const f=e.target.files[0];e.target.value="";if(!f)return;
     const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     let d;try{d=JSON.parse(await f.text());if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
-    catch(err){$("backupMsg").textContent="Ez a fájl nem Fogásnapló mentés.";return}
+    catch(err){$("backupMsg").textContent="Ez a fájl nem Kapás mentés.";return}
     askImport(d);
   };
   function askImport(d){
@@ -1779,7 +1780,7 @@ button{transition:transform .15s}
   window.__fnZipIn=function(r){
     if(!r||r.error){$("backupMsg").textContent=(r&&r.error)||"A visszatöltés nem sikerült.";return}
     let d;try{d=JSON.parse(r.json);if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
-    catch(e){$("backupMsg").textContent="Ez a fájl nem Fogásnapló ZIP-mentés.";return}
+    catch(e){$("backupMsg").textContent="Ez a fájl nem Kapás ZIP-mentés.";return}
     // the photos were unpacked under their own names into this phone's folders
     const seg=u=>u.slice(u.lastIndexOf("/")+1);
     d.catches.forEach(c=>{if(!c||!c.photo)return;const p={...c.photo};

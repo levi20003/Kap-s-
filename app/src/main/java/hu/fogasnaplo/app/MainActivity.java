@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
     static final String ACTION_QUICK = "hu.fogasnaplo.app.QUICK";
     // test build self-update: CI publishes the latest test APK and its version here
     private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
-    private static final String UA = "Fogasnaplo/1.7 (hu.fogasnaplo.app; Android personal fishing log)";
+    private static final String UA = "Kapas/1.8 (hu.fogasnaplo.app; Android personal fishing log)";
 
     private WebView web;
     private boolean webDead = false;
@@ -458,7 +458,7 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(req, perms, res);
         if (req == PERM_NOTIF) {
             boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
-            js("__fnNotify", ok ? new JSONObject() : err("Az értesítések tiltva vannak. A telefon Beállítások → Alkalmazások → Fogásnapló részében engedélyezheted."));
+            js("__fnNotify", ok ? new JSONObject() : err("Az értesítések tiltva vannak. A telefon Beállítások → Alkalmazások → Kapás részében engedélyezheted."));
         }
         if (req == PERM_LOC) {
             boolean ok = false;
@@ -793,7 +793,7 @@ public class MainActivity extends Activity {
             o.put("thumbs", Uri.fromFile(thumbs) + "/");
             js("__fnZipIn", o);
         } catch (Exception ex) {
-            js("__fnZipIn", err("Ez a fájl nem Fogásnapló mentés."));
+            js("__fnZipIn", err("Ez a fájl nem Kapás mentés."));
         }
     }
 

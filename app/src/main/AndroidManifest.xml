@@ -16,7 +16,7 @@
     </queries>
 
     <application
-        android:label="Fogásnapló"
+        android:label="Kapás"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"

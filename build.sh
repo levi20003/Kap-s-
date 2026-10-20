@@ -1,15 +1,15 @@
 #!/bin/bash
 # Usage: ./build.sh <versionCode> <versionName>   -> out/Fogasnaplo.apk
-# A side-by-side test app: APP_ID=hu.fogasnaplo.app.teszt LABEL="Fogásnapló TESZT" ./build.sh ...
+# A side-by-side test app: APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás TESZT" ./build.sh ...
 set -e
-VC=${1:?versionCode}; VN=${2:?versionName}; APP_ID=${APP_ID:-hu.fogasnaplo.app}; LABEL=${LABEL:-Fogásnapló}
+VC=${1:?versionCode}; VN=${2:?versionName}; APP_ID=${APP_ID:-hu.fogasnaplo.app}; LABEL=${LABEL:-Kapás}
 ANDROID_HOME=${ANDROID_HOME:-/home/claude/android-sdk}; API=${PLATFORM:-36}; BTV=${BUILD_TOOLS:-36.0.0}
 BT=$ANDROID_HOME/build-tools/$BTV; JAR=$ANDROID_HOME/platforms/android-$API/android.jar
 [ -f "$JAR" ] && [ -x "$BT/aapt2" ] || { echo "Hiányzik az SDK-ból: platforms;android-$API vagy build-tools;$BTV"; echo "Telepítés: sdkmanager \"platforms;android-$API\" \"build-tools;$BTV\""; exit 1; }
 P=$(cd "$(dirname "$0")" && pwd); O=$P/out; rm -rf $O; mkdir -p $O/res $O/classes $O/dex $O/gen
 cd $P/app/src/main
 sed -e 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="hu.fogasnaplo.app">|' \
-    -e "s|android:authorities=\"hu.fogasnaplo.app.shot\"|android:authorities=\"$APP_ID.shot\"|" -e "s|android:label=\"Fogásnapló\"|android:label=\"$LABEL\"|" \
+    -e "s|android:authorities=\"hu.fogasnaplo.app.shot\"|android:authorities=\"$APP_ID.shot\"|" -e "s|android:label=\"Kapás\"|android:label=\"$LABEL\"|" \
     AndroidManifest.xml > $O/AndroidManifest.xml
 # test build: switch on the self-update parts (install permission, update provider)
 [ "$APP_ID" != hu.fogasnaplo.app ] && sed -i -e 's|<!--TESZT:\(.*\)-->|\1|' -e "s|android:authorities=\"hu.fogasnaplo.app.update\"|android:authorities=\"$APP_ID.update\"|" $O/AndroidManifest.xml

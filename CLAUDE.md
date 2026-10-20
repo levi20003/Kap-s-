@@ -1,4 +1,4 @@
-# Fogásnapló – Android app
+# Kapás (régi nevén Fogásnapló) – Android app
 
 Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS oldal
 (`app/src/main/assets/index.html`), a natív rész csak a burok (`MainActivity.java`,
@@ -16,7 +16,7 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Aláírás: `fogasnaplo.keystore` + `keystore-jelszo.txt` a projekt gyökerében.
   **Ezek soha nem kerülhetnek a repóba** (`.gitignore` kizárja őket, az `out/`, `*.apk`, `*.zip` mellett).
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
-- Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Fogásnapló TESZT" ./build.sh …` (külön csomagnév, külön adatok).
+- Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás TESZT" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
 - A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,
   versionCode = 1000 + futásszám). A tesztapp induláskor ezt nézi (`checkUpdate`), és egy koppintással frissít (`installUpdate` → rendszer-telepítő).
@@ -111,3 +111,10 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 - Ellenőrzés: a számítás 2026-ra pontosan a korábbi kézi táblát adja (csuka 02.02., ponty 05.04–05.29. stb.).
 - Duna és Tisza: `OVERRIDES` (szigorúbb minimum és felső méretkorlát, harcsára téli elviteli tilalom). Ezek a helyi szabályok nem tolódnak (`shift:false`).
 - `ALIAS`: fajnév-szinonimák. A helyi horgászrend szigorúbb lehet; az app ezt a felületen jelzi is.
+
+## Név és logó
+
+- Az app neve **Kapás** (1.8-ig Fogásnapló). A logó a Tisza kanyarulata és egy narancs úszó gyűrűkkel: adaptív ikon (`res/drawable/ic_launcher_{bg,fg,mono}.xml`,
+  `mipmap-anydpi-v26`), régebbi Androidon az `ic_launcher.png`-k; a fejlécben ugyanez inline SVG (`.logo`).
+- **Nem változott** (kompatibilitás): csomagnév `hu.fogasnaplo.app`, `fogasnaplo.*` tárolókulcsok, `FogasnaploAndroid` híd, mentésfájl-nevek,
+  és a release-eszközök neve (`Fogasnaplo-TESZT.apk`, `version.json`), mert a már telepített tesztappok frissítője ezeket keresi.
