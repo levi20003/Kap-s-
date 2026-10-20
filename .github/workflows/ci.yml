@@ -54,7 +54,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "targetSdkVersion:'36'"
       - name: Test app for the phone (installs next to the real app)
         run: |
-          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "teszt-${GITHUB_SHA::7}"
+          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts)"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|application-label):"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app.teszt'"
           mv out/Fogasnaplo.apk out/Fogasnaplo-TESZT.apk
@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -c 'import json,os,subprocess; print(json.dumps({"versionCode":1000+int(os.environ["GITHUB_RUN_NUMBER"]),"versionName":"teszt-"+os.environ["GITHUB_SHA"][:7],"notes":subprocess.check_output(["git","log","-1","--pretty=%s"],text=True).strip()[:120],"sha":os.environ["GITHUB_SHA"]},ensure_ascii=False))' > out/version.json
+          python3 -c 'import json,os,subprocess; print(json.dumps({"versionCode":1000+int(os.environ["GITHUB_RUN_NUMBER"]),"versionName":os.environ["GITHUB_SHA"][:7],"notes":subprocess.check_output(["git","log","-1","--pretty=%s"],text=True).strip()[:120],"sha":os.environ["GITHUB_SHA"]},ensure_ascii=False))' > out/version.json
           cat out/version.json
           gh release view teszt > /dev/null 2>&1 || gh release create teszt --prerelease --target "$GITHUB_SHA" --title "Kapás – tesztbuild" \
             --notes "A legutóbbi tesztverzió. Telefonon: koppints a Fogasnaplo-TESZT.apk fájlra. A valódi app mellé települ, annak adataihoz nem nyúl."

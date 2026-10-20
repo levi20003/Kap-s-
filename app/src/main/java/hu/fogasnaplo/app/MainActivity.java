@@ -832,7 +832,7 @@ public class MainActivity extends Activity {
         public String appVersion() {
             try {
                 android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
-                return pi.versionName + " (" + ownVersion() + ")" + (isTestBuild() ? " · teszt" : "");
+                return pi.versionName + " (" + ownVersion() + ")";
             } catch (Exception e) {
                 return "–";
             }

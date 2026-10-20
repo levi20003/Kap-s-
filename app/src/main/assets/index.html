@@ -396,6 +396,36 @@ textarea.inp{resize:vertical;min-height:68px}
 .win span{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .win b{font-family:var(--f-display);font-size:1.25rem;font-variant-numeric:tabular-nums}
 .today .foot{font-size:.72rem;color:var(--faint)}
+.wxplace-btn{display:inline-flex;align-items:center;gap:5px}.wxplace-btn .ic{width:18px;height:18px}
+.wx-sub{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px}
+.fact .ic{width:15px;height:15px;color:var(--water)}.fact.wet{border-color:var(--water)}
+.hours{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}
+.hours::-webkit-scrollbar{display:none}
+.hr{flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted)}
+.hr.newday{border-left:2px solid var(--water)}
+.h-ic{width:22px;height:22px;color:var(--water)}.h-ic svg{width:100%;height:100%}
+.h-temp{font-family:var(--f-display);font-size:1.1rem;color:var(--fg);line-height:1}
+.h-rain{min-height:1em}.h-rain.wet,.d-rain.wet{color:var(--water);font-weight:600}
+.h-wind{display:flex;align-items:center;gap:2px}
+.warr{display:inline-block;font-size:.85em;line-height:1;color:var(--water)}
+.days{display:flex;flex-direction:column;gap:4px}
+.day{display:grid;grid-template-columns:minmax(0,1fr) 24px 62px 58px 72px;align-items:center;gap:8px;width:100%;text-align:left;
+  background:var(--tint);border:1px solid transparent;border-radius:12px;padding:8px 10px;color:var(--fg);font:inherit;font-size:.8rem}
+.day.on{border-color:var(--water);background:var(--tint-2)}
+.d-name{min-width:0}.d-name b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.d-name small,.d-temp small{color:var(--muted)}
+.d-ic{width:22px;height:22px;color:var(--water)}.d-ic svg{width:100%;height:100%}
+.d-temp b{font-family:var(--f-display);font-size:1.05rem}
+.d-rain,.d-wind{color:var(--muted);display:flex;align-items:center;gap:3px;white-space:nowrap}
+.d-lv{display:block;font-size:.7rem;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d-lv.lv4,.d-lv.lv5{color:var(--accent)}.d-name small{white-space:nowrap}
+.wx-explain summary{font-size:.85rem}
+.wx-ex{display:flex;flex-direction:column;gap:8px;font-size:.84rem;color:var(--muted);padding-top:8px}.wx-ex p{margin:0}
+.wxpick{background:var(--surface);border:1px solid var(--edge);border-radius:18px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-card)}
+.wxsearch{display:flex;gap:8px}.wxsearch input{flex:1;min-width:0}
+.wxres{display:flex;flex-direction:column;gap:6px}
+.wxopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
+.wxopt small{color:var(--muted);font-size:.76rem}
+@media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 22px 56px 54px 64px;gap:6px;padding:8px}}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 /* motion: tabs rise in, bars grow, the hero ripples; all of it off for reduced-motion */
 @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
@@ -444,7 +474,7 @@ button{transition:transform .15s}
     </section>
 
     <section id="todaySec">
-      <div class="sechead"><h2><span class="ic" data-ic="cloud"></span>Mai horgászidő</h2><button class="linkbtn" id="todayRefresh">◎ Helyem frissítése</button></div>
+      <div class="sechead"><h2><span class="ic" data-ic="cloud"></span>Időjárás</h2><button class="linkbtn wxplace-btn" id="wxPlaceBtn" type="button" aria-expanded="false">Szeged ▾</button></div>
       <div id="today"></div>
     </section>
 
@@ -787,6 +817,10 @@ button{transition:transform .15s}
     rain:'<path d="M7 15h9.8a4 4 0 0 0 .5-7.97A5.7 5.7 0 0 0 6.3 6.2 4.4 4.4 0 0 0 7 15z"/><path d="M8 18.5l-1 2M12 18.5l-1 2M16 18.5l-1 2"/>',
     storm:'<path d="M7 14h9.8a4 4 0 0 0 .5-7.97A5.7 5.7 0 0 0 6.3 5.2 4.4 4.4 0 0 0 7 14z"/><path d="M12.7 14l-2.4 4h3l-1.6 3"/>',
     fog:'<path d="M4 8h16M6 12h12M4 16h16M8 20h8"/>',
+    drop:'<path d="M12 3.5s-6 6.6-6 10.6a6 6 0 0 0 12 0c0-4-6-10.6-6-10.6z"/>',
+    wind:'<path d="M3 9h11.5a2.5 2.5 0 1 0-2.5-2.5M3 13h15a2.5 2.5 0 1 1-2.5 2.5M3 17h7"/>',
+    sunrise:'<path d="M4 18h16M7.5 18a4.5 4.5 0 0 1 9 0M12 4v5M9.5 6.5 12 4l2.5 2.5M4.6 11.6l1.4 1.4M19.4 11.6 18 13"/>',
+    sunset:'<path d="M4 18h16M7.5 18a4.5 4.5 0 0 1 9 0M12 4v5M9.5 6.5 12 9l2.5-2.5M4.6 11.6l1.4 1.4M19.4 11.6 18 13"/>',
     snow:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>'
   };
   const icoSvg=(n,c)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(c?' class="'+c+'"':'')+'>'+ICONS[n]+'</svg>';
@@ -1467,27 +1501,31 @@ button{transition:transform .15s}
   }
 
 
-  /* ---------- today's fishing forecast ---------- */
-  let today={loading:false,err:null,data:null};
-  try{const c=JSON.parse(localStorage.getItem("fogasnaplo.today")||"null");if(c&&c.fetched)today.data=c}catch(e){}
+  /* ---------- weather + fishing forecast for a chosen place (no GPS: Szeged unless the user picks another) ---------- */
+  const WX_PLACE_KEY="fogasnaplo.wxplace",SZEGED={name:"Szeged",lat:46.253,lng:20.148};
+  function wxPlace(){try{const p=JSON.parse(localStorage.getItem(WX_PLACE_KEY)||"null");if(p&&p.lat!=null&&p.name)return p}catch(e){}return SZEGED}
+  function setWxPlace(p){try{localStorage.setItem(WX_PLACE_KEY,JSON.stringify({name:p.name,lat:Math.round(p.lat*1e3)/1e3,lng:Math.round(p.lng*1e3)/1e3}))}catch(e){}}
+  let today={loading:false,err:null,data:null},wxDay=0,wxPick=null;
+  try{const c=JSON.parse(localStorage.getItem("fogasnaplo.today")||"null");if(c&&c.fetched&&c.d)today.data=c}catch(e){}
   async function loadToday(force){
-    const loc=homeLoc();if(!loc){renderToday();return}
+    const loc=wxPlace();
     const fresh=today.data&&Math.abs(today.data.lat-loc.lat)<0.05&&Math.abs(today.data.lng-loc.lng)<0.05&&Date.now()-today.data.fetched<45*6e4;
     if(fresh&&!force){renderToday();return}
     today.loading=true;today.err=null;renderToday();
     try{
       const url="https://api.open-meteo.com/v1/forecast?latitude="+loc.lat.toFixed(3)+"&longitude="+loc.lng.toFixed(3)+
-        "&hourly=temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,cloud_cover,weather_code,precipitation_probability&past_days=1&forecast_days=2&timezone=auto&wind_speed_unit=kmh";
-      const r=await fetchT(url);if(!r.ok)throw new Error("http");const j=await r.json();if(!j.hourly||!j.hourly.time)throw new Error("shape");
-      today.data={fetched:Date.now(),lat:loc.lat,lng:loc.lng,h:j.hourly};
+        "&hourly=temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,weather_code,precipitation,precipitation_probability"+
+        "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunrise,sunset"+
+        "&past_days=1&forecast_days=7&timezone=auto&wind_speed_unit=kmh";
+      const r=await fetchT(url);if(!r.ok)throw new Error("http");const j=await r.json();if(!j.hourly||!j.hourly.time||!j.daily||!j.daily.time)throw new Error("shape");
+      today.data={fetched:Date.now(),lat:loc.lat,lng:loc.lng,h:j.hourly,d:j.daily};
       try{localStorage.setItem("fogasnaplo.today",JSON.stringify(today.data))}catch(e){}
-    }catch(e){today.err=today.data?"Nincs internet, a legutóbbi adatot látod.":"Nincs internet. Ha lesz kapcsolat, a Frissítés gombbal betöltöm."}
+    }catch(e){today.err=today.data?"Nincs internet, a legutóbbi adatot látod.":"Nincs internet. Ha lesz kapcsolat, magától betöltöm."}
     today.loading=false;renderToday();
   }
-  function scoreToday(H,i,now,loc){
+  function scoreToday(H,i,now){
     const reasons=[];let sc=0;
     const p=H.pressure_msl[i],dp=i>=3?Math.round((p-H.pressure_msl[i-3])*10)/10:0;
-    const dpF=i+3<H.pressure_msl.length?Math.round((H.pressure_msl[i+3]-p)*10)/10:0;
     const fmt=v=>(v>0?"+":"")+String(v).replace(".",",");
     if(dp<=-0.5&&dp>=-2.5){sc+=2;reasons.push(["","Lassan csökkenő légnyomás ("+fmt(dp)+" hPa / 3 óra). Front előtt a ragadozók gyakran aktívabbak."])}
     else if(Math.abs(dp)<0.5){sc+=1.5;reasons.push(["","Stabil légnyomás ("+Math.round(p)+" hPa)."])}
@@ -1501,6 +1539,7 @@ button{transition:transform .15s}
     else reasons.push(["","Élénk szél ("+Math.round(ws)+" km/h)."]);
     const cc=H.cloud_cover[i];if(cc>=50){sc+=.5;reasons.push(["","Felhős ég ("+cc+"%), tompább fény."])}
     const t=H.temperature_2m[i];if(t<2||t>30){sc-=.5;reasons.push(["neg",(t<2?"Hideg":"Kánikula")+" ("+Math.round(t)+" °C)."])}
+    if(H.weather_code[i]>=95){sc-=1;reasons.push(["neg","Zivatar: nyílt vízen, pergetőbottal veszélyes."])}
     const mp=moonPhase(now),mb=moonBucket(mp);if(mb===0||mb===2){sc+=.5;reasons.push(["",moonName(mp)+" közelében."])}
     // personal pattern
     const mine=state.catches.filter(c=>c.wx&&c.wx.dp!=null);
@@ -1509,9 +1548,15 @@ button{transition:transform .15s}
       if(nowT===best[0]){sc+=.5;reasons.unshift(["me","A fogásaid "+share+"%-a "+TREND_TXT[best[0]]+" légnyomásnál volt, és ma is ilyen."])}
       else reasons.push(["me","A fogásaid többsége "+TREND_TXT[best[0]]+" légnyomásnál volt, ma "+TREND_TXT[nowT]+"."])}
     const level=Math.max(1,Math.min(5,Math.round(sc+1)));
-    return{level,reasons:reasons.slice(0,4),p,dp,dpF};
+    return{level,sc,reasons:reasons.slice(0,4),p,dp};
   }
   const LEVELS=["","Gyenge","Közepes","Jó","Nagyon jó","Kiváló"];
+  // a day's rating: the average of its daylight hours (6–20 h), so one good hour does not make a good day
+  function dayLevel(H,date){
+    const day=ymd(date);let s=0,n=0;
+    for(let h=6;h<=20;h++){const k=H.time.indexOf(day+"T"+pad(h)+":00");if(k>=3){s+=scoreToday(H,k,date).sc;n++}}
+    return n?Math.max(1,Math.min(5,Math.round(s/n+1))):0;
+  }
   function sparkSvg(H,i){
     const from=Math.max(0,i-12),to=Math.min(H.pressure_msl.length-1,i+12),vals=H.pressure_msl.slice(from,to+1);
     const W=320,Ht=74,padL=4,padR=34,padT=8,padB=16;
@@ -1530,52 +1575,154 @@ button{transition:transform .15s}
       '<text x="'+padL+'" y="'+(Ht-3)+'">−12 ó</text><text x="'+(X(ni)-10)+'" y="'+(Ht-3)+'">most</text><text x="'+(W-padR-26)+'" y="'+(Ht-3)+'">+12 ó</text>';
     return svg;
   }
+  const WDAY=["vasárnap","hétfő","kedd","szerda","csütörtök","péntek","szombat"],WDAY_S=["Vas.","Hét.","Kedd","Szer.","Csüt.","Pén.","Szom."];
+  const mm=v=>(Math.round(v*10)/10).toString().replace(".",",");
+  const parseLocal=s=>{const [d,t]=s.split("T"),[y,m,dd]=d.split("-").map(Number),[h,mi]=(t||"00:00").split(":").map(Number);return new Date(y,m-1,dd,h,mi)};
+  const windArrow=deg=>{const a=el("span","warr","↓");a.style.transform="rotate("+Math.round(deg)+"deg)";a.title="Szél: "+dirName(deg);return a};
+  function dayName(date,now,short){const diff=Math.round((new Date(date).setHours(0,0,0,0)-new Date(now).setHours(0,0,0,0))/864e5);
+    return diff===0?"Ma":diff===1?"Holnap":short?WDAY_S[date.getDay()]:WDAY[date.getDay()][0].toUpperCase()+WDAY[date.getDay()].slice(1)}
+  function hoursEl(H,from,to,now){
+    const box=el("div","hours");box.setAttribute("role","list");
+    for(let k=from;k<=to&&k<H.time.length;k++){
+      const t=parseLocal(H.time[k]),c=el("div","hr"+(t.getHours()===0&&k!==from?" newday":""));c.setAttribute("role","listitem");
+      c.append(el("span","h-t",k===from&&now?"Most":pad(t.getHours())+":00"));
+      const ic=el("span","h-ic");ic.innerHTML=icoSvg(wxIconName(H.weather_code[k]));c.append(ic);
+      c.append(el("b","h-temp",Math.round(H.temperature_2m[k])+"°"));
+      const pr=H.precipitation?H.precipitation[k]:0,pp=H.precipitation_probability?H.precipitation_probability[k]:null;
+      c.append(el("span","h-rain"+(pr>=0.1||pp>=40?" wet":""),pr>=0.1?mm(pr)+" mm":(pp!=null?pp+"%":"")));
+      const w=el("span","h-wind");w.append(windArrow(H.wind_direction_10m[k]));w.append(Math.round(H.wind_speed_10m[k])+"");c.append(w);
+      box.append(c);
+    }
+    return box;
+  }
+  function daysEl(D,H,now,n){
+    const box=el("div","days");
+    for(let k=0;k<D.time.length&&box.childElementCount<n;k++){
+      const date=parseLocal(D.time[k]);if(ymd(date)<ymd(now))continue;
+      const idx=box.childElementCount,row=el("button","day"+(idx===wxDay?" on":""));row.type="button";
+      row.setAttribute("aria-pressed",idx===wxDay?"true":"false");
+      const lv=dayLevel(H,date),nm=el("span","d-name");nm.append(el("b",null,dayName(date,now,true)));const sm=el("small",null,pad(date.getMonth()+1)+"."+pad(date.getDate())+". ");
+      if(lv)sm.append(el("span","d-lv lv"+lv,LEVELS[lv]));nm.append(sm);row.append(nm);
+      const ic=el("span","d-ic");ic.innerHTML=icoSvg(wxIconName(D.weather_code[k]));row.append(ic);
+      const tp=el("span","d-temp");tp.append(el("b",null,Math.round(D.temperature_2m_max[k])+"°"));tp.append(el("small",null," / "+Math.round(D.temperature_2m_min[k])+"°"));row.append(tp);
+      const rs=D.precipitation_sum[k]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[k]:null;
+      row.append(el("span","d-rain"+(rs>=1?" wet":""),rs>=0.1?mm(rs)+" mm":(rp!=null?rp+"%":"–")));
+      const wd=el("span","d-wind");wd.append(windArrow(D.wind_direction_10m_dominant[k]));wd.append(Math.round(D.wind_speed_10m_max[k])+" km/h");row.append(wd);
+      row.onclick=()=>{wxDay=idx;renderToday()};
+      box.append(row);
+    }
+    return box;
+  }
+  function explainEl(){
+    const d=el("details","more wx-explain");d.append(el("summary",null,"Mit jelent az értékelés és a hPa?"));
+    const b=el("div","wx-ex");
+    b.append(el("p",null,"A hPa (hektopascal) a légnyomás mértékegysége. Az átlag kb. 1013 hPa: 1020 fölött általában száraz, nyugodt idő van, 1005 alatt csapadékos, szeles. "+
+      "A halaknak nem maga a szám számít, hanem a változás: a nyíl és a görbe azt mutatja, nő, csökken vagy stabil. Lassan csökkenő nyomásnál (front előtt) a ragadozók gyakran aktívabbak, gyorsan emelkedőnél (front után) passzívabbak."));
+    b.append(el("p",null,"Az értékelés pontokból áll össze, az adott óra előrejelzéséből:"));
+    const ul=el("ul","reasons");[
+      "Légnyomás az elmúlt 3 órában: lassan csökken +2, stabil +1,5, enyhén nő +0,5, gyorsan nő −0,5, gyorsan esik 0.",
+      "Szél: 5–20 km/h +1 (fodros víz), szélcsend +0,5, 30 km/h fölött −1.",
+      "Felhős ég (50% fölött) +0,5: tompább fényben bátrabb a hal.",
+      "Hideg (2 °C alatt) vagy kánikula (30 °C fölött) −0,5, zivatar −1.",
+      "Újhold vagy telihold közelében +0,5.",
+      "Ha legalább 8 fogásodnál van időjárás, és ma a kedvenc légnyomás-helyzeted van: +0,5."
+    ].forEach(t=>ul.append(el("li",null,t)));b.append(ul);
+    b.append(el("p",null,"Az összegből lesz az 1–5 fokozat (Gyenge, Közepes, Jó, Nagyon jó, Kiváló). A napoknál a nappali órák (6–20 óra) átlaga. Ez tájékoztató becslés, nem garancia."));
+    d.append(b);return d;
+  }
+  function placePickerEl(){
+    const box=el("div","wxpick");
+    const f=el("form","wxsearch");const inp=el("input");inp.type="search";inp.placeholder="Település, pl. Csongrád";inp.setAttribute("aria-label","Település keresése");inp.value=wxPick.q||"";
+    const go=el("button","btn-main","Keresés");go.type="submit";f.append(inp,go);box.append(f);
+    const res=el("div","wxres");
+    const choose=p=>{setWxPlace(p);wxPick=null;wxDay=0;today.data=null;loadToday(true)};
+    const opt=(label,sub,fn)=>{const b=el("button","wxopt");b.type="button";b.append(el("b",null,label));if(sub)b.append(el("small",null,sub));b.onclick=fn;res.append(b)};
+    if(wxPick.msg)res.append(el("div","hint",wxPick.msg));
+    (wxPick.results||[]).forEach(r=>opt(r.name,[r.admin1,r.country_code&&r.country_code!=="HU"?r.country:null].filter(Boolean).join(", "),()=>choose({name:r.name,lat:r.latitude,lng:r.longitude})));
+    if(wxPlace().name!=="Szeged"||wxPlace().lat!==SZEGED.lat)opt("Szeged","alapértelmezett",()=>choose(SZEGED));
+    opt("Jelenlegi helyem","egyszer kéri le a GPS-t, utána nem",()=>{toast("Helymeghatározás…");requestLoc(r=>{
+      if(r&&!r.error)choose({name:"Saját hely",lat:r.lat,lng:r.lng});else toast((r&&r.error)||"Nem sikerült meghatározni a helyed.")})});
+    box.append(res);
+    f.onsubmit=async e=>{e.preventDefault();const q=inp.value.trim();if(q.length<2)return;wxPick={q,msg:"Keresés…"};renderToday();
+      try{const r=await fetchT("https://geocoding-api.open-meteo.com/v1/search?count=6&language=hu&format=json&name="+encodeURIComponent(q));
+        if(!r.ok)throw new Error("http");const j=await r.json();const rs=(j.results||[]).sort((a,b)=>(b.country_code==="HU")-(a.country_code==="HU"));
+        wxPick={q,results:rs,msg:rs.length?null:"Nem találtam ilyen települést."}}
+      catch(e){wxPick={q,msg:"Nincs internet, most nem tudok keresni."}}
+      if(wxPick)renderToday();
+      const i2=document.querySelector("#today .wxsearch input");if(i2&&!(wxPick.results||[]).length)i2.focus()};
+    setTimeout(()=>{if(!wxPick.results&&!wxPick.msg)inp.focus()},0);
+    return box;
+  }
   function renderToday(){
     const box=$("today");if(!box)return;box.replaceChildren();
-    const loc=homeLoc();
-    if(!loc){const e=el("div","today today-empty");e.append(el("div",null,"Megmutatom, milyen ma a horgászidő a környékeden: légnyomás-trend, szél, hold és a legjobb időszakok."));
-      const b=el("button","btn-main","Helyzetem használata");b.onclick=()=>{b.textContent="Helymeghatározás…";requestLoc(r=>{if(r&&!r.error)loadToday(true);else{b.textContent="Helyzetem használata";toast((r&&r.error)||"Nem sikerült meghatározni a helyed.")}})};
-      e.append(b);box.append(e);return}
-    const D=today.data;
-    if(!D){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
-    const H=D.h,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
-    if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult. Koppints a Frissítés gombra."));box.append(e);return}
-    const sc=scoreToday(H,i,now,loc);
+    const loc=wxPlace(),pb=$("wxPlaceBtn");
+    if(pb){pb.replaceChildren(mkIc("pin"),el("span",null,loc.name+(wxPick?" ▴":" ▾")));pb.setAttribute("aria-expanded",wxPick?"true":"false")}
+    if(wxPick)box.append(placePickerEl());
+    const T=today.data;
+    const fresh=T&&Math.abs(T.lat-loc.lat)<0.05&&Math.abs(T.lng-loc.lng)<0.05;
+    if(!T||!fresh){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
+    const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
+    if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
+    const sc=scoreToday(H,i,now);
     const card=el("div","today s"+sc.level);
     const top=el("div","today-top");
     const sco=el("div","score");sco.append(el("div","lbl",LEVELS[sc.level]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=sc.level?"on":""));sco.append(dots);
     sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
     const wi=el("span","wxic"+(sc.level>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));top.append(wi);
-    const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));nt.append(el("span",null,dirName(H.wind_direction_10m[i])+" "+Math.round(H.wind_speed_10m[i])+" km/h"));top.append(nt);
+    const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));
+    const gust=H.wind_gusts_10m?Math.round(H.wind_gusts_10m[i]):null;
+    nt.append(el("span",null,dirName(H.wind_direction_10m[i])+" "+Math.round(H.wind_speed_10m[i])+" km/h"+(gust&&gust>=Math.round(H.wind_speed_10m[i])+10?", lökés "+gust:"")));top.append(nt);
     card.append(top);
-    const open=todayOpen(),more=el("button","linkbtn today-more",open?"Kevesebb ▴":"Részletek ▾");more.type="button";
-    more.onclick=()=>{try{localStorage.setItem("fogasnaplo.todayOpen",open?"0":"1")}catch(e){}renderToday()};
-    if(open)card.append(sparkSvg(H,i));
+    // the chosen day: its sunrise/sunset, rain and wind, then its hours
+    const dayDates=D.time.map(parseLocal).filter(d=>ymd(d)>=ymd(now)),di=Math.min(wxDay,dayDates.length-1),selDate=dayDates[di]||now;
+    const dk=D.time.findIndex(t=>t.slice(0,10)===ymd(selDate));
     const facts=el("div","facts");
-    const tr=trendOf(sc.dp);facts.append(el("span","fact",Math.round(sc.p)+" hPa "+(tr==="up"?"↑":tr==="down"?"↓":"→")+" "+TREND_TXT[tr]));
-    const mp=moonPhase(now);const mf=el("span","fact");mf.append(moonSvg(mp,16));mf.append(moonName(mp));facts.append(mf);
-    const st=sunTimes(now,loc.lat,loc.lng);
-    if(st){facts.append(el("span","fact","Napkelte "+fmtHM(st.rise)));facts.append(el("span","fact","Napnyugta "+fmtHM(st.set)))}
-    const pp=H.precipitation_probability?H.precipitation_probability[i]:null;if(pp!=null&&pp>=30)facts.append(el("span","fact","Eső esélye "+pp+"%"));
+    const st=sunTimes(selDate,loc.lat,loc.lng);
+    const rise=dk>=0&&D.sunrise?parseLocal(D.sunrise[dk]):st&&st.rise,set=dk>=0&&D.sunset?parseLocal(D.sunset[dk]):st&&st.set;
+    const fact=(ic,t,cls)=>{const f=el("span","fact"+(cls?" "+cls:""));f.append(mkIc(ic));f.append(t);facts.append(f)};
+    if(rise)fact("sunrise","Napkelte "+fmtHM(rise));
+    if(set)fact("sunset","Napnyugta "+fmtHM(set));
+    if(dk>=0){const rs=D.precipitation_sum[dk]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[dk]:null;
+      fact("drop",(rs>=0.1?"Eső "+mm(rs)+" mm":"Nem esik")+(rp!=null?" ("+rp+"%)":""),rs>=1?"wet":"");
+      fact("wind","Szél max "+Math.round(D.wind_speed_10m_max[dk])+" km/h"+(D.wind_gusts_10m_max?", lökés "+Math.round(D.wind_gusts_10m_max[dk]):""))}
+    card.append(el("div","wx-sub",dayName(selDate,now)+" · "+pad(selDate.getMonth()+1)+"."+pad(selDate.getDate())+"."));
     card.append(facts);
-    // compact by default: the counter below is what you need at the water
+    let from,to;
+    if(di===0){from=i;to=i+24}else{const k0=H.time.indexOf(ymd(selDate)+"T04:00");from=k0;to=k0+19}
+    if(from>=0)card.append(hoursEl(H,from,to,di===0));
+    const open=todayOpen();
+    card.append(el("div","wx-sub","Előrejelzés"));
+    card.append(daysEl(D,H,now,open?7:3));
+    const more=el("button","linkbtn today-more",open?"Kevesebb ▴":"7 nap és horgászrészletek ▾");more.type="button";
+    more.onclick=()=>{try{localStorage.setItem("fogasnaplo.todayOpen",open?"0":"1")}catch(e){}renderToday()};
     if(!open){card.append(more);box.append(card);return}
-    if(st){
+    card.append(el("div","wx-sub","Légnyomás (hPa) – a görbe iránya számít"));
+    card.append(sparkSvg(H,i));
+    const f2=el("div","facts");
+    const tr=trendOf(sc.dp);f2.append(el("span","fact",Math.round(sc.p)+" hPa "+(tr==="up"?"↑":tr==="down"?"↓":"→")+" "+TREND_TXT[tr]));
+    const mp=moonPhase(now);const mf=el("span","fact");mf.append(moonSvg(mp,16));mf.append(moonName(mp));f2.append(mf);
+    card.append(f2);
+    const sunOf=d=>{const k=D.time.findIndex(t=>t.slice(0,10)===ymd(d));
+      return k>=0&&D.sunrise&&D.sunset?{rise:parseLocal(D.sunrise[k]),set:parseLocal(D.sunset[k])}:sunTimes(d,loc.lat,loc.lng)};
+    const stT=sunOf(now);
+    if(stT){
       const w=el("div","windows");const add=(lbl,a,b)=>{const x=el("div","win");x.append(el("span",null,lbl));x.append(el("b",null,fmtHM(a)+"–"+fmtHM(b)));w.append(x)};
-      const tom=new Date(now);tom.setDate(tom.getDate()+1);const st2=sunTimes(tom,loc.lat,loc.lng);
-      const dawnPast=now.getTime()>st.rise.getTime()+90*6e4;
-      const r=dawnPast&&st2?st2.rise:st.rise;
+      const tom=new Date(now);tom.setDate(tom.getDate()+1);const st2=sunOf(tom);
+      const dawnPast=now.getTime()>stT.rise.getTime()+90*6e4;
+      const r=dawnPast&&st2?st2.rise:stT.rise;
       add(dawnPast?"Holnap hajnal":"Hajnali rablás",new Date(r.getTime()-60*6e4),new Date(r.getTime()+90*6e4));
-      add("Esti rablás",new Date(st.set.getTime()-90*6e4),new Date(st.set.getTime()+45*6e4));
+      add("Esti rablás",new Date(stT.set.getTime()-90*6e4),new Date(stT.set.getTime()+45*6e4));
       card.append(w);
     }
+    card.append(el("div","wx-sub","Miért "+LEVELS[sc.level].toLowerCase()+" most?"));
     const ul=el("ul","reasons");sc.reasons.forEach(([cls,t])=>ul.append(el("li",cls,t)));card.append(ul);
-    const ago=Math.round((Date.now()-D.fetched)/6e4);
-    card.append(el("div","foot",(today.err?today.err+" ":"")+"Frissítve "+(ago<1?"most":ago+" perce")+". Tájékoztató becslés a légnyomás, szél, felhőzet és holdfázis alapján. Forrás: Open-Meteo."));
+    card.append(explainEl());
+    const ago=Math.round((Date.now()-T.fetched)/6e4);
+    card.append(el("div","foot",(today.err?today.err+" ":"")+"Frissítve "+(ago<1?"most":ago+" perce")+" · "+loc.name+". Forrás: Open-Meteo."));
     card.append(more);box.append(card);
   }
   const todayOpen=()=>{try{return localStorage.getItem("fogasnaplo.todayOpen")==="1"}catch(e){return false}};
-  $("todayRefresh").onclick=()=>{toast("Helymeghatározás…");requestLoc(r=>{if(r&&!r.error){loadToday(true)}else{toast((r&&r.error)||"Nem sikerült meghatározni a helyed.");loadToday(true)}})};
+  $("wxPlaceBtn").onclick=()=>{wxPick=wxPick?null:{};renderToday()};
   window.addEventListener("online",()=>loadToday(false));
   document.addEventListener("visibilitychange",()=>{if(document.hidden)return;
     if(ymd(new Date())!==ymd(NOW)&&!ed&&$("picker").hidden){finishDelete();location.reload();return}
@@ -1676,7 +1823,7 @@ button{transition:transform .15s}
     let skip=null;try{skip=localStorage.getItem(UPD_KEY)}catch(e){}
     if(!v||String(v.versionCode)===skip)return;
     const b=$("updBar");b.replaceChildren();
-    b.append(el("span",null,"Új tesztverzió érhető el"+(v.notes?": "+v.notes:"")+"."));
+    b.append(el("span",null,"Új verzió érhető el"+(v.notes?": "+v.notes:"")+"."));
     const go=el("button","btn-main","Frissítés");go.type="button";
     go.onclick=()=>{go.disabled=true;go.textContent="Letöltés…";ANDROID.installUpdate()};
     const later=el("button","no","Később");later.type="button";

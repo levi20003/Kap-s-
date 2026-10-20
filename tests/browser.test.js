@@ -223,23 +223,48 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
   }
   // field-test fixes: GPS catches on the map, picker starts at the catch, compact forecast, folded statistics
   {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.stack));
     const Y = new Date().getFullYear(), now = new Date();
-    const hours = Array.from({ length: 49 }, (_, k) => { const d = new Date(now); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - 24 + k);
+    const hours = Array.from({ length: 24 * 8 }, (_, k) => { const d = new Date(now); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - 24 + k);
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + 'T' + String(d.getHours()).padStart(2, '0') + ':00'; });
     const H = { time: hours, temperature_2m: hours.map(() => 18), pressure_msl: hours.map((_, k) => 1020 - k * 0.1), wind_speed_10m: hours.map(() => 8),
-      wind_direction_10m: hours.map(() => 0), cloud_cover: hours.map(() => 80), weather_code: hours.map(() => 3), precipitation_probability: hours.map(() => 10) };
-    await q.addInitScript(({ Y, H }) => {
+      wind_direction_10m: hours.map(() => 0), wind_gusts_10m: hours.map(() => 15), cloud_cover: hours.map(() => 80), weather_code: hours.map(() => 3),
+      precipitation: hours.map((_, k) => k % 7 === 0 ? 0.6 : 0), precipitation_probability: hours.map(() => 10) };
+    const days = Array.from({ length: 8 }, (_, k) => { const d = new Date(now); d.setDate(d.getDate() - 1 + k);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+    const D = { time: days, weather_code: days.map(() => 61), temperature_2m_max: days.map((_, k) => 15 + k), temperature_2m_min: days.map(() => 6),
+      precipitation_sum: days.map(() => 2.4), precipitation_probability_max: days.map(() => 70), wind_speed_10m_max: days.map(() => 21),
+      wind_gusts_10m_max: days.map(() => 40), wind_direction_10m_dominant: days.map(() => 270), sunrise: days.map(d => d + 'T06:58'), sunset: days.map(d => d + 'T17:44') };
+    await q.addInitScript(({ Y, H, D }) => {
+      window.__gps = 0;
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() { window.__gps++; } };
       localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
         catches: [{ id: 'g1', sp: 's1', at: new Date().toISOString(), y: Y, t: true, gps: { lat: 46.2557, lng: 20.1575 } }] }));
-      localStorage.setItem('fogasnaplo.home', JSON.stringify({ lat: 46.2557, lng: 20.1575, ts: Date.now() }));
-      localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.2557, lng: 20.1575, h: H }));
-    }, { Y, H });
+      localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
+    }, { Y, H, D });
+    await q.route('https://geocoding-api.open-meteo.com/**', r => r.fulfill({ contentType: 'application/json',
+      body: JSON.stringify({ results: [{ name: 'Csongrád', latitude: 46.71, longitude: 20.14, admin1: 'Csongrád-Csanád', country: 'Magyarország', country_code: 'HU' }] }) }));
+    let wxUrl = '';
+    await q.route('https://api.open-meteo.com/**', r => { if (r.request().url().includes('daily=')) wxUrl = r.request().url(); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: H, daily: D }) }); });
     await q.goto(PAGE); await q.waitForTimeout(600);
-    ok(await q.locator('#today .today-more').count() === 1 && await q.locator('#today svg.spark').count() === 0, 'előrejelzés alapból kompakt (nincs görbe, van „Részletek”)');
+    ok((await q.locator('#wxPlaceBtn').innerText()).includes('Szeged') && await q.evaluate(() => window.__gps) === 0, 'időjárás: alapból Szeged, a GPS-t nem kéri');
+    ok(await q.locator('#today .hours .hr').count() === 25 && (await q.locator('#today .hours .hr').first().innerText()).includes('Most'), 'időjárás: óránkénti sáv a következő 24 órára');
+    const facts = await q.locator('#today .facts').first().innerText();
+    ok(facts.includes('Napkelte 06:58') && facts.includes('Napnyugta 17:44') && facts.includes('Eső 2,4 mm') && facts.includes('Szél max 21 km/h'), 'időjárás: napkelte, napnyugta, eső, szél');
+    ok(await q.locator('#today .days .day').count() === 3 && await q.locator('#today svg.spark').count() === 0, 'előrejelzés alapból kompakt: 3 nap, nincs légnyomás-görbe');
+    await q.locator('#today .days .day').nth(1).click();
+    ok((await q.locator('#today .wx-sub').first().textContent()).startsWith('Holnap') && (await q.locator('#today .hours .hr').first().innerText()).includes('04:00'), 'napra koppintva annak az órái látszanak');
     await q.locator('#today .today-more').click();
-    ok(await q.locator('#today svg.spark').count() === 1 && (await q.locator('#today .today-more').innerText()).includes('Kevesebb'), 'Részletek: kinyílik a teljes előrejelzés');
-    ok(await q.locator('details.more').count() === 2, 'Mentés és szabályok: hosszú szöveg lenyitható részben');
+    ok(await q.locator('#today svg.spark').count() === 1 && await q.locator('#today .days .day').count() === 7 && (await q.locator('#today .today-more').innerText()).includes('Kevesebb'), 'Részletek: 7 nap és a légnyomás-görbe');
+    ok(await q.locator('#today .wx-explain').count() === 1 && (await q.locator('#today .wx-explain').textContent()).includes('hektopascal'), 'Részletek: magyarázat az értékelésről és a hPa-ról');
+    await q.locator('#wxPlaceBtn').click();
+    await q.locator('#today .wxsearch input').fill('Csongrád'); await q.locator('#today .wxsearch button').click(); await q.waitForTimeout(300);
+    await q.locator('#today .wxopt', { hasText: 'Csongrád' }).first().click(); await q.waitForTimeout(400);
+    ok((await q.locator('#wxPlaceBtn').innerText()).includes('Csongrád') && wxUrl.includes('latitude=46.710') && await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.wxplace')).name) === 'Csongrád', 'kézi hely: keresés után arra frissül, és megjegyzi');
+    for (const w of [360, 412]) { await q.setViewportSize({ width: w, height: 800 }); await q.waitForTimeout(100);
+      ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'időjárás: nincs vízszintes túlcsordulás ' + w + ' px-en'); }
+    await q.setViewportSize({ width: 390, height: 844 });
+    ok(await q.locator('details.more:not(.wx-explain)').count() === 2, 'Mentés és szabályok: hosszú szöveg lenyitható részben');
 
     await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
     ok(await q.locator('#kpis .kpi').count() === 3 && await q.locator('#statsEmpty').isHidden(), 'statisztika: 3 összefoglaló csempe, nincs üres állapot');
@@ -296,7 +321,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
     await q.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); window.__u = { inst: 0 };
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
-        checkUpdate() { setTimeout(() => window.__fnUpdate({ versionCode: 1042, versionName: 'teszt-abc1234', notes: 'Zsálya színvilág' })); },
+        checkUpdate() { setTimeout(() => window.__fnUpdate({ versionCode: 1042, versionName: 'abc1234', notes: 'Zsálya színvilág' })); },
         installUpdate() { window.__u.inst++; setTimeout(() => window.__fnUpdateState({ state: 'ready' })); } }; });
     await q.goto(PAGE); await q.waitForTimeout(2900);
     ok(await q.locator('#updBar').isVisible() && (await q.locator('#updBar').innerText()).includes('Zsálya színvilág'), 'tesztverzió: frissítés-sáv megjelenik a változás leírásával');
@@ -385,10 +410,10 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await ctx.close();
     const c2 = await b.newContext(); const a = await c2.newPage(); a.on('pageerror', e => errs.push(e.message));
     await a.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] }));
-      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, appVersion() { return '1.6 (1012) · teszt'; }, backupFolder() { return ''; }, zipToFolder() {}, saveZip() {}, restoreZip() {}, pickBackupFolder() {} }; });
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, appVersion() { return '1.8 (1012)'; }, backupFolder() { return ''; }, zipToFolder() {}, saveZip() {}, restoreZip() {}, pickBackupFolder() {} }; });
     await a.goto(PAGE); await a.waitForTimeout(300);
     await a.locator('.tabbar button[data-tab="more"]').click();
-    ok((await a.locator('#verLine').innerText()) === '1.6 (1012) · teszt', 'Beállítások: az app verziója látszik');
+    ok((await a.locator('#verLine').innerText()) === '1.8 (1012)', 'Beállítások: az app verziója látszik');
     await c2.close();
   }
   // motion: tabs rise in, the total counts up, the theme switch animates and still lands right

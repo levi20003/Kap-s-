@@ -40,7 +40,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Kezdőlap (hős-összesítő, mai horgászidő, halfaj-számlálók, rekordok), Fogások (lista, keresés, szűrők), Statisztika (összefoglaló csempék + diagramok),
   Térkép, Beállítások (halfajaim, értesítések, biztonsági mentés, verzió). A Kezdőlapon csak az kell, ami a vízparton: régebbi fogások adatai nem.
   Új funkciónak először a helyét döntsd el, ne a Kezdőlapra tedd alapból.
-- Kezdőlap: a „Mai horgászidő” alapból kompakt (`fogasnaplo.todayOpen`), hogy a halfajok és a + gombok elsőre látsszanak.
+- Kezdőlap → Időjárás: a hely kézi (`wxPlace()`, alapból **Szeged**; a fejléc helygombja: település-keresés az Open-Meteo geocodinggal,
+  vagy egyszeri „Jelenlegi helyem”). Az időjárás **soha nem kér GPS-t magától** (akkumulátor). Mutatja: értékelés (1–5), hőmérséklet, szél/lökés,
+  napkelte/napnyugta, eső (mm, %), óránkénti sáv (ma: a következő 24 óra; más napra koppintva 4–23 óra), napi előrejelzés (alapból 3 nap,
+  „Részletek” alatt 7 + légnyomás-görbe, horgászablakok, indoklás és magyarázat a pontozásról / hPa-ról). Kompakt/nyitott: `fogasnaplo.todayOpen`.
+  A pontozás (`scoreToday`) változásakor a felületi magyarázatot (`explainEl`) is igazítsd.
   Üres naplónál a Kezdőlap a gyakori halfajokat kínálja egy koppintásra.
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).
 - Beállítások → halfaj törlése megerősítéssel (a hozzá tartozó fogások is törlődnek).
@@ -58,7 +62,7 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 ## Adattárolás
 
 - A fogásadatok a WebView `localStorage`-ában vannak, kulcs: **`fogasnaplo.v1`**.
-- Egyéb kulcsok: `fogasnaplo.region`, `fogasnaplo.home`, `fogasnaplo.today`.
+- Egyéb kulcsok: `fogasnaplo.region`, `fogasnaplo.home`, `fogasnaplo.today` (időjárás-gyorsítótár: `h` óránkénti, `d` napi), `fogasnaplo.wxplace` (időjárás helye).
 - A kulcsot vagy az adatformátumot ne változtasd meg migráció nélkül, különben a felhasználók elveszítik a naplójukat.
 - Fotók: a teljes kép `files/photos/`, az előnézet `files/thumbs/` (Android), a naplóban csak `file://` uri van.
   1.4-ig az előnézet base64-ként a localStorage-ban volt; induláskor `migrateThumbs` átköltözteti (a localStorage ~5 MB-nál megtelik).
