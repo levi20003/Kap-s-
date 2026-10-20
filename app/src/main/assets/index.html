@@ -85,7 +85,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* header */
 header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.logo{width:1.9rem;height:1.9rem;flex:none}
+.logo{width:1.9rem;height:1.9rem;flex:none;object-fit:contain}
 .brand{display:flex;align-items:center;gap:.5rem;font-family:var(--f-display);font-weight:700;font-size:1.75rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase}
 .hright{display:flex;align-items:center;gap:8px}
 .yearbar{display:flex;align-items:center;gap:0;background:var(--tint);border:1px solid var(--edge);border-radius:999px;padding:3px}
@@ -417,7 +417,7 @@ button{transition:transform .15s}
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><svg class="logo" viewBox="14 14 80 80" aria-hidden="true"><path d="M36,90C60,86 78,78 68,64S34,58 42,48S52,44 58,42" fill="none" stroke="var(--water)" stroke-width="9" stroke-linecap="round"/><g fill="none" stroke="var(--accent)" stroke-width="3"><ellipse cx="71" cy="42" rx="15" ry="5.5"/><ellipse cx="71" cy="42" rx="9" ry="3"/></g><circle cx="71" cy="28.5" r="6.5" fill="var(--accent)"/></svg><span>Kapás</span></div>
+    <div class="brand"><img class="logo" src="logo.png" alt=""><span>Kapás</span></div>
     <div class="hright">
       <div class="yearbar" id="yearbar" role="group" aria-label="Év választása">
         <button id="prevYear" aria-label="Előző év">‹</button>

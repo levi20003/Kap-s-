@@ -114,7 +114,7 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 
 ## Név és logó
 
-- Az app neve **Kapás** (1.8-ig Fogásnapló). A logó a Tisza kanyarulata és egy narancs úszó gyűrűkkel: adaptív ikon (`res/drawable/ic_launcher_{bg,fg,mono}.xml`,
-  `mipmap-anydpi-v26`), régebbi Androidon az `ic_launcher.png`-k; a fejlécben ugyanez inline SVG (`.logo`).
+- Az app neve **Kapás** (1.8-ig Fogásnapló). A logó a folyóvölgyes kép: a fejlécben `app/src/main/assets/logo.png`, adaptív ikon előtérként
+  `res/drawable-nodpi/ic_launcher_fg.png` (világos zsálya háttér: `ic_launcher_bg.xml`), egyszínű téma-ikon `ic_launcher_mono.xml`, régebbi Androidon az `ic_launcher.png`-k.
 - **Nem változott** (kompatibilitás): csomagnév `hu.fogasnaplo.app`, `fogasnaplo.*` tárolókulcsok, `FogasnaploAndroid` híd, mentésfájl-nevek,
   és a release-eszközök neve (`Fogasnaplo-TESZT.apk`, `version.json`), mert a már telepített tesztappok frissítője ezeket keresi.
