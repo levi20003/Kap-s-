@@ -80,29 +80,33 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Induláskor és előtérbe jövéskor `maybeAutoBackup()`; a mappában a 4 legutóbbi `fogasnaplo-ÉÉÉÉ-HH-NN.zip` marad.
 - Törlés (− gomb, „Fogás törlése”) 6 mp-ig visszavonható (`deleteWithUndo`); a fotó csak utána törlődik.
 
-## Zsálya design – két téma
+## „Erdei csend” design – két téma
 
-A paletta (Sage Hint `#DCE6D9`, Mint `#BFCFBB`, Sage `#8EA58C`, Moss `#738A6E`, Evergreen `#344C3D`) + narancs kiemelés.
+Meleg krémpapír alap, mélyzöld (Evergreen `#2F4A3A`) panelek és gombok, talpas címek (**Fraunces**, `--f-display`, 500/600, helyi woff2 + OFL a `fonts/`-ban),
+törzsszöveg Figtree. Narancs csak kiemelésre (értékelés 4–5, rekord, napív). A régi zsálya paletta (Sage `#8EA58C`, Moss, Mint) a másodlagos tónusokban él tovább.
 Világos és sötét téma: alapból a telefon módját követi (`ANDROID.isNight()`, váltáskor `__fnSysTheme`). Kézzel a fejléc nap/hold gombja váltja
 (`#themeBtn`): ha a gomb a telefon módjától eltérőre vált, `fogasnaplo.theme` = `light`/`dark` (felülbírálás), ha a telefon módjára, a kulcs törlődik
 (újra követi a telefont). Váltáskor körkörös átváltás (View Transitions, ahol van). A téma `<html data-theme>`-ként él;
-a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTheme(light)` a rendszersávok ikonszínét és az ablak hátterét igazítja.
+a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTheme(light)` a rendszersávok ikonszínét és az ablak hátterét igazítja
+(a `MainActivity` színei a `--bg`-vel egyeznek).
 
 | Token | Sötét | Világos |
 |---|---|---|
-| `--bg` | `#151c17` | `#eef2ec` |
-| `--surface` | `#212d25` | `#ffffff` |
-| `--fg` | `#e9efe6` | `#1f2b23` |
-| `--water` (fő kiemelés: gombok, címek, sávok) | `#bfcfbb` (Mint) | `#344c3d` (Evergreen) |
-| `--water-deep` | `#738a6e` (Moss) | `#8ea58c` (Sage) |
-| `--accent` (+ gomb, értékelés) | `#ff7a45` | `#c4501f` |
-| `--edge` / `--shadow-card` / `--shadow-pop` | kártyák peremfénye és mélysége (emelkedés) | ugyanazok, világos árnyékkal |
+| `--bg` | `#121915` | `#f4f0e8` (krém) |
+| `--surface` | `#1c261f` | `#fdfbf7` |
+| `--fg` | `#efebe1` | `#1e2a22` |
+| `--water` (fő szín: gombok, kiválasztott elemek) | `#c5d4be` | `#2f4a3a` (Evergreen) |
+| `--accent` / `--accent-txt` (kiemelés / narancs szöveg) | `#ff8350` / `#ffa070` | `#c4501f` / `#a3401a` |
+| `--hero-*` (zöld panelek: hős-kártya, horgászidő-panel, táj) | sötétebb erdő | Evergreen átmenet |
+| `--edge` / `--shadow-card` / `--shadow-pop` | finom perem és lágy, mély árnyék | ugyanazok, meleg barnás árnyékkal |
 
-- Kártyák: minden kártya a `--edge` peremet, a `--shadow-card` árnyékot és enyhe fényátmenetet kapja; a hős-kártya `--shadow-pop`. A fajták
-  különböznek: halfaj-kártya (bal csík + jelvény + számláló-pirula), rekord (vízszintesen görgethető trófea-sor, az első arany), statisztika-csempe, fogás-kártya.
-
+- Kezdőlap: köszöntés (`renderGreet`: napszak szerint, alatta dátum + a mai horgászidő), hős-kártya (zöld panel SVG folyóvölgy-tájjal, „Fogásaim →” gomb),
+  időjárás-kártya: felül teljes szélességű zöld „Horgászidő ma” panel 5 körös értékeléssel, rá ráfutó **napsáv** (`daysEl`: 7 nap chipként, a „Ma”
+  körvonalas, a kiválasztott teli zöld), alatta a kiválasztott nap fejléce (`.selday`), napív, eső/szél, óránkénti sáv.
+- Alsó fülsáv: az aktív ikon mögött csúszó pirula (`.tabind`).
+- Halfaj-kártya: kerek jelvény (talpas kezdőbetű), számláló, zöld + gomb; bal csík csak tilalomnál / közelgő tilalomnál. Rekord: vízszintes trófea-sor, az első arany.
 - Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
-  ha új szín kell, vegyél fel tokent mindkét blokkba (pl. `--card-a/b`, `--hero-*`, `--tint`, `--tile-filter`).
+  ha új szín kell, vegyél fel tokent mindkét blokkba.
 - A kontrasztot (WCAG) mindkét témában ellenőrizd: a szöveg legalább 4,5:1, a nagy szöveg és ikon legalább 3:1.
 
 ## Tilalmi idők és méretkorlátok

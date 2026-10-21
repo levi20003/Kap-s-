@@ -252,15 +252,13 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const facts = await q.locator('#today .facts').first().innerText(), arc = await q.locator('#today svg.sun-arc').textContent();
     ok(arc.includes('06:58') && arc.includes('17:44') && arc.includes('Nappal') && facts.includes('Eső 2,4 mm') && facts.includes('Szél max 21 km/h'), 'időjárás: napív (napkelte, napnyugta), eső, szél');
     ok(await q.locator('#today .hours .hr').first().evaluate(e => e.classList.contains('now')), 'időjárás: a „Most” óra kiemelve');
-    const maRow = q.locator('#today .days > .day').first();
-    ok(await maRow.isVisible() && (await maRow.innerText()).includes('Ma') && await maRow.evaluate(e => e.classList.contains('today')), 'előrejelzés: a „Ma” lenyitás nélkül is látszik, kiemelve');
-    ok((await maRow.locator('.d-lv').innerText()).toLowerCase() === (await q.locator('#today .score .lbl').innerText()).toLowerCase(), 'értékelés: a fejléc és a „Ma” sor ugyanazt írja');
-    ok(await q.locator('#today details.forecast').count() === 1, 'előrejelzés: lenyitható details');
-    await q.locator('#today details.forecast').evaluate(d => d.open = true);
-    ok(await q.locator('#today .days .day').count() === 3 && await q.locator('#today svg.spark').count() === 0, 'előrejelzés alapból kompakt: 3 nap, nincs légnyomás-görbe');
+    const maRow = q.locator('#today .days .day').first(), lbl = (await q.locator('#today .score .lbl').innerText()).toLowerCase();
+    ok(await maRow.isVisible() && (await maRow.innerText()).includes('Ma') && await maRow.evaluate(e => e.classList.contains('today') && e.classList.contains('on')), 'napsáv: a „Ma” elöl, kiemelve és kiválasztva');
+    ok((await q.locator('#today .selday .d-lv').innerText()).toLowerCase() === lbl && (await maRow.getAttribute('aria-label')).toLowerCase().includes(lbl), 'értékelés: a fejléc és a „Ma” ugyanazt írja');
+    ok(await q.locator('#today .days .day').count() === 7 && await q.locator('#today svg.spark').count() === 0, 'napsáv: 7 nap, alapból nincs légnyomás-görbe');
     await q.locator('#today .days .day').nth(1).click();
     ok((await q.locator('#today .wx-sub').first().textContent()).startsWith('Holnap') && (await q.locator('#today .hours .hr').first().innerText()).includes('04:00'), 'napra koppintva annak az órái látszanak');
-    ok(await q.locator('#today details.forecast').evaluate(d => d.open) && await q.locator('#today .day.today').count() === 1 && await q.locator('#today .day.on').innerText().then(t => t.includes('Holnap')), 'másik nap: a lenyitás nyitva marad, a „Ma” kiemelése megmarad');
+    ok(await q.locator('#today .day.today').count() === 1 && !(await q.locator('#today .day.today').evaluate(e => e.classList.contains('on'))) && (await q.locator('#today .day.on').getAttribute('aria-label')).startsWith('Holnap'), 'másik nap: kiválasztva, a „Ma” jelölése megmarad');
     await q.locator('#today .today-more').click();
     ok(await q.locator('#today svg.spark').count() === 1 && await q.locator('#today .days .day').count() === 7 && (await q.locator('#today .today-more').innerText()).includes('Kevesebb'), 'Részletek: 7 nap és a légnyomás-görbe');
     ok(await q.locator('#today .wx-explain').count() === 1 && (await q.locator('#today .wx-explain').textContent()).includes('hektopascal'), 'Részletek: magyarázat az értékelésről és a hPa-ról');
@@ -399,7 +397,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       }
       ok(wide.length === 0, `${W}px, ${scheme}: nincs vízszintes túlcsordulás` + (wide.length ? ' (' + wide.join(', ') + ')' : ''));
       await q.locator('.tabbar button[data-tab="home"]').click();
-      ok(await q.evaluate(() => getComputedStyle(document.querySelector('.total .n')).color) === 'rgb(255, 255, 255)', `${W}px, ${scheme}: a hős-kártya száma fehér`);
+      ok(await q.evaluate(() => getComputedStyle(document.querySelector('.total .n')).color.match(/\d+/g).slice(0, 3).every(v => +v >= 230)), `${W}px, ${scheme}: a hős-kártya száma világos (krémfehér)`);
       await ctx.close();
     }
   }
