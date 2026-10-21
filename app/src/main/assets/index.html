@@ -362,7 +362,7 @@ textarea.inp{resize:vertical;min-height:68px}
 .myrow .confirm{flex:1 1 100%}
 
 /* today card */
-.today{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--card-a) 0%,var(--card-b) 70%);border:1px solid var(--edge);border-radius:24px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-card)}
+.today{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--card-a) 0%,var(--card-b) 70%);border:1px solid var(--edge);border-radius:24px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:13px;box-shadow:var(--shadow-card)}
 .today::after{content:"";position:absolute;right:-60px;top:-70px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,var(--glow-water),transparent 70%);pointer-events:none}
 .today.s4::after,.today.s5::after{background:radial-gradient(circle,var(--glow-accent),transparent 70%)}
 .today-top{display:flex;align-items:center;gap:14px}
@@ -384,8 +384,8 @@ textarea.inp{resize:vertical;min-height:68px}
 .spark .nowd{fill:var(--accent-2)}
 .spark text{fill:var(--faint);font-size:10px;font-family:var(--f-body)}
 .spark .grid{stroke:var(--grid)}
-.facts{display:flex;flex-wrap:wrap;gap:6px}
-.fact{font-size:.8rem;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:5px 10px;display:flex;align-items:center;gap:6px;color:var(--fg)}
+.facts{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0}
+.fact{font-size:.8rem;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:6px 11px;display:flex;align-items:center;gap:6px;color:var(--fg);transition:border-color .2s}
 .reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:var(--muted)}
 .reasons li{display:flex;gap:8px}
 .reasons li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;margin-top:.5em;background:var(--water)}
@@ -399,9 +399,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxplace-btn{display:inline-flex;align-items:center;gap:5px}.wxplace-btn .ic{width:18px;height:18px}
 .wx-sub{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px}
 .fact .ic{width:15px;height:15px;color:var(--water)}.fact.wet{border-color:var(--water)}
-.hours{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}
+.hours{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;margin:6px -16px;padding:2px 16px 6px;scrollbar-width:none}
 .hours::-webkit-scrollbar{display:none}
-.hr{flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted)}
+.hr{flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 3px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted);transition:all .2s}
 .hr.newday{border-left:2px solid var(--water)}
 .h-ic{width:22px;height:22px;color:var(--water)}.h-ic svg{width:100%;height:100%}
 .h-temp{font-family:var(--f-display);font-size:1.1rem;color:var(--fg);line-height:1}
@@ -410,8 +410,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .warr{display:inline-block;font-size:.85em;line-height:1;color:var(--water)}
 .days{display:flex;flex-direction:column;gap:4px}
 .day{display:grid;grid-template-columns:minmax(0,1fr) 24px 62px 58px 72px;align-items:center;gap:8px;width:100%;text-align:left;
-  background:var(--tint);border:1px solid transparent;border-radius:12px;padding:8px 10px;color:var(--fg);font:inherit;font-size:.8rem}
-.day.on{border-color:var(--water);background:var(--tint-2)}
+  background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit;font-size:.8rem;cursor:pointer;transition:all .2s;user-select:none}
+.day:active{background:var(--tint-2)}
+.day.on{border-color:var(--water);background:var(--tint-2);box-shadow:inset 0 0 0 1px var(--water)}
 .d-name{min-width:0}.d-name b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.d-name small,.d-temp small{color:var(--muted)}
 .d-ic{width:22px;height:22px;color:var(--water)}.d-ic svg{width:100%;height:100%}
 .d-temp b{font-family:var(--f-display);font-size:1.05rem}
@@ -425,9 +426,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxres{display:flex;flex-direction:column;gap:6px}
 .wxopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
 .wxopt small{color:var(--muted);font-size:.76rem}
-.sun-arc{max-width:100%;height:auto;margin:12px 0}.sun-arc .arc{stroke:var(--water);stroke-width:2;fill:none}.sun-arc .horizon{stroke:var(--muted);stroke-width:1;opacity:.4}.sun-arc .time-dot{fill:var(--water);opacity:.6}.sun-arc .time-label{font-size:11px;text-anchor:middle;fill:var(--muted)}.sun-arc .sun{fill:var(--accent);filter:drop-shadow(0 0 8px var(--glow-accent))}.sun-arc .sun-inner{fill:var(--accent-ink);opacity:.4}
-.forecast{border:none;padding:0;margin-top:4px}.forecast summary{cursor:pointer;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;user-select:none;font-weight:600}.forecast summary::marker{color:var(--water)}
-.forecast[open] summary{margin-bottom:12px}
+.sun-arc{max-width:100%;height:auto;margin:14px 0;background:var(--tint);border:1px solid var(--line-soft);border-radius:16px;padding:12px 8px}.sun-arc .arc{stroke:var(--water);stroke-width:2;fill:none}.sun-arc .horizon{stroke:var(--muted);stroke-width:1;opacity:.4}.sun-arc .time-dot{fill:var(--water);opacity:.6}.sun-arc .time-label{font-size:11px;text-anchor:middle;fill:var(--muted)}.sun-arc .sun{fill:var(--accent);filter:drop-shadow(0 0 8px var(--glow-accent))}.sun-arc .sun-inner{fill:var(--accent-ink);opacity:.4}
+.forecast{border:none;padding:0;margin-top:8px}.forecast summary{cursor:pointer;color:var(--water);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;padding:10px 12px;margin:-10px -12px 10px -12px;user-select:none;font-weight:600;background:var(--tint);border-radius:12px;display:flex;align-items:center;gap:6px}.forecast summary::marker{display:none}.forecast summary::before{content:"▾";color:var(--water);font-size:.85em;transition:transform .2s}
+.forecast[open] summary{margin-bottom:14px}.forecast[open] summary::before{transform:rotate(180deg)}
 @media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 22px 56px 54px 64px;gap:6px;padding:8px}}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 /* motion: tabs rise in, bars grow, the hero ripples; all of it off for reduced-motion */
@@ -1699,9 +1700,10 @@ button{transition:transform .15s}
     const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
     if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
     const sc=scoreToday(H,i,now);
-    const card=el("div","today s"+sc.level);
+    const todayDayLevel=dayLevel(H,now)||sc.level;
+    const card=el("div","today s"+todayDayLevel);
     const top=el("div","today-top");
-    const sco=el("div","score");sco.append(el("div","lbl",LEVELS[sc.level]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=sc.level?"on":""));sco.append(dots);
+    const sco=el("div","score");sco.append(el("div","lbl",LEVELS[todayDayLevel]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=sc.level?"on":""));sco.append(dots);
     sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
     const wi=el("span","wxic"+(sc.level>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));top.append(wi);
     const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));
