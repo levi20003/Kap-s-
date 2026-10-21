@@ -386,7 +386,6 @@ textarea.inp{resize:vertical;min-height:68px}
 .spark .grid{stroke:var(--grid)}
 .facts{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0}
 .fact{font-size:.8rem;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:6px 11px;display:flex;align-items:center;gap:6px;color:var(--fg);transition:border-color .2s}
-.fact.moon{background:var(--tint-2);border-color:var(--water);font-weight:600}
 .reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:var(--muted)}
 .reasons li{display:flex;gap:8px}
 .reasons li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;margin-top:.5em;background:var(--water)}
@@ -400,27 +399,32 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxplace-btn{display:inline-flex;align-items:center;gap:5px}.wxplace-btn .ic{width:18px;height:18px}
 .wx-sub{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:-4px}
 .fact .ic{width:15px;height:15px;color:var(--water)}.fact.wet{border-color:var(--water)}
-.hours{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;margin:6px -16px;padding:2px 16px 6px;scrollbar-width:none}
+.hours{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:16px;margin:0 -16px;padding:10px 16px 8px;scrollbar-width:none}
 .hours::-webkit-scrollbar{display:none}
-.hr{flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 3px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted);transition:all .2s}
-.hr.newday{border-left:2px solid var(--water)}
-.hr.now{border:2px solid var(--water);background:var(--tint-2);box-shadow:0 0 8px var(--glow-water)}
+.hr{position:relative;flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 3px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted)}
+/* now: a filled card that clearly stands out */
+.hr.now{background:var(--water);border-color:var(--water);color:var(--on-water);box-shadow:0 6px 14px -6px var(--water)}
+.hr.now .h-t{font-weight:700}.hr.now .h-temp,.hr.now .h-ic,.hr.now .warr,.hr.now .h-rain{color:var(--on-water)}
+/* midnight: quieter, a dashed edge and a small day tag */
+.hr.newday{border-style:dashed;border-color:var(--water-deep)}
+.h-day{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.6rem;font-weight:600;line-height:1;padding:2px 6px;border-radius:999px;background:var(--surface);border:1px solid var(--line-soft);color:var(--muted);white-space:nowrap}
 .h-ic{width:22px;height:22px;color:var(--water)}.h-ic svg{width:100%;height:100%}
 .h-temp{font-family:var(--f-display);font-size:1.1rem;color:var(--fg);line-height:1}
 .h-rain{min-height:1em}.h-rain.wet,.d-rain.wet{color:var(--water);font-weight:600}
 .h-wind{display:flex;align-items:center;gap:2px}
 .warr{display:inline-block;font-size:.85em;line-height:1;color:var(--water)}
 .days{display:flex;flex-direction:column;gap:4px}
-.day{display:grid;grid-template-columns:minmax(0,1fr) 24px 62px 58px 72px;align-items:center;gap:8px;width:100%;text-align:left;
+.day{display:grid;grid-template-columns:minmax(0,1fr) 22px 54px 50px 64px;align-items:center;gap:6px;width:100%;text-align:left;
   background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit;font-size:.8rem;cursor:pointer;transition:all .2s;user-select:none}
 .day:active{background:var(--tint-2)}
-.day.today{border-color:var(--water);background:var(--tint-2)}
-.day.on{border-color:var(--water);background:var(--tint-2);box-shadow:inset 0 0 0 2px var(--water)}
-.day.today.on{box-shadow:inset 0 0 0 2px var(--water),0 0 0 1px var(--water)}
+.day.on{border-color:var(--water);background:var(--tint-2)}
+/* today keeps its bar even when another day is selected */
+.day.today{box-shadow:inset 4px 0 0 var(--water)}.day.today .d-name b{color:var(--water)}
 .d-name{min-width:0}.d-name b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.d-name small,.d-temp small{color:var(--muted)}
 .d-ic{width:22px;height:22px;color:var(--water)}.d-ic svg{width:100%;height:100%}
 .d-temp b{font-family:var(--f-display);font-size:1.05rem}
 .d-rain,.d-wind{color:var(--muted);display:flex;align-items:center;gap:3px;white-space:nowrap}
+.d-rain{flex-direction:column;align-items:flex-start;gap:0;line-height:1.2}.d-rain small{font-size:.7rem;color:var(--muted);font-weight:400}
 .d-lv{display:block;font-size:.7rem;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d-lv.lv4,.d-lv.lv5{color:var(--accent)}.d-name small{white-space:nowrap}
 .wx-explain summary{font-size:.85rem}
@@ -430,10 +434,24 @@ textarea.inp{resize:vertical;min-height:68px}
 .wxres{display:flex;flex-direction:column;gap:6px}
 .wxopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
 .wxopt small{color:var(--muted);font-size:.76rem}
-.sun-arc{max-width:100%;height:auto;margin:14px 0;background:var(--tint);border:1px solid var(--line-soft);border-radius:16px;padding:12px 8px}.sun-arc .arc{stroke:var(--water);stroke-width:2;fill:none}.sun-arc .horizon{stroke:var(--muted);stroke-width:1;opacity:.4}.sun-arc .time-dot{fill:var(--water);opacity:.6}.sun-arc .time-label{font-size:11px;text-anchor:middle;fill:var(--muted)}.sun-arc .sun{fill:var(--accent);filter:drop-shadow(0 0 8px var(--glow-accent))}.sun-arc .sun-inner{fill:var(--accent-ink);opacity:.4}
-.forecast{border:none;padding:0;margin-top:8px}.forecast summary{cursor:pointer;color:var(--water);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;padding:10px 12px;margin:-10px -12px 10px -12px;user-select:none;font-weight:600;background:var(--tint);border-radius:12px;display:flex;align-items:center;gap:6px}.forecast summary::marker{display:none}.forecast summary::before{content:"▾";color:var(--water);font-size:.85em;transition:transform .2s}
-.forecast[open] summary{margin-bottom:14px}.forecast[open] summary::before{transform:rotate(180deg)}
-@media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 22px 56px 54px 64px;gap:6px;padding:8px}}
+.sun-arc{display:block;width:100%;height:auto;background:var(--tint);border:1px solid var(--line-soft);border-radius:16px;font-family:var(--f-body)}
+.sun-arc .horizon{stroke:var(--line);stroke-width:1}
+.sun-arc .arc{fill:none;stroke:var(--water-deep);stroke-width:2;stroke-dasharray:3 5;stroke-linecap:round}
+.sun-arc .arc-done{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round}
+.sun-arc .time-dot{fill:var(--water)}
+.sun-arc .sun{fill:var(--accent)}.sun-arc .sun-halo{fill:var(--glow-accent)}
+.sun-arc text{text-anchor:middle}
+.sun-arc .sa-lbl{font-size:11px;fill:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sun-arc .sa-time{font-family:var(--f-display);font-weight:700;font-size:19px;fill:var(--fg)}
+.sun-arc .sa-tw{font-size:10.5px;fill:var(--faint)}
+.sun-arc .sa-main{font-family:var(--f-display);font-weight:600;font-size:17px;fill:var(--fg)}
+.sun-arc .sa-sub{font-size:11px;fill:var(--muted)}
+.days-rest{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.forecast summary{list-style:none;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:12px;border:1px dashed var(--line);color:var(--water);font-size:.82rem;font-weight:600}
+.forecast summary::-webkit-details-marker{display:none}
+.forecast summary::after{content:"▾";transition:transform .2s}.forecast[open] summary::after{transform:rotate(180deg)}
+.forecast[open] summary{margin-bottom:2px}
+@media (max-width:380px){.day{grid-template-columns:minmax(0,1fr) 20px 50px 46px 58px;gap:5px;padding:10px}}
 .today-empty{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 /* motion: tabs rise in, bars grow, the hero ripples; all of it off for reduced-motion */
 @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
@@ -1513,7 +1531,7 @@ button{transition:transform .15s}
   const WX_PLACE_KEY="fogasnaplo.wxplace",SZEGED={name:"Szeged",lat:46.253,lng:20.148};
   function wxPlace(){try{const p=JSON.parse(localStorage.getItem(WX_PLACE_KEY)||"null");if(p&&p.lat!=null&&p.name)return p}catch(e){}return SZEGED}
   function setWxPlace(p){try{localStorage.setItem(WX_PLACE_KEY,JSON.stringify({name:p.name,lat:Math.round(p.lat*1e3)/1e3,lng:Math.round(p.lng*1e3)/1e3}))}catch(e){}}
-  let today={loading:false,err:null,data:null},wxDay=0,wxPick=null;
+  let today={loading:false,err:null,data:null},wxDay=0,wxPick=null,fcstOpen=false;
   try{const c=JSON.parse(localStorage.getItem("fogasnaplo.today")||"null");if(c&&c.fetched&&c.d)today.data=c}catch(e){}
   async function loadToday(force){
     const loc=wxPlace();
@@ -1592,7 +1610,8 @@ button{transition:transform .15s}
   function hoursEl(H,from,to,now){
     const box=el("div","hours");box.setAttribute("role","list");
     for(let k=from;k<=to&&k<H.time.length;k++){
-      const t=parseLocal(H.time[k]),c=el("div","hr"+(t.getHours()===0&&k!==from?" newday":"")+(k===from&&now?" now":""));c.setAttribute("role","listitem");
+      const t=parseLocal(H.time[k]),mid=t.getHours()===0&&k!==from,c=el("div","hr"+(mid?" newday":"")+(k===from&&now?" now":""));c.setAttribute("role","listitem");
+      if(mid)c.append(el("span","h-day",dayName(t,new Date(),true).toLowerCase()));
       c.append(el("span","h-t",k===from&&now?"Most":pad(t.getHours())+":00"));
       const ic=el("span","h-ic");ic.innerHTML=icoSvg(wxIconName(H.weather_code[k]));c.append(ic);
       c.append(el("b","h-temp",Math.round(H.temperature_2m[k])+"°"));
@@ -1614,43 +1633,47 @@ button{transition:transform .15s}
       const ic=el("span","d-ic");ic.innerHTML=icoSvg(wxIconName(D.weather_code[k]));row.append(ic);
       const tp=el("span","d-temp");tp.append(el("b",null,Math.round(D.temperature_2m_max[k])+"°"));tp.append(el("small",null," / "+Math.round(D.temperature_2m_min[k])+"°"));row.append(tp);
       const rs=D.precipitation_sum[k]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[k]:null;
-      let rainText="–";if(rs>=0.1)rainText=mm(rs)+" mm"+(rp!=null?" ("+rp+"%)":"");else if(rp!=null)rainText=rp+"%";
-      row.append(el("span","d-rain"+(rs>=1?" wet":""),rainText));
+      const rn=el("span","d-rain"+(rs>=1?" wet":""),rs>=0.1?mm(rs)+" mm":rp!=null?rp+"%":"–");
+      if(rs>=0.1&&rp!=null)rn.append(el("small",null,rp+"%"));row.append(rn);
       const wd=el("span","d-wind");wd.append(windArrow(D.wind_direction_10m_dominant[k]));wd.append(Math.round(D.wind_speed_10m_max[k])+" km/h");row.append(wd);
       row.onclick=()=>{wxDay=idx;renderToday()};
       box.append(row);
     }
     return box;
   }
-  function sunArcEl(rise,set,now){
-    if(!rise||!set)return el("div");
-    const ns="http://www.w3.org/2000/svg",W=360,H=140,R=100,cx=W/2,cy=120;
-    const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.setAttribute("class","sun-arc");svg.setAttribute("role","img");svg.setAttribute("aria-label","Napkelte és napnyugta");
-    // dawn: 1h before rise, dusk: 1h after set
-    const dawn=new Date(rise);dawn.setHours(dawn.getHours()-1);
-    const dusk=new Date(set);dusk.setHours(dusk.getHours()+1);
-    const dayStart=dawn.getTime(),dayEnd=dusk.getTime(),dayLen=dayEnd-dayStart;
-    const risePos=(rise.getTime()-dayStart)/dayLen,setPos=(set.getTime()-dayStart)/dayLen,nowPos=(now.getTime()-dayStart)/dayLen;
-    const angle=p=>Math.PI*(1-p);
-    const pt=(a)=>[cx+R*Math.cos(a),cy-R*Math.sin(a)];
-    // arc from dawn to dusk
-    const p1=pt(angle(0)),p2=pt(angle(1));
-    const path=document.createElementNS(ns,"path");path.setAttribute("d",`M${p1[0]},${p1[1]} A${R},${R} 0 0 1 ${p2[0]},${p2[1]}`);path.setAttribute("class","arc");svg.append(path);
-    // horizon line
-    const hline=document.createElementNS(ns,"line");hline.setAttribute("x1","20");hline.setAttribute("y1",cy);hline.setAttribute("x2",W-20);hline.setAttribute("y2",cy);hline.setAttribute("class","horizon");svg.append(hline);
-    // time markers: dawn, rise, set, dusk
-    const times=[{t:dawn,lbl:"Hajnal"},{t:rise,lbl:"Napkelte"},{t:set,lbl:"Napnyugta"},{t:dusk,lbl:"Alkonyat"}];
-    times.forEach(({t,lbl})=>{
-      const p=pt(angle((t.getTime()-dayStart)/dayLen)),g=document.createElementNS(ns,"g");
-      const dot=document.createElementNS(ns,"circle");dot.setAttribute("cx",p[0]);dot.setAttribute("cy",p[1]);dot.setAttribute("r","5");dot.setAttribute("class","time-dot");g.append(dot);
-      const txt=document.createElementNS(ns,"text");txt.setAttribute("x",p[0]);txt.setAttribute("y",p[1]+24);txt.setAttribute("class","time-label");txt.textContent=fmtHM(t);g.append(txt);
-      svg.append(g);
-    });
-    // sun position
-    if(nowPos>=0&&nowPos<=1){
-      const sp=pt(angle(Math.max(0,Math.min(1,nowPos)))),sun=document.createElementNS(ns,"circle");sun.setAttribute("cx",sp[0]);sun.setAttribute("cy",sp[1]);sun.setAttribute("r","12");sun.setAttribute("class","sun");svg.append(sun);
-      const inner=document.createElementNS(ns,"circle");inner.setAttribute("cx",sp[0]);inner.setAttribute("cy",sp[1]);inner.setAttribute("r","8");inner.setAttribute("class","sun-inner");svg.append(inner);
+  // civil twilight (sun 6° below the horizon) before sunrise / after sunset, in ms
+  function twilightMs(date,lat){
+    const n=Math.round((new Date(date).setHours(12,0,0,0)-new Date(date.getFullYear(),0,0))/864e5);
+    const dec=RAD*23.44*Math.sin(2*Math.PI*(284+n)/365),phi=RAD*lat;
+    const ha=alt=>Math.acos(Math.max(-1,Math.min(1,(Math.sin(RAD*alt)-Math.sin(phi)*Math.sin(dec))/(Math.cos(phi)*Math.cos(dec)))));
+    return (ha(-6)-ha(-0.833))/(2*Math.PI)*864e5;
+  }
+  const durTxt=ms=>{const m=Math.max(0,Math.round(ms/6e4)),h=Math.floor(m/60);return (h?h+" ó ":"")+(m%60)+" p"};
+  function sunArcEl(rise,set,now,lat){
+    const ns="http://www.w3.org/2000/svg",W=360,Ht=162,cx=180,cy=104,rx=120,ry=78;
+    const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 "+W+" "+Ht);svg.setAttribute("class","sun-arc");svg.setAttribute("role","img");
+    const mk=(tag,attrs,text)=>{const e=document.createElementNS(ns,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;svg.append(e);return e};
+    const tw=twilightMs(rise,lat),dawn=new Date(rise.getTime()-tw),dusk=new Date(set.getTime()+tw);
+    const len=set-rise,isToday=ymd(rise)===ymd(now),p=isToday?Math.max(0,Math.min(1,(now-rise)/len)):0;
+    const arcD=`M${cx-rx},${cy} A${rx},${ry} 0 0 1 ${cx+rx},${cy}`;
+    mk("line",{x1:16,y1:cy,x2:W-16,y2:cy,class:"horizon"});
+    mk("path",{d:arcD,class:"arc"});
+    if(p>0)mk("path",{d:arcD,class:"arc-done",pathLength:1,"stroke-dasharray":p+" 1"});
+    mk("circle",{cx:cx-rx,cy,r:4,class:"time-dot"});mk("circle",{cx:cx+rx,cy,r:4,class:"time-dot"});
+    // the two ends: label, time, twilight underneath
+    [[cx-rx,"Napkelte",rise,"hajnal "+fmtHM(dawn)],[cx+rx,"Napnyugta",set,"alkony "+fmtHM(dusk)]].forEach(([x,l,t,s])=>{
+      mk("text",{x,y:cy+19,class:"sa-lbl"},l);mk("text",{x,y:cy+38,class:"sa-time"},fmtHM(t));mk("text",{x,y:cy+54,class:"sa-tw"},s)});
+    let line1,line2="Nappal: "+durTxt(len);
+    if(isToday){
+      if(now<rise)line1="Napkeltéig "+durTxt(rise-now);
+      else if(now<set){line1="Napnyugtáig "+durTxt(set-now);
+        const a=Math.PI*(1-p),sx=cx+rx*Math.cos(a),sy=cy-ry*Math.sin(a);
+        mk("circle",{cx:sx,cy:sy,r:17,class:"sun-halo"});mk("circle",{cx:sx,cy:sy,r:10,class:"sun"})}
+      else line1="Lement a nap";
     }
+    if(line1){mk("text",{x:cx,y:cy-30,class:"sa-main"},line1);mk("text",{x:cx,y:cy-11,class:"sa-sub"},line2)}
+    else mk("text",{x:cx,y:cy-18,class:"sa-main"},line2);
+    svg.setAttribute("aria-label","Napkelte "+fmtHM(rise)+", napnyugta "+fmtHM(set)+(line1?". "+line1:""));
     return svg;
   }
   function explainEl(){
@@ -1667,7 +1690,7 @@ button{transition:transform .15s}
       "Újhold vagy telihold közelében +0,5.",
       "Ha legalább 8 fogásodnál van időjárás, és ma a kedvenc légnyomás-helyzeted van: +0,5."
     ].forEach(t=>ul.append(el("li",null,t)));b.append(ul);
-    b.append(el("p",null,"Az összegből lesz az 1–5 fokozat (Gyenge, Közepes, Jó, Nagyon jó, Kiváló). A napoknál a nappali órák (6–20 óra) átlaga. Ez tájékoztató becslés, nem garancia."));
+    b.append(el("p",null,"Az összegből lesz az 1–5 fokozat (Gyenge, Közepes, Jó, Nagyon jó, Kiváló). A fenti értékelés és a napok sorai is a nappali órák (6–20 óra) átlagát mutatják, így a „Ma” sor mindig ugyanazt írja, mint a fejléc. Ez tájékoztató becslés, nem garancia."));
     d.append(b);return d;
   }
   function placePickerEl(){
@@ -1704,12 +1727,13 @@ button{transition:transform .15s}
     const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
     if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
     const sc=scoreToday(H,i,now);
-    const todayDayLevel=dayLevel(H,now)||sc.level;
-    const card=el("div","today s"+todayDayLevel);
+    // the headline is the same daylight average the "Ma" row shows, so the two never disagree
+    const lv=dayLevel(H,now)||sc.level;
+    const card=el("div","today s"+lv);
     const top=el("div","today-top");
-    const sco=el("div","score");sco.append(el("div","lbl",LEVELS[todayDayLevel]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=sc.level?"on":""));sco.append(dots);
+    const sco=el("div","score");sco.append(el("div","lbl",LEVELS[lv]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=lv?"on":""));sco.append(dots);
     sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
-    const wi=el("span","wxic"+(sc.level>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));top.append(wi);
+    const wi=el("span","wxic"+(lv>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));top.append(wi);
     const nt=el("div","now-t");nt.append(el("b",null,Math.round(H.temperature_2m[i])+"°"));
     const gust=H.wind_gusts_10m?Math.round(H.wind_gusts_10m[i]):null;
     nt.append(el("span",null,dirName(H.wind_direction_10m[i])+" "+Math.round(H.wind_speed_10m[i])+" km/h"+(gust&&gust>=Math.round(H.wind_speed_10m[i])+10?", lökés "+gust:"")));top.append(nt);
@@ -1720,11 +1744,9 @@ button{transition:transform .15s}
     const st=sunTimes(selDate,loc.lat,loc.lng);
     const rise=dk>=0&&D.sunrise?parseLocal(D.sunrise[dk]):st&&st.rise,set=dk>=0&&D.sunset?parseLocal(D.sunset[dk]):st&&st.set;
     card.append(el("div","wx-sub",dayName(selDate,now)+" · "+pad(selDate.getMonth()+1)+"."+pad(selDate.getDate())+"."));
-    if(rise&&set)card.append(sunArcEl(rise,set,now));
+    if(rise&&set)card.append(sunArcEl(rise,set,now,loc.lat));
     const facts=el("div","facts");
     const fact=(ic,t,cls)=>{const f=el("span","fact"+(cls?" "+cls:""));f.append(mkIc(ic));f.append(t);facts.append(f)};
-    if(rise)fact("sunrise","Napkelte "+fmtHM(rise));
-    if(set)fact("sunset","Napnyugta "+fmtHM(set));
     if(dk>=0){const rs=D.precipitation_sum[dk]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[dk]:null;
       fact("drop",(rs>=0.1?"Eső "+mm(rs)+" mm":"Nem esik")+(rp!=null?" ("+rp+"%)":""),rs>=1?"wet":"");
       fact("wind","Szél max "+Math.round(D.wind_speed_10m_max[dk])+" km/h"+(D.wind_gusts_10m_max?", lökés "+Math.round(D.wind_gusts_10m_max[dk]):""))}
@@ -1733,9 +1755,16 @@ button{transition:transform .15s}
     if(di===0){from=i;to=i+24}else{const k0=H.time.indexOf(ymd(selDate)+"T04:00");from=k0;to=k0+19}
     if(from>=0)card.append(hoursEl(H,from,to,di===0));
     const open=todayOpen();
-    const fcst=el("details","forecast"+(open?"":" closed"));fcst.open=open;
-    fcst.append(el("summary",null,"Előrejelzés"));fcst.append(daysEl(D,H,now,open?7:3));
-    card.append(fcst);
+    // "Ma" always shows; the other days fold away (the fold stays open while you tap through them)
+    const days=daysEl(D,H,now,open?7:3),rest=[...days.children].slice(1);
+    card.append(el("div","wx-sub","Előrejelzés"));
+    if(rest.length){
+      const fcst=el("details","forecast");fcst.open=fcstOpen||wxDay>0;
+      fcst.append(el("summary",null,"További "+rest.length+" nap"));
+      const box2=el("div","days-rest");rest.forEach(r=>box2.append(r));fcst.append(box2);
+      fcst.ontoggle=()=>{fcstOpen=fcst.open};days.append(fcst);
+    }
+    card.append(days);
     const more=el("button","linkbtn today-more",open?"Kevesebb ▴":"7 nap és horgászrészletek ▾");more.type="button";
     more.onclick=()=>{try{localStorage.setItem("fogasnaplo.todayOpen",open?"0":"1")}catch(e){}renderToday()};
     if(!open){card.append(more);box.append(card);return}
@@ -1743,7 +1772,7 @@ button{transition:transform .15s}
     card.append(sparkSvg(H,i));
     const f2=el("div","facts");
     const tr=trendOf(sc.dp);f2.append(el("span","fact",Math.round(sc.p)+" hPa "+(tr==="up"?"↑":tr==="down"?"↓":"→")+" "+TREND_TXT[tr]));
-    const mp=moonPhase(now);const mf=el("span","fact moon");mf.append(moonSvg(mp,16));mf.append(moonName(mp));f2.append(mf);
+    const mp=moonPhase(now);const mf=el("span","fact");mf.append(moonSvg(mp,16));mf.append(moonName(mp));f2.append(mf);
     card.append(f2);
     const sunOf=d=>{const k=D.time.findIndex(t=>t.slice(0,10)===ymd(d));
       return k>=0&&D.sunrise&&D.sunset?{rise:parseLocal(D.sunrise[k]),set:parseLocal(D.sunset[k])}:sunTimes(d,loc.lat,loc.lng)};
@@ -1757,7 +1786,7 @@ button{transition:transform .15s}
       add("Esti rablás",new Date(stT.set.getTime()-90*6e4),new Date(stT.set.getTime()+45*6e4));
       card.append(w);
     }
-    card.append(el("div","wx-sub","Miért "+LEVELS[sc.level].toLowerCase()+" most?"));
+    card.append(el("div","wx-sub","Miért "+LEVELS[lv].toLowerCase()+" ma? A mostani óra alapján:"));
     const ul=el("ul","reasons");sc.reasons.forEach(([cls,t])=>ul.append(el("li",cls,t)));card.append(ul);
     card.append(explainEl());
     const ago=Math.round((Date.now()-T.fetched)/6e4);
