@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Test build only (build.sh unwraps TESZT: lines when APP_ID is not the real one): self-update from GitHub -->
     <!--TESZT:<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />-->
+    <!--TESZT:<uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />-->
 
     <queries>
         <intent>
@@ -45,7 +46,7 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-        <!--TESZT:<provider android:name=".UpdateProvider" android:authorities="hu.fogasnaplo.app.update" android:exported="false" android:grantUriPermissions="true" />-->
+        <!--TESZT:<receiver android:name=".UpdateReceiver" android:exported="false" />-->
         <provider
             android:name=".ShotProvider"
             android:authorities="hu.fogasnaplo.app.shot"

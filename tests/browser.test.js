@@ -326,16 +326,16 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
     await q.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); window.__u = { inst: 0 };
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
-        checkUpdate() { setTimeout(() => window.__fnUpdate({ versionCode: 1042, versionName: 'abc1234', notes: 'Zsálya színvilág' })); },
-        installUpdate() { window.__u.inst++; setTimeout(() => window.__fnUpdateState({ state: 'ready' })); } }; });
+        checkUpdate() { setTimeout(() => { window.__fnUpdate({ versionCode: 1042, versionName: 'abc1234', notes: 'Zsálya színvilág' });
+          setTimeout(() => window.__fnUpdateState({ state: 'downloaded' }), 800); }); },
+        installUpdate() { window.__u.inst++; setTimeout(() => window.__fnUpdateState({ state: 'installing' })); } }; });
     await q.goto(PAGE); await q.waitForTimeout(2900);
-    ok(await q.locator('#updBar').isVisible() && (await q.locator('#updBar').innerText()).includes('Zsálya színvilág'), 'tesztverzió: frissítés-sáv megjelenik a változás leírásával');
+    ok(await q.locator('#updBar').isVisible() && (await q.locator('#updBar').innerText()).includes('letöltése'), 'tesztverzió: új verziónál magától letölt, a sáv jelzi');
+    await q.waitForTimeout(900);
+    const ub = await q.locator('#updBar').innerText();
+    ok(ub.includes('Zsálya színvilág') && ub.includes('magától frissül') && await q.locator('#updBar .btn-main').isVisible(), 'letöltve: kilépéskor magától frissül, „Frissítés most” gomb');
     await q.locator('#updBar .btn-main').click(); await q.waitForTimeout(100);
-    ok((await q.evaluate(() => window.__u.inst)) === 1 && await q.locator('#updBar').isHidden(), 'Frissítés: letöltés indul, megnyílik a telepítő');
-    await q.reload(); await q.waitForTimeout(2900);
-    await q.locator('#updBar .no').click();
-    await q.reload(); await q.waitForTimeout(2900);
-    ok(await q.locator('#updBar').isHidden(), '„Később”: erre a verzióra nem kérdez újra');
+    ok((await q.evaluate(() => window.__u.inst)) === 1 && (await q.locator('#updBar').innerText()).includes('telepítése'), '„Frissítés most”: azonnal telepít');
     await ctx.close();
   }
   // tabs: structure, home content, species management

@@ -1913,22 +1913,20 @@ button{transition:transform .15s}
   window.__fnSysTheme=function(r){sysNight=!!(r&&r.night);if(themePref()==="auto")applyTheme()};
   if(!ANDROID)try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",e=>{sysNight=e.matches;if(themePref()==="auto")applyTheme()})}catch(e){}
 
-  /* ---------- test build: one-tap update to the newest CI build ---------- */
-  const UPD_KEY="fogasnaplo.updSkip";
-  window.__fnUpdate=function(v){
-    let skip=null;try{skip=localStorage.getItem(UPD_KEY)}catch(e){}
-    if(!v||String(v.versionCode)===skip)return;
-    const b=$("updBar");b.replaceChildren();
-    b.append(el("span",null,"Új verzió érhető el"+(v.notes?": "+v.notes:"")+"."));
-    const go=el("button","btn-main","Frissítés");go.type="button";
-    go.onclick=()=>{go.disabled=true;go.textContent="Letöltés…";ANDROID.installUpdate()};
-    const later=el("button","no","Később");later.type="button";
-    later.onclick=()=>{try{localStorage.setItem(UPD_KEY,String(v.versionCode))}catch(e){}b.hidden=true};
-    b.append(go,later);b.hidden=false;
-  };
+  /* ---------- test build: updates itself (download in the background, install when you leave the app) ---------- */
+  let updInfo=null;
+  function updBar(msg,btnLabel,disabled){
+    const b=$("updBar");b.replaceChildren();b.append(el("span",null,msg));
+    if(btnLabel){const go=el("button","btn-main",btnLabel);go.type="button";go.disabled=!!disabled;
+      go.onclick=()=>{go.disabled=true;go.textContent="Telepítés…";ANDROID.installUpdate()};b.append(go)}
+    b.hidden=false;
+  }
+  const updNote=()=>updInfo&&updInfo.notes?" ("+updInfo.notes+")":"";
+  window.__fnUpdate=function(v){if(!v)return;updInfo=v;updBar("Új verzió letöltése"+updNote()+"…")};
   window.__fnUpdateState=function(r){
-    const b=$("updBar"),go=b.querySelector(".btn-main");
-    if(r&&r.error){toast(r.error);if(go){go.disabled=false;go.textContent="Újra"}}else b.hidden=true; // installer is open
+    if(r&&r.error){toast(r.error);if(updInfo)updBar("Új verzió kész"+updNote()+".","Frissítés most");return}
+    if(r&&r.state==="downloaded")updBar("Új verzió kész"+updNote()+". Amikor kilépsz az appból, magától frissül.","Frissítés most");
+    else if(r&&r.state==="installing")updBar("Frissítés telepítése… Utána nyisd meg újra az appot.");
   };
 
   /* ---------- back button (Android) ---------- */

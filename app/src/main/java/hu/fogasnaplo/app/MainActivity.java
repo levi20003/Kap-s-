@@ -233,50 +233,160 @@ public class MainActivity extends Activity {
         return c;
     }
 
+    /* The test build updates itself: a newer CI build is downloaded in the background and installed when the app
+       goes to the background (never mid-use). From Android 12 that is silent once this app is the installer of record;
+       otherwise (first time, or older Android) the system asks once, when you come back to the app. */
+    static MainActivity live;      // the resumed activity, so the installer's confirmation can be shown
+    static Intent pendingConfirm;  // the system's "update this app?" screen, waiting for the app to be in front
+    static boolean installing;
+    private volatile JSONObject readyInfo; // version.json of the downloaded build
+    private volatile boolean busy;
+    private boolean awaitingResult;
+    private long lastCheck;
+
+    private File updateApk() {
+        File dir = new File(getCacheDir(), "update");
+        dir.mkdirs();
+        return new File(dir, "Fogasnaplo-TESZT.apk");
+    }
+
+    @SuppressWarnings("deprecation")
+    private long archiveVersion(File f) {
+        if (!f.exists()) return -1;
+        android.content.pm.PackageInfo pi = getPackageManager().getPackageArchiveInfo(f.getPath(), 0);
+        if (pi == null || !getPackageName().equals(pi.packageName)) return -1;
+        return Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+    }
+
+    private SharedPreferences updPrefs() { return getSharedPreferences("update", MODE_PRIVATE); }
+
+    /** Looks for a newer build and downloads it; true when one is ready to install. */
+    private boolean fetchUpdate() throws Exception {
+        HttpURLConnection c = open(UPDATE_BASE + "version.json");
+        if (c.getResponseCode() != 200) return readyInfo != null;
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        try (InputStream in = c.getInputStream()) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0 && bo.size() < 65536) bo.write(buf, 0, n);
+        }
+        JSONObject v = new JSONObject(bo.toString("UTF-8"));
+        long code = v.optLong("versionCode");
+        File apk = updateApk();
+        if (code <= ownVersion()) { apk.delete(); readyInfo = null; return false; }
+        js("__fnUpdate", v);
+        if (archiveVersion(apk) != code) {
+            File tmp = new File(apk.getPath() + ".part");
+            HttpURLConnection d = open(UPDATE_BASE + "Fogasnaplo-TESZT.apk");
+            if (d.getResponseCode() != 200) throw new Exception("http " + d.getResponseCode());
+            try (InputStream in = d.getInputStream(); OutputStream out = new FileOutputStream(tmp)) {
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            }
+            if (!tmp.renameTo(apk) || archiveVersion(apk) != code) { tmp.delete(); apk.delete(); throw new Exception("bad apk"); }
+        }
+        readyInfo = v;
+        js("__fnUpdateState", new JSONObject().put("state", "downloaded"));
+        return true;
+    }
+
     private void checkUpdate() {
-        if (!isTestBuild()) return;
+        if (!isTestBuild() || busy) return;
+        busy = true;
+        lastCheck = System.currentTimeMillis();
         new Thread(() -> {
-            try {
-                HttpURLConnection c = open(UPDATE_BASE + "version.json");
-                if (c.getResponseCode() != 200) return;
-                ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                try (InputStream in = c.getInputStream()) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0 && bo.size() < 65536) bo.write(buf, 0, n);
-                }
-                JSONObject v = new JSONObject(bo.toString("UTF-8"));
-                if (v.optLong("versionCode") > ownVersion()) js("__fnUpdate", v);
-            } catch (Exception ignored) {} // offline: try again next start
+            try { fetchUpdate(); } catch (Exception ignored) {} // offline: try again later
+            finally { busy = false; }
         }).start();
     }
 
+    /** "Frissítés most": install right away (downloads first if needed). */
     private void installUpdate() {
         if (!isTestBuild()) return;
+        updPrefs().edit().remove("declined").apply();
         new Thread(() -> {
-            File apk = UpdateProvider.apk(this), tmp = new File(apk.getPath() + ".part");
             try {
-                HttpURLConnection c = open(UPDATE_BASE + "Fogasnaplo-TESZT.apk");
-                if (c.getResponseCode() != 200) throw new Exception("http " + c.getResponseCode());
-                try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(tmp)) {
-                    byte[] buf = new byte[65536];
-                    int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                }
-                if (!tmp.renameTo(apk)) throw new Exception("rename");
-                Uri u = Uri.parse("content://" + getPackageName() + ".update/Fogasnaplo-TESZT.apk");
-                Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "application/vnd.android.package-archive")
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                // the installer only accepts it over this app if it is signed with the same (CI test) key
-                runOnUiThread(() -> {
-                    try { startActivity(i); js("__fnUpdateState", new JSONObject().put("state", "ready")); }
-                    catch (Exception e) { js("__fnUpdateState", err("Nem sikerült megnyitni a telepítőt.")); }
-                });
+                if (readyInfo == null && !fetchUpdate()) { js("__fnUpdateState", err("Nincs újabb verzió.")); return; }
+                commitInstall();
             } catch (Exception e) {
-                tmp.delete();
                 js("__fnUpdateState", err("A letöltés nem sikerült. Próbáld újra wifin."));
             }
         }).start();
+    }
+
+    /** Hands the downloaded APK to the system installer; the result arrives in UpdateReceiver. */
+    private synchronized void commitInstall() {
+        if (installing || readyInfo == null) return;
+        installing = true;
+        try {
+            js("__fnUpdateState", new JSONObject().put("state", "installing"));
+            File apk = updateApk();
+            android.content.pm.PackageInstaller pi = getPackageManager().getPackageInstaller();
+            android.content.pm.PackageInstaller.SessionParams sp =
+                    new android.content.pm.PackageInstaller.SessionParams(android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            sp.setAppPackageName(getPackageName());
+            if (Build.VERSION.SDK_INT >= 31) sp.setRequireUserAction(android.content.pm.PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+            int id = pi.createSession(sp);
+            try (android.content.pm.PackageInstaller.Session s = pi.openSession(id)) {
+                try (OutputStream out = s.openWrite("app.apk", 0, apk.length()); InputStream in = new FileInputStream(apk)) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    s.fsync(out);
+                }
+                Intent cb = new Intent(this, UpdateReceiver.class).putExtra("versionCode", readyInfo.optLong("versionCode"));
+                android.app.PendingIntent pend = android.app.PendingIntent.getBroadcast(this, id, cb,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? android.app.PendingIntent.FLAG_MUTABLE : 0));
+                s.commit(pend.getIntentSender());
+            }
+        } catch (Exception e) {
+            installing = false;
+            js("__fnUpdateState", err("A telepítés nem indult el."));
+        }
+    }
+
+    void updateFailed(long versionCode, boolean declined, String msg) {
+        if (declined) updPrefs().edit().putLong("declined", versionCode).apply(); // no auto-install of this one; the button still works
+        js("__fnUpdateState", err(declined ? "A frissítést elhalasztottad. A sávon bármikor elindíthatod." : "A frissítés nem sikerült" + (msg != null ? ": " + msg : ".")));
+    }
+
+    void showConfirm() {
+        Intent c = pendingConfirm;
+        if (c == null) return;
+        pendingConfirm = null;
+        try { startActivity(c); } catch (Exception e) { installing = false; }
+    }
+
+    @Override
+    public void startActivityForResult(Intent intent, int requestCode, Bundle options) {
+        awaitingResult = true; // camera, gallery, file pickers: going to the background then is not leaving the app
+        super.startActivityForResult(intent, requestCode, options);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        live = this;
+        if (!isTestBuild()) return;
+        if (pendingConfirm != null) showConfirm();
+        else if (lastCheck > 0 && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000L) checkUpdate();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (live == this) live = null;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // left the app (not just opened the camera or a picker): a good moment to update
+        if (isTestBuild() && readyInfo != null && !awaitingResult && !isChangingConfigurations()
+                && updPrefs().getLong("declined", -1) != readyInfo.optLong("versionCode")) {
+            new Thread(this::commitInstall).start();
+        }
     }
 
     /* ---------- theme: the page picks light/dark sage, the window follows ---------- */
@@ -594,6 +704,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        awaitingResult = false;
         if (req == REQ_OPEN) {
             if (fileCallback != null) {
                 Uri u = (res == RESULT_OK && data != null) ? data.getData() : null;
