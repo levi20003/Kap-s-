@@ -9,7 +9,7 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # playwright install --with-deps needs an Ubuntu release this Playwright version supports
     defaults:
       run:
         working-directory: tests
