@@ -386,6 +386,7 @@ textarea.inp{resize:vertical;min-height:68px}
 .spark .grid{stroke:var(--grid)}
 .facts{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0}
 .fact{font-size:.8rem;background:var(--tint);border:1px solid var(--line-soft);border-radius:999px;padding:6px 11px;display:flex;align-items:center;gap:6px;color:var(--fg);transition:border-color .2s}
+.fact.moon{background:var(--tint-2);border-color:var(--water);font-weight:600}
 .reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:var(--muted)}
 .reasons li{display:flex;gap:8px}
 .reasons li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;margin-top:.5em;background:var(--water)}
@@ -403,6 +404,7 @@ textarea.inp{resize:vertical;min-height:68px}
 .hours::-webkit-scrollbar{display:none}
 .hr{flex:none;scroll-snap-align:start;width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 3px;border-radius:14px;background:var(--tint);border:1px solid var(--line-soft);font-size:.76rem;color:var(--muted);transition:all .2s}
 .hr.newday{border-left:2px solid var(--water)}
+.hr.now{border:2px solid var(--water);background:var(--tint-2);box-shadow:0 0 8px var(--glow-water)}
 .h-ic{width:22px;height:22px;color:var(--water)}.h-ic svg{width:100%;height:100%}
 .h-temp{font-family:var(--f-display);font-size:1.1rem;color:var(--fg);line-height:1}
 .h-rain{min-height:1em}.h-rain.wet,.d-rain.wet{color:var(--water);font-weight:600}
@@ -412,7 +414,9 @@ textarea.inp{resize:vertical;min-height:68px}
 .day{display:grid;grid-template-columns:minmax(0,1fr) 24px 62px 58px 72px;align-items:center;gap:8px;width:100%;text-align:left;
   background:var(--tint);border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit;font-size:.8rem;cursor:pointer;transition:all .2s;user-select:none}
 .day:active{background:var(--tint-2)}
-.day.on{border-color:var(--water);background:var(--tint-2);box-shadow:inset 0 0 0 1px var(--water)}
+.day.today{border-color:var(--water);background:var(--tint-2)}
+.day.on{border-color:var(--water);background:var(--tint-2);box-shadow:inset 0 0 0 2px var(--water)}
+.day.today.on{box-shadow:inset 0 0 0 2px var(--water),0 0 0 1px var(--water)}
 .d-name{min-width:0}.d-name b{display:block;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.d-name small,.d-temp small{color:var(--muted)}
 .d-ic{width:22px;height:22px;color:var(--water)}.d-ic svg{width:100%;height:100%}
 .d-temp b{font-family:var(--f-display);font-size:1.05rem}
@@ -1588,7 +1592,7 @@ button{transition:transform .15s}
   function hoursEl(H,from,to,now){
     const box=el("div","hours");box.setAttribute("role","list");
     for(let k=from;k<=to&&k<H.time.length;k++){
-      const t=parseLocal(H.time[k]),c=el("div","hr"+(t.getHours()===0&&k!==from?" newday":""));c.setAttribute("role","listitem");
+      const t=parseLocal(H.time[k]),c=el("div","hr"+(t.getHours()===0&&k!==from?" newday":"")+(k===from&&now?" now":""));c.setAttribute("role","listitem");
       c.append(el("span","h-t",k===from&&now?"Most":pad(t.getHours())+":00"));
       const ic=el("span","h-ic");ic.innerHTML=icoSvg(wxIconName(H.weather_code[k]));c.append(ic);
       c.append(el("b","h-temp",Math.round(H.temperature_2m[k])+"°"));
@@ -1603,7 +1607,7 @@ button{transition:transform .15s}
     const box=el("div","days");
     for(let k=0;k<D.time.length&&box.childElementCount<n;k++){
       const date=parseLocal(D.time[k]);if(ymd(date)<ymd(now))continue;
-      const idx=box.childElementCount,row=el("button","day"+(idx===wxDay?" on":""));row.type="button";
+      const idx=box.childElementCount,isToday=idx===0,row=el("button","day"+(idx===wxDay?" on":"")+(isToday?" today":""));row.type="button";
       row.setAttribute("aria-pressed",idx===wxDay?"true":"false");
       const lv=dayLevel(H,date),nm=el("span","d-name");nm.append(el("b",null,dayName(date,now,true)));const sm=el("small",null,pad(date.getMonth()+1)+"."+pad(date.getDate())+". ");
       if(lv)sm.append(el("span","d-lv lv"+lv,LEVELS[lv]));nm.append(sm);row.append(nm);
@@ -1739,7 +1743,7 @@ button{transition:transform .15s}
     card.append(sparkSvg(H,i));
     const f2=el("div","facts");
     const tr=trendOf(sc.dp);f2.append(el("span","fact",Math.round(sc.p)+" hPa "+(tr==="up"?"↑":tr==="down"?"↓":"→")+" "+TREND_TXT[tr]));
-    const mp=moonPhase(now);const mf=el("span","fact");mf.append(moonSvg(mp,16));mf.append(moonName(mp));f2.append(mf);
+    const mp=moonPhase(now);const mf=el("span","fact moon");mf.append(moonSvg(mp,16));mf.append(moonName(mp));f2.append(mf);
     card.append(f2);
     const sunOf=d=>{const k=D.time.findIndex(t=>t.slice(0,10)===ymd(d));
       return k>=0&&D.sunrise&&D.sunset?{rise:parseLocal(D.sunrise[k]),set:parseLocal(D.sunset[k])}:sunTimes(d,loc.lat,loc.lng)};
