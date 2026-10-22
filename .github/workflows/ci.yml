@@ -47,7 +47,16 @@ jobs:
             echo ci-only-123 > ci-key/keystore-jelszo.txt
           fi
           cp ci-key/fogasnaplo.keystore ci-key/keystore-jelszo.txt .
-      - run: ./build.sh 999 ci
+      - name: bundletool (Android App Bundle for Google Play)
+        run: curl -sSfL -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
+      - run: AAB=1 ./build.sh 999 ci
+      - name: The bundle installs as a working APK (universal APK from the AAB)
+        run: |
+          java -jar bundletool.jar build-apks --bundle=out/Fogasnaplo.aab --output=out/check.apks --mode=universal \
+            --ks=fogasnaplo.keystore --ks-key-alias=fogasnaplo --ks-pass=file:keystore-jelszo.txt
+          unzip -q -o out/check.apks universal.apk -d out
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/universal.apk | grep -E "^(package|targetSdkVersion|application-label):"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/universal.apk | grep -q "targetSdkVersion:'36'"
       - name: APK targets API 36 (Google Play requirement)
         run: |
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|sdkVersion|targetSdkVersion)"

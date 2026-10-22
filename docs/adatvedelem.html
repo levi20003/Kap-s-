@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kapás – Adatvédelem</title>
+<style>
+:root{--bg:#f4f0e8;--surface:#fdfbf7;--fg:#1e2a22;--muted:#596259;--water:#2f4a3a;--line:#ddd5c6}
+@media (prefers-color-scheme:dark){:root{--bg:#121915;--surface:#1c261f;--fg:#efebe1;--muted:#b1b7aa;--water:#c5d4be;--line:#34423a}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:32px 16px 64px}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:2rem;line-height:1.15;margin:0 0 4px}
+h2{font-family:Georgia,"Times New Roman",serif;font-size:1.25rem;margin:28px 0 6px;color:var(--water)}
+p,li{color:var(--fg)}.muted{color:var(--muted)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:4px 18px 14px;margin-top:16px}
+a{color:var(--water)}
+</style>
+</head>
+<body>
+<main>
+<h1>Kapás – adatvédelmi tájékoztató</h1>
+<p class="muted">Hatályos: 2026. október 22.</p>
+
+<section>
+<h2>Röviden</h2>
+<p>A Kapás horgász fogásnapló. <b>Nincs fiók, nincs reklám, nincs analitika.</b> A naplód, a fotóid és a videóid
+<b>csak a telefonodon</b> vannak. A fejlesztő semmilyen adatodat nem kapja meg és nem tárolja.</p>
+</section>
+
+<section>
+<h2>Milyen adatot kezel az app?</h2>
+<ul>
+<li><b>Fogások</b> (halfaj, időpont, méret, csali, hely, megjegyzés), <b>fotók és videók</b>: a telefon saját tárhelyén, az alkalmazás mappájában.</li>
+<li><b>Hely</b>: ha engedélyezed, a fogás rögzítésekor az app lekéri a telefon helyét, hogy a fogáshoz elmentse. Az időjárás-kártyához az app
+soha nem kér helyet magától; ott te választod a települést (vagy egyszer, kérésre a jelenlegi helyed).</li>
+</ul>
+</section>
+
+<section>
+<h2>Mi megy ki a telefonról?</h2>
+<ul>
+<li><b>Open-Meteo</b> (<a href="https://open-meteo.com/">open-meteo.com</a>): az időjárás lekéréséhez a választott település vagy a fogás helyének
+koordinátái és dátuma, valamint a településkereső szövege. Titkosított (HTTPS) kapcsolaton, azonosító nélkül.</li>
+<li><b>OpenStreetMap</b> (<a href="https://www.openstreetmap.org/">openstreetmap.org</a>): a térkép megjelenítéséhez a megnézett térképrészlet csempéi.</li>
+</ul>
+<p>Ezek a szolgáltatások a saját adatvédelmi szabályaik szerint működnek. A Kapás nem küld nekik nevet, e-mail-címet vagy más azonosítót,
+és a fogásnaplódat sem.</p>
+</section>
+
+<section>
+<h2>Megosztás és mentés</h2>
+<ul>
+<li>A fogáskártyát és az év összefoglalót csak akkor osztja meg az app, ha te a „Megosztás” gombra koppintasz, és te választod ki, hová (pl. Messenger).</li>
+<li>A biztonsági mentést te indítod, vagy a heti automatikus mentés abba a mappába ír, amit te választottál ki. A mentés a te fájlod; a fejlesztőhöz nem jut el.</li>
+</ul>
+</section>
+
+<section>
+<h2>Engedélyek</h2>
+<ul>
+<li><b>Hely</b> (csak használat közben): a fogás helyének mentéséhez. Nélküle is használható, a helyet a térképen kézzel is megadhatod.</li>
+<li><b>Értesítések</b>: tilalmi emlékeztetők (a tilalom előtti este és amikor újra fogható). Kikapcsolható.</li>
+<li><b>Indításkor futás</b>: hogy a telefon újraindítása után is megmaradjon a következő emlékeztető.</li>
+<li>Fotót és videót a telefon saját kamera- és galéria-alkalmazása készít vagy választ ki; az appnak ehhez nincs külön engedélye.</li>
+</ul>
+</section>
+
+<section>
+<h2>Törlés</h2>
+<p>Egy fogást az appban törölhetsz (a fotóival együtt). Az alkalmazás törlése minden adatát eltávolítja a telefonról.
+Szerveren nincs törlendő adat.</p>
+</section>
+
+<section>
+<h2>Gyerekek</h2>
+<p>Az app nem gyerekeknek készült, és tudatosan nem gyűjt adatot gyerekektől.</p>
+</section>
+
+<section>
+<h2>Kapcsolat</h2>
+<p>Kérdés esetén: <b>[ide jön a fejlesztői e-mail-cím]</b></p>
+<p class="muted">Ha a tájékoztató változik, ezen az oldalon frissül, a hatálybalépés dátumával.</p>
+</section>
+</main>
+</body>
+</html>

@@ -1967,7 +1967,7 @@ button{transition:transform .15s}
     const card=el("div","today s"+lv);
     const top=el("div","today-top");
     const sco=el("div","score");sco.append(el("div","kick","Horgászidő ma"));sco.append(el("div","lbl",LEVELS[lv]));const dots=el("div","dots");for(let k=1;k<=5;k++)dots.append(el("i",k<=lv?"on":""));sco.append(dots);
-    sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+H.cloud_cover[i]+"% felhő"));top.append(sco);
+    sco.append(el("div","sub",(WMO[H.weather_code[i]]||"")+" · "+Math.round(H.cloud_cover[i])+"% felhő"));top.append(sco);
     const wi=el("span","wxic"+(lv>=4?" hot":""));wi.innerHTML=icoSvg(wxIconName(H.weather_code[i]));
     const nt=el("div","now-t"),tr0=el("div","nt-row");tr0.append(wi,el("b",null,Math.round(H.temperature_2m[i])+"°"));nt.append(tr0);
     const gust=H.wind_gusts_10m?Math.round(H.wind_gusts_10m[i]):null;

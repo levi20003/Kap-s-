@@ -16,6 +16,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Aláírás: `fogasnaplo.keystore` + `keystore-jelszo.txt` a projekt gyökerében.
   **Ezek soha nem kerülhetnek a repóba** (`.gitignore` kizárja őket, az `out/`, `*.apk`, `*.zip` mellett).
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
+- **Google Play: AAB** (a Play új appnál csak ezt fogadja): `AAB=1 ./build.sh …` → `out/Fogasnaplo.aab` is (aapt2 `--proto-format` → `base` modul → `bundletool`,
+  `jarsigner`). Kell hozzá `bundletool.jar` (alapból a projekt gyökerében, vagy `BUNDLETOOL=…`). A CI minden pushnál megépíti és ellenőrzi (universal APK-vá alakítja).
+- **Kiadás**: a „Kiadás (Play Áruház)” workflow (`.github/workflows/kiadas.yml`, kézzel indítva, versionCode/versionName bemenettel) a valódi kulccsal
+  (secrets: `FOGASNAPLO_KEYSTORE_B64`, `FOGASNAPLO_KEYSTORE_PASS`) aláírt AAB-t és APK-t ad artifactként. Lépések, Play Console-válaszok, képek:
+  `store/KIADAS.md`, `store/play-aruhaz.md`, `store/kepek/`. Adatvédelmi oldal: `docs/adatvedelem.html` (GitHub Pages).
 - Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
 - A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,

@@ -26,3 +26,4 @@ node_modules/
 
 # CI-only test signing key (GitHub Actions cache)
 ci-key/
+bundletool*.jar

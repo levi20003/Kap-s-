@@ -1,0 +1,64 @@
+# Google Play release: started by hand (Actions → "Kiadás (Play Áruház)" → Run workflow).
+# Builds the real app (hu.fogasnaplo.app) as an Android App Bundle, signed with the real upload key from the repository secrets:
+#   FOGASNAPLO_KEYSTORE_B64   base64 of fogasnaplo.keystore   (base64 -w0 fogasnaplo.keystore)
+#   FOGASNAPLO_KEYSTORE_PASS  its password (store and key password are the same)
+# The key is written to the runner only for the build and deleted at the end; it never goes into the repository or the artifact.
+name: Kiadás (Play Áruház)
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        description: "versionCode (egész szám, minden kiadásnál nagyobb, pl. 10)"
+        required: true
+      versionName:
+        description: "versionName (a felhasználó ezt látja, pl. 2.0)"
+        required: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      VC: ${{ inputs.versionCode }}
+      VN: ${{ inputs.versionName }}
+    steps:
+      - name: Version check
+        run: |
+          [[ "$VC" =~ ^[0-9]+$ ]] || { echo "A versionCode csak szám lehet."; exit 1; }
+          [[ "$VN" =~ ^[0-9A-Za-z.\-]+$ ]] || { echo "A versionName csak számot, betűt, pontot és kötőjelet tartalmazhat."; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: SDK (platform 36, build-tools 36.0.0)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: bundletool
+        run: curl -sSfL -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
+      - name: Upload key from the secrets
+        env:
+          KS_B64: ${{ secrets.FOGASNAPLO_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.FOGASNAPLO_KEYSTORE_PASS }}
+        run: |
+          if [ -z "$KS_B64" ] || [ -z "$KS_PASS" ]; then echo "Hiányzik a FOGASNAPLO_KEYSTORE_B64 vagy a FOGASNAPLO_KEYSTORE_PASS secret."; exit 1; fi
+          echo "$KS_B64" | base64 -d > fogasnaplo.keystore
+          printf '%s' "$KS_PASS" > keystore-jelszo.txt
+      - name: Build (APK + AAB)
+        run: AAB=1 ./build.sh "$VC" "$VN"
+      - name: Check
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|targetSdkVersion|application-label):"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app' versionCode='$VC'"
+          ! "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions out/Fogasnaplo.apk | grep -q REQUEST_INSTALL_PACKAGES
+          mv out/Fogasnaplo.aab "out/Kapas-$VN.aab"
+          mv out/Fogasnaplo.apk "out/Kapas-$VN.apk"
+      - name: Remove the key
+        if: always()
+        run: rm -f fogasnaplo.keystore keystore-jelszo.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kapas-${{ inputs.versionName }}-play
+          path: |
+            out/Kapas-${{ inputs.versionName }}.aab
+            out/Kapas-${{ inputs.versionName }}.apk
+          retention-days: 30
