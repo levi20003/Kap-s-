@@ -597,6 +597,7 @@ button{transition:transform .15s}
   <!-- ===== Statisztika ===== -->
   <div id="tab-stats" class="wrap" style="gap:22px" hidden>
     <section class="yearcard" id="yearCard" hidden></section>
+    <section id="gameSec" aria-label="Kap-ás Kihívások"></section>
     <div class="kpis" id="kpis"></div>
     <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
     <section id="monthSec">
@@ -833,7 +834,7 @@ button{transition:transform .15s}
   data.species=data.species||[];data.catches=data.catches||[];
   function save(){let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
     $("saveWarn").hidden=ok;if(!ok)toast("A mentés nem sikerült: megtelt a tárhely.");sync()}
-  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts()}
+  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts();checkGame()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
     addSpecies(name){data.species.push({id:rid(),name,created:new Date().toISOString()});save()},
@@ -916,6 +917,10 @@ button{transition:transform .15s}
     sunrise:'<path d="M12 2v8" /> <path d="m4.93 10.93 1.41 1.41" /> <path d="M2 18h2" /> <path d="M20 18h2" /> <path d="m19.07 10.93-1.41 1.41" /> <path d="M22 22H2" /> <path d="m8 6 4-4 4 4" /> <path d="M16 18a4 4 0 0 0-8 0" />',
     sunset:'<path d="M12 10V2" /> <path d="m4.93 10.93 1.41 1.41" /> <path d="M2 18h2" /> <path d="M20 18h2" /> <path d="m19.07 10.93-1.41 1.41" /> <path d="M22 22H2" /> <path d="m16 6-4 4-4-4" /> <path d="M16 18a4 4 0 0 0-8 0" />',
     plus:'<path d="M5 12h14" /> <path d="M12 5v14" />',
+    flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />',
+    lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" />',
+    leaf:'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /> <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />',
+    award:'<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" /> <circle cx="12" cy="8" r="6" />',
     snow:'<path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" />',
   };
   const icoSvg=(n,c)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(c?' class="'+c+'"':'')+'>'+ICONS[n]+'</svg>';
@@ -1144,6 +1149,7 @@ button{transition:transform .15s}
     renderMonths(yearCatches);
     renderBest(yearCatches);
     renderYearCard();
+    renderGame();
   }
   function renderMonths(yc){
     $("monthSec").hidden=yc.length<1;const box=$("monthStats");box.replaceChildren();if(!yc.length)return;
@@ -1567,6 +1573,110 @@ button{transition:transform .15s}
     toast("Évösszefoglaló készítése…");
     let url;try{url=await yearCardImage(S)}catch(e){toast("A képet nem sikerült elkészíteni.");return}
     shareDataUrl(url,"Az évem a vízparton ("+S.y+"): "+S.total+" hal"+(S.rec?", az év hala: "+recText(S.rec):"")+". #Kapás","kapas-"+S.y+".jpg");
+  }
+
+  /* ---------- Kap-ás Kihívások: XP, levels, weekly streak, weekly quests, badges ----------
+     Everything is worked out from the log itself, so nothing new is stored in it; fogasnaplo.kihivasok only remembers
+     what was already announced (to toast a level-up or a new badge once). */
+  const GAME_KEY="fogasnaplo.kihivasok";
+  const GAME_LEVELS=[["Novícius Pergető",0],["Kezdő Pergető",100],["Partjáró",250],["Csalimester-tanonc",450],["Rablóhal-vadász",700],
+    ["Tiszai Pergető",1000],["Folyami Ragadozó",1400],["Holtági Öreg Róka",1900],["Tiszai Helyi Legenda",2500]];
+  const GAME_SPECIES=["Balin","Süllő","Sügér","Csuka","Harcsa"],GAME_LURES=["Spintail","Salmo Thrill"],TIER_NAMES=["Bronz","Ezüst","Arany"];
+  const weekStart=d=>{const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+  const canon=n=>{const k=norm(n);return ALIAS[k]||k};
+  const isSp=(c,name)=>canon(spName(c.sp))===canon(name);
+  const usesLure=(c,l)=>!!c.lure&&norm(c.lure).includes(norm(l));
+  // 10 for a catch, more for filling it in (size, lure, place, photo) and for letting the fish go
+  const catchXp=c=>10+((c.l||c.w)?5:0)+(c.lure?3:0)+(coordsOf(c)?3:0)+(mediaOf(c).length?5:0)+(c.kept===false?5:0);
+  function seeded(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}
+    return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
+  // three quests a week, the same all week; a species quest only for a fish that is not in its closed season
+  function weekQuests(ws){
+    const rnd=seeded("kapas"+ymd(ws)),mid=new Date(ws);mid.setDate(mid.getDate()+3);
+    const pick=a=>a[Math.floor(rnd()*a.length)];
+    const open=GAME_SPECIES.filter(n=>{const st=ruleStatus(ruleFor(n),mid);return!st||st.kind!=="closed"});
+    const qs=[];
+    if(open.length){const n=pick(open);qs.push({id:"sp",text:"Fogj egy halat: "+n,need:1,test:c=>isSp(c,n)})}
+    const l=pick(QUICK_LURES);qs.push({id:"lure",text:"Fogás ezzel a csalival: "+l,need:1,test:c=>usesLure(c,l)});
+    const extra=[{id:"rel",text:"Engedj vissza egy halat",need:1,test:c=>c.kept===false},
+      {id:"three",text:"Rögzíts 3 fogást a héten",need:3,test:()=>true},
+      {id:"size",text:"Mérd le egy fogásod (hossz vagy súly)",need:1,test:c=>!!(c.l||c.w)},
+      {id:"photo",text:"Fotózd le a fogásod",need:1,test:c=>mediaOf(c).length>0},
+      {id:"dawn",text:"Fogj halat hajnalban vagy alkonyatkor",need:1,test:c=>{const k=daypart(c);return k===0||k===2}}];
+    while(qs.length<3)qs.push(extra.splice(Math.floor(rnd()*extra.length),1)[0]);
+    return qs.map(q=>({...q,xp:25}));
+  }
+  function gameState(now){
+    now=now||new Date();
+    const cs=state.catches.filter(c=>state.species.some(s=>s.id===c.sp)),wk=d=>ymd(d);
+    const prevWeek=d=>{const x=new Date(d);x.setDate(x.getDate()-7);return x};
+    const byWeek=new Map();cs.forEach(c=>{const k=wk(weekStart(new Date(c.at)));if(!byWeek.has(k))byWeek.set(k,[]);byWeek.get(k).push(c)});
+    let xp=cs.reduce((a,c)=>a+catchXp(c),0);
+    byWeek.forEach((list,k)=>weekQuests(new Date(k+"T00:00")).forEach(q=>{if(list.filter(q.test).length>=q.need)xp+=q.xp}));
+    // the streak is still alive during a week without a catch yet; it breaks when a whole week is missed
+    const cur=weekStart(now),active=byWeek.has(wk(cur));let streak=0;
+    for(let d=active?cur:prevWeek(cur);byWeek.has(wk(d));d=prevWeek(d))streak++;
+    let best=0,run=0,last=null;[...byWeek.keys()].sort().forEach(k=>{run=last&&wk(prevWeek(new Date(k+"T00:00")))===last?run+1:1;best=Math.max(best,run);last=k});
+    const badges=[];
+    GAME_SPECIES.forEach(n=>badges.push({id:"sp-"+canon(n),group:"Halfaj",name:n,icon:"fish",n:cs.filter(c=>isSp(c,n)).length,tiers:[1,10,25],unit:"hal"}));
+    GAME_LURES.forEach(l=>badges.push({id:"lure-"+norm(l),group:"Csalimester",name:l,icon:"bolt",n:cs.filter(c=>usesLure(c,l)).length,tiers:[1,5,15],unit:"fogás"}));
+    badges.push({id:"release",group:"Fair play",name:"Fogd és engedd",icon:"leaf",n:cs.filter(c=>c.kept===false).length,tiers:[1,10,25],unit:"visszaengedve"});
+    badges.forEach(b=>{b.tier=b.tiers.filter(t=>b.n>=t).length;xp+=b.tier*20});
+    let li=0;GAME_LEVELS.forEach(([,t],i)=>{if(xp>=t)li=i});
+    const week=byWeek.get(wk(cur))||[],next=GAME_LEVELS[li+1];
+    return{xp,level:li+1,name:GAME_LEVELS[li][0],floor:GAME_LEVELS[li][1],next:next?next[1]:null,nextName:next?next[0]:null,
+      streak,best,active,weekStart:cur,week,badges,quests:weekQuests(cur).map(q=>({...q,have:Math.min(q.need,week.filter(q.test).length)}))};
+  }
+  function renderGame(){
+    const box=$("gameSec");box.replaceChildren();const G=gameState();
+    const h=el("div","sechead");const h2=el("h2");h2.append(mkIc("flame",true),"Kap-ás Kihívások");h.append(h2);box.append(h);
+    const grid=el("div","gm-grid");
+    const num=(v,u)=>{const r=el("div","gm-xprow");r.append(el("b","gm-num",String(v)),el("span","gm-unit",u));return r};
+    const bar=(pct,cls)=>{const b=el("div","gm-bar"+(cls?" "+cls:"")),i=el("i");i.style.width=Math.max(0,Math.min(100,pct))+"%";b.append(i);return b};
+    // level
+    const lv=el("div","gm-card gm-full gm-level");
+    lv.append(el("div","gm-k","Szint "+G.level+" / "+GAME_LEVELS.length),el("div","gm-title",G.name),num(G.xp,"XP"));
+    if(G.next){lv.append(bar((G.xp-G.floor)/(G.next-G.floor)*100));lv.append(el("div","gm-sub","Még "+(G.next-G.xp)+" XP a következő szintig: "+G.nextName))}
+    else lv.append(el("div","gm-sub","Elérted a legmagasabb szintet. Igazi tiszai legenda vagy."));
+    grid.append(lv);
+    // streak
+    const st=el("div","gm-card gm-streak");const fl=el("span","gm-flame"+(G.active?" on":""));fl.innerHTML=icoSvg("flame");st.append(fl);
+    st.append(num(G.streak,"hét"),el("div","gm-sub",G.streak?(G.active?"Heti sorozat, ezen a héten is fogtál.":"Ezen a héten még nem fogtál, ne szakadjon meg!"):"Fogj ezen a héten, és indul a sorozat."));
+    st.append(el("span","spec","Leghosszabb: "+G.best+" hét"));grid.append(st);
+    // this week
+    const done=G.quests.filter(q=>q.have>=q.need).length;
+    const tw=el("div","gm-card");tw.append(el("div","gm-k","Ezen a héten"),num(G.week.length,"hal"),el("span","spec",done+"/"+G.quests.length+" küldetés"));grid.append(tw);
+    // weekly quests
+    const qc=el("div","gm-card gm-full");qc.append(el("div","gm-k","Heti küldetések"));
+    const ql=el("div","gm-quests");
+    G.quests.forEach(q=>{const ok=q.have>=q.need,r=el("div","gm-quest"+(ok?" done":""));const ck=el("span","gm-check");ck.innerHTML=icoSvg(ok?"check":"target");r.append(ck);
+      const t=el("div","gm-qt");t.append(el("span",null,q.text),bar(q.have/q.need*100,"sm"));r.append(t);
+      r.append(el("span","spec"+(ok?" big":""),(q.need>1?q.have+"/"+q.need+" · ":"")+"+"+q.xp+" XP"));ql.append(r)});
+    qc.append(ql);const nx=new Date(G.weekStart);nx.setDate(nx.getDate()+7);qc.append(el("div","gm-sub","Új küldetések hétfőn ("+fmtDM(nx)+")."));
+    grid.append(qc);
+    // badges
+    const bc=el("div","gm-card gm-full");bc.append(el("div","gm-k","Jelvények · "+G.badges.reduce((a,b)=>a+b.tier,0)+"/"+G.badges.length*3));
+    const bg=el("div","gm-badges");
+    G.badges.forEach(b=>{const c=el("div","gm-badge"+(b.tier?" t"+b.tier:" locked"));const ic=el("span","gm-bic");ic.innerHTML=icoSvg(b.tier?b.icon:"lock");
+      const nextT=b.tiers[b.tier];c.append(ic,el("b",null,b.name),el("span","gm-bk",b.group));
+      c.append(el("span","spec",b.tier?TIER_NAMES[b.tier-1]+(nextT?" · "+b.n+"/"+nextT:" · kész"):b.n+"/"+b.tiers[0]+" "+b.unit));
+      const dots=el("div","gm-tiers");b.tiers.forEach((_,i)=>dots.append(el("i",i<b.tier?"on":"")));c.append(dots);
+      c.setAttribute("aria-label",b.group+": "+b.name+(b.tier?", "+TIER_NAMES[b.tier-1]+" szint":", még zárva"));bg.append(c)});
+    bc.append(bg);grid.append(bc);box.append(grid);
+    const d=el("details","gm-help");d.append(el("summary",null,"Hogyan jár az XP?"));
+    d.append(el("p","hint","Fogás 10 XP; hossz vagy súly +5, csali +3, hely +3, fotó vagy videó +5, visszaengedett hal +5. Teljesített heti küldetés +25, minden jelvényszint +20. "+
+      "A heti sorozathoz hetente (hétfőtől vasárnapig) legalább egy fogás kell. Tilalmi időben lévő halfajra nem kapsz küldetést."));box.append(d);
+  }
+  // after a change: announce new XP, a level-up or a new badge once (nothing on the first run, and nothing over an undo toast)
+  function checkGame(){
+    const G=gameState(),cur={xp:G.xp,level:G.level,badges:G.badges.filter(b=>b.tier).map(b=>b.id+":"+b.tier)};
+    let prev=null;try{prev=JSON.parse(localStorage.getItem(GAME_KEY)||"null")}catch(e){}
+    try{localStorage.setItem(GAME_KEY,JSON.stringify(cur))}catch(e){}
+    if(!prev||cur.xp<=prev.xp)return;
+    const seen=new Set(prev.badges||[]),msg=["+"+(cur.xp-prev.xp)+" XP"];
+    if(cur.level>prev.level)msg.push("Szintlépés: "+G.name+"!");
+    G.badges.filter(b=>b.tier&&!seen.has(b.id+":"+b.tier)).forEach(b=>msg.push("Új jelvény: "+b.name+" ("+TIER_NAMES[b.tier-1].toLowerCase()+")"));
+    clearTimeout(checkGame._t);checkGame._t=setTimeout(()=>{const t=$("toast");if(!t.hidden&&t.querySelector("button"))return;toast(msg.join(" · "))},900);
   }
 
   /* ---------- map picker ---------- */

@@ -38,7 +38,7 @@
   /* Quick log: floating button above the tab bar */
   .fab {
     @apply fixed right-4 z-[510] flex h-14 w-14 items-center justify-center rounded-full shadow-lg;
-    @apply bg-emerald-500 text-white active:scale-95 transition-transform;
+    @apply bg-emerald-500 text-white;
     bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom, 0px));
   }
   .fab svg {
@@ -78,6 +78,55 @@
   .spec.big {
     @apply bg-emerald-500/20 text-emerald-200 light:text-emerald-800;
   }
+
+  /* Kap-ás Kihívások: dark bento, olive / sand accents */
+  .gm-grid { @apply grid grid-cols-2 gap-3; }
+  .gm-card {
+    @apply flex min-w-0 flex-col items-start gap-2 rounded-2xl border p-4 shadow-sm;
+    @apply border-emerald-900/30 bg-zinc-900/70 light:border-zinc-200 light:bg-white;
+  }
+  .gm-full { @apply col-span-2; }
+  /* plain CSS gradients: the utility ones need variables from the (switched off) base layer */
+  .gm-level { background: linear-gradient(135deg, theme('colors.zinc.900'), theme('colors.zinc.950')); }
+  [data-theme="light"] .gm-level { background: linear-gradient(135deg, theme('colors.sand.100'), theme('colors.white')); }
+  .gm-k { @apply text-xs font-semibold uppercase tracking-wider text-zinc-400 light:text-zinc-500; }
+  .gm-title { font-family: var(--f-display); @apply text-2xl font-semibold leading-tight text-sand-200 light:text-olive-700; }
+  .gm-xprow { @apply flex items-baseline gap-1.5; }
+  .gm-num { @apply text-3xl font-extrabold leading-none text-zinc-100 light:text-zinc-900; }
+  .gm-unit { @apply text-sm font-semibold text-olive-400 light:text-olive-600; }
+  .gm-sub { @apply text-xs leading-snug text-zinc-400 light:text-zinc-500; }
+  .gm-bar { @apply h-2 w-full overflow-hidden rounded-full bg-zinc-800 light:bg-zinc-200; }
+  .gm-bar.sm { @apply h-1.5; }
+  .gm-bar i { @apply block h-full rounded-full; background: linear-gradient(90deg, theme('colors.olive.500'), theme('colors.sand.300')); }
+  .gm-flame { @apply flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-zinc-500 light:bg-zinc-100 light:text-zinc-400; }
+  .gm-flame.on { @apply bg-orange-500/20 text-orange-400 light:text-orange-600; }
+  .gm-flame svg { @apply h-6 w-6; }
+  .gm-quests { @apply flex w-full flex-col gap-3; }
+  .gm-quest { @apply flex w-full items-center gap-3; }
+  .gm-check { @apply flex h-8 w-8 flex-none items-center justify-center rounded-full bg-zinc-800 text-zinc-400 light:bg-zinc-100 light:text-zinc-500; }
+  .gm-check svg { @apply h-4 w-4; }
+  .gm-quest.done .gm-check { @apply bg-olive-500/25 text-olive-300 light:text-olive-700; }
+  .gm-qt { @apply flex min-w-0 flex-1 flex-col gap-1.5 text-sm; }
+  .gm-quest.done .gm-qt span { @apply text-zinc-400 line-through light:text-zinc-500; }
+  .gm-quest .spec { @apply flex-none; }
+  .gm-badges { @apply grid w-full grid-cols-2 gap-2.5; }
+  .gm-badge {
+    @apply flex min-w-0 flex-col items-start gap-1 rounded-xl border p-3;
+    @apply border-emerald-900/30 bg-zinc-950/50 light:border-zinc-200 light:bg-zinc-50;
+  }
+  .gm-badge b { @apply text-sm font-semibold; }
+  .gm-badge.locked .gm-bic, .gm-badge.locked b { @apply opacity-60; }
+  .gm-bk { @apply text-xs text-zinc-400 light:text-zinc-500; }
+  .gm-bic { @apply mb-1 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-zinc-500 light:bg-zinc-200 light:text-zinc-500; }
+  .gm-bic svg { @apply h-5 w-5; }
+  .gm-badge.t1 .gm-bic { @apply bg-amber-700/30 text-amber-500 light:bg-amber-100 light:text-amber-700; }
+  .gm-badge.t2 .gm-bic { @apply bg-zinc-300/20 text-zinc-200 light:bg-zinc-200 light:text-zinc-600; }
+  .gm-badge.t3 .gm-bic { @apply bg-sand-300/25 text-sand-200 light:bg-sand-200 light:text-olive-700; }
+  .gm-tiers { @apply mt-1 flex gap-1; }
+  .gm-tiers i { @apply h-1.5 w-5 rounded-full bg-zinc-700 light:bg-zinc-300; }
+  .gm-tiers i.on { @apply bg-olive-400 light:bg-olive-600; }
+  .gm-help summary { @apply cursor-pointer py-1 text-sm font-semibold text-olive-400 light:text-olive-700; }
+  .gm-help p { @apply mt-2; }
 
   /* Bottom nav: rounded pill behind the active tab */
   .tabind::after {

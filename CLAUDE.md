@@ -59,6 +59,14 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   a listán, `store.addSpecies` felveszi. A `__fnBack` is bezárja.
 - Statisztika: **halfajonkénti megoszlás** (`#speciesList`, darab és %), és **csali-rangsor** (`#lures`, `.lure-row`): fogásszám és a csali
   legnagyobb hala (`better`), a csali szerinti legnagyobb hal a rangsor kártyáján.
+- **Kap-ás Kihívások** (Statisztika fül, `#gameSec`, `renderGame`): minden a naplóból számolódik (`gameState`), a napló formátuma nem változott.
+  XP: fogás 10, hossz/súly +5, csali +3, hely +3, fotó/videó +5, visszaengedett +5, teljesített heti küldetés +25, jelvényszint +20.
+  9 szint (`GAME_LEVELS`, „Novícius Pergető” → „Tiszai Helyi Legenda”). Heti sorozat (hétfő–vasárnap, a folyó héten még él).
+  Heti küldetések (`weekQuests`): 3 db, a hét dátumából seedelve (egész héten ugyanaz), halfajt csak tilalmon kívül kér.
+  Jelvények: az 5 tiszai faj (1/10/25), Spintail és Salmo Thrill (1/5/15), fogd és engedd (1/10/25); bronz/ezüst/arany.
+  `checkGame` (a `sync` végén) XP-növekedéskor egyszer jelzi a szintlépést és az új jelvényt (`toast`, 0,9 mp késéssel, visszavonás-sávot nem ír felül);
+  a már bejelentett állás a `fogasnaplo.kihivasok` kulcsban, első induláskor csendben indul. Színek: olíva/homok (`tailwind.config.js`).
+  A Tailwind gradiens-osztályai preflight/base nélkül nem működnek: gradienshez sima CSS kell `theme()`-mel.
 - Statisztika teteje: **év összefoglaló** (`renderYearCard`, `yearSummary`): fogásszám, az év hala, legtöbb faj, legjobb hónap, horgásznapok;
   „Évösszefoglaló megosztása” → `yearCardImage` 1080×1920-as sztori-kép (`shareDataUrl`, ugyanaz az út, mint a fogáskártyánál).
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).

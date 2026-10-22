@@ -427,6 +427,36 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#fab').isVisible() && await q.locator('#sheetWrap').isHidden(), 'gyors rögzítés: a szerkesztő bezárása után a kezdőlap látszik');
     await ctx.close();
   }
+  // Kap-ás Kihívások: streak, XP and level, badges, one-time announcements
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const now = Date.now(), ago = d => new Date(now - d * 864e5).toISOString(), Y = new Date().getFullYear();
+    const catches = [{ id: 'g1', sp: 's1', at: ago(0), y: new Date(ago(0)).getFullYear(), t: true, l: 50, kept: false },
+      { id: 'g2', sp: 's1', at: ago(7), y: new Date(ago(7)).getFullYear(), t: true }, { id: 'g3', sp: 's1', at: ago(14), y: new Date(ago(14)).getFullYear(), t: true }];
+    await q.addInitScript(({ catches }) => {
+      if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches })); }
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
+    }, { catches });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(1300);
+    ok(await q.locator('#toast').isHidden(), 'kihívások: első indításkor nincs XP-értesítés (a meglévő fogások csendben számítanak)');
+    ok(await q.evaluate(() => !!JSON.parse(localStorage.getItem('fogasnaplo.kihivasok')).xp), 'kihívások: a már bejelentett állás külön kulcsban, a napló nem változik');
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(200);
+    const g = await q.locator('#gameSec').innerText();
+    const xp = +(await q.locator('#gameSec .gm-level .gm-num').innerText());
+    ok(xp >= 80 && /Novícius Pergető|Kezdő Pergető/.test(g), 'kihívások: XP és szint (' + xp + ' XP)');
+    ok((await q.locator('#gameSec .gm-streak .gm-num').innerText()) === '3' && g.includes('Leghosszabb: 3 hét'), 'kihívások: 3 hetes sorozat egymást követő hetekből');
+    ok(await q.locator('#gameSec .gm-quest').count() === 3, 'kihívások: 3 heti küldetés');
+    const balin = q.locator('#gameSec .gm-badge', { hasText: 'Balin' }), rel = q.locator('#gameSec .gm-badge', { hasText: 'Fogd és engedd' });
+    ok(await balin.evaluate(e => e.classList.contains('t1')) && await rel.evaluate(e => e.classList.contains('t1')) && await q.locator('#gameSec .gm-badge.locked', { hasText: 'Harcsa' }).count() === 1,
+      'kihívások: Balin és fogd-és-engedd bronz, Harcsa még zárva');
+    await q.locator('#fab').click(); await q.locator('#quick .pill', { hasText: 'Spintail' }).click(); await q.locator('#quick .pill', { hasText: 'Harcsa' }).click();
+    await q.waitForTimeout(1200);
+    const t = await q.locator('#toast').innerText();
+    ok(/\+\d+ XP/.test(t) && t.includes('Új jelvény: Harcsa') && t.includes('Új jelvény: Spintail'), 'kihívások: új fogás után XP és új jelvények értesítése (' + t + ')');
+    await ctx.close();
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
