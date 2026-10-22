@@ -366,6 +366,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(sh && sh.u.startsWith('data:image/jpeg') && sh.u.length > 5000 && sh.t.includes('Csuka') && sh.t.includes('62 cm'), 'megosztás: fogáskártya kép + szöveg');
     ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#sheetWrap').isHidden(), 'vissza gomb: bezárja a kártyát');
     ok((await q.locator('.citem .mcount').innerText()) === '2', 'listában: a bélyegképen a darabszám');
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
+    const yc = await q.locator('#yearCard').innerText();
+    ok(await q.locator('#yearCard').isVisible() && yc.includes('Az idei éved') && yc.includes('Csuka, 62 cm'), 'statisztika: év összefoglaló kártya (rekorddal)');
+    await q.evaluate(() => { window.__m.share = null; }); await q.locator('#yearCard .hero-go').click(); await q.waitForTimeout(800);
+    const ys = await q.evaluate(() => window.__m.share);
+    ok(ys && ys.u.startsWith('data:image/jpeg') && ys.t.includes('1 hal') && ys.t.includes('Csuka, 62 cm'), 'évösszefoglaló: sztori-kép megosztása');
     await ctx.close();
   }
   // old catches without weather (and without a place) get it from the archive, near the weather place

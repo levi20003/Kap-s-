@@ -124,6 +124,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hero-stats b{font-weight:600;color:var(--hero-side)}
 .hero-go{margin-top:auto;border:0;border-radius:999px;padding:10px 16px 10px 18px;background:var(--hero-btn);color:var(--hero-btn-ink);font-weight:600;font-size:.88rem;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
 .hero-go:active{transform:scale(.96)}
+.yearcard{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:20px;border-radius:28px;color:var(--hero-side);
+  background:radial-gradient(circle at 90% 14%,var(--hero-sun) 0 26px,transparent 27px),linear-gradient(160deg,var(--hero-a) 0%,var(--hero-b) 55%,var(--hero-c) 100%);box-shadow:var(--shadow-pop)}
+.yc-k{font-family:var(--f-display);font-size:1.2rem;font-weight:500;color:var(--hero-lbl)}
+.yc-n{font-family:var(--f-display);font-weight:600;font-size:3.8rem;line-height:.9;letter-spacing:-.03em}.yc-n small{font-size:1.3rem;font-weight:500;margin-left:8px;color:var(--hero-lbl)}
+.yc-facts{display:flex;flex-wrap:wrap;gap:6px}.yc-facts span{background:var(--hero-chip);border:1px solid var(--hero-chip-line);border-radius:999px;padding:4px 11px;font-size:.78rem}
+.yearcard .hero-go{margin-top:6px}
 
 /* section heads */
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -589,6 +595,7 @@ button{transition:transform .15s}
 
   <!-- ===== Statisztika ===== -->
   <div id="tab-stats" class="wrap" style="gap:22px" hidden>
+    <section class="yearcard" id="yearCard" hidden></section>
     <div class="kpis" id="kpis"></div>
     <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
     <section id="monthSec">
@@ -1117,6 +1124,7 @@ button{transition:transform .15s}
     }
     renderMonths(yearCatches);
     renderBest(yearCatches);
+    renderYearCard();
   }
   function renderMonths(yc){
     $("monthSec").hidden=yc.length<1;const box=$("monthStats");box.replaceChildren();if(!yc.length)return;
@@ -1469,12 +1477,77 @@ button{transition:transform .15s}
   async function shareCatch(c){
     toast("Kártya készítése…");
     let url;try{url=await catchCardImage(c)}catch(e){toast("A kártyát nem sikerült elkészíteni.");return}
-    const text=shareText(c);
+    shareDataUrl(url,shareText(c),"kapas-fogas.jpg");
+  }
+  async function shareDataUrl(url,text,name){
     if(ANDROID&&ANDROID.shareImage){try{ANDROID.shareImage(url,text)}catch(e){toast("A megosztás nem sikerült.")}return}
     const bin=atob(url.split(",")[1]),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
-    const file=new File([buf],"kapas-fogas.jpg",{type:"image/jpeg"});
+    const file=new File([buf],name,{type:"image/jpeg"});
     try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==="AbortError")return}
     const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=file.name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  }
+
+  /* ---------- year in review: a card on the stats tab and a story-sized picture to share ---------- */
+  function yearSummary(y){
+    const cs=state.catches.filter(c=>c.y===y&&state.species.some(s=>s.id===c.sp));if(!cs.length)return null;
+    const count=f=>{const m=new Map();cs.forEach(c=>{const k=f(c);if(k)m.set(k,(m.get(k)||0)+1)});return[...m.entries()].sort((a,b)=>b[1]-a[1])};
+    let rec=null;cs.forEach(c=>{if((c.w||c.l)&&better(c,rec))rec=c});
+    const mo=count(c=>String(new Date(c.at).getMonth()+1))[0];
+    return{y,total:cs.length,species:count(c=>spName(c.sp)),rec,month:mo?[MONTHS_L[mo[0]-1],mo[1]]:null,
+      lure:count(c=>c.lure&&c.lure.trim())[0]||null,place:count(c=>c.place&&c.place.name)[0]||null,
+      days:new Set(cs.map(c=>ymd(new Date(c.at)))).size,released:cs.filter(c=>c.kept===false).length};
+  }
+  const yearFacts=S=>[S.month&&["Legjobb hónap",S.month[0]+" · "+S.month[1]+" hal"],["Horgásznapok",S.days+" nap"],
+    S.lure&&["Kedvenc csali",S.lure[0]],S.place&&["Kedvenc hely",S.place[0]],S.released&&["Visszaengedve",S.released+" hal"],
+    S.species.length>1&&["Fajok",S.species.length+" féle"]].filter(Boolean).slice(0,4);
+  const recText=c=>c?spName(c.sp)+", "+(c.l?c.l+" cm":kg(c.w)):"";
+  function renderYearCard(){
+    const S=yearSummary(state.year),box=$("yearCard");box.hidden=!S;box.replaceChildren();if(!S)return;
+    box.append(el("div","yc-k",S.y===NOW_Y?"Az idei éved a vízparton":"Éved a vízparton · "+S.y));
+    const n=el("div","yc-n",String(S.total));n.append(el("small",null,"hal"));box.append(n);
+    const f=el("div","yc-facts");if(S.rec)f.append(el("span",null,"Rekord: "+recText(S.rec)));
+    if(S.species[0])f.append(el("span",null,"Legtöbb: "+S.species[0][0]+" ("+S.species[0][1]+")"));
+    yearFacts(S).slice(0,2).forEach(([k,v])=>f.append(el("span",null,k+": "+v)));box.append(f);
+    const b=el("button","hero-go","Évösszefoglaló megosztása");b.type="button";b.append(el("span",null," →"));b.onclick=()=>shareYear(S);box.append(b);
+  }
+  async function yearCardImage(S){
+    const W=1080,H=1920,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+    const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
+    try{await Promise.all(["600 96px Fraunces","500 40px Figtree","600 40px Figtree"].map(f=>document.fonts.load(f)))}catch(e){}
+    const bg=g.createLinearGradient(0,0,W*.4,H);bg.addColorStop(0,col("--hero-a"));bg.addColorStop(.55,col("--hero-b"));bg.addColorStop(1,col("--hero-c"));g.fillStyle=bg;g.fillRect(0,0,W,H);
+    g.fillStyle=col("--hero-sun");g.globalAlpha=.9;g.beginPath();g.arc(905,250,78,0,7);g.fill();g.globalAlpha=1;
+    g.save();g.translate(0,H-400);g.scale(3,3);
+    [["--hero-hill1","M0 140C50 112 96 104 146 122S250 84 360 110V210H0Z"],["--hero-hill2","M0 162C66 136 124 150 186 138S300 124 360 142V210H0Z"],
+     ["--hero-river","M142 210C176 186 222 170 300 160L316 162C252 174 212 190 196 210Z"],["--hero-hill3","M0 186C58 170 112 190 172 180S282 168 360 182V210H0Z"]]
+      .forEach(([t,d])=>{g.fillStyle=col(t);g.fill(new Path2D(d))});g.restore();
+    const X=90,MW=W-2*X,side=col("--hero-side"),lbl=col("--hero-lbl"),sun=col("--hero-sun"),chip=col("--hero-chip");
+    const box=(x,y,w,h,r)=>{g.fillStyle=chip;g.beginPath();if(g.roundRect)g.roundRect(x,y,w,h,r);else g.rect(x,y,w,h);g.fill()};
+    const fitFont=(t,font,size,max)=>{let z=size;do{g.font=font.replace("$",z);if(g.measureText(t).width<=max)break;z-=4}while(z>20)};
+    g.textBaseline="alphabetic";
+    g.fillStyle=lbl;g.font="600 46px Fraunces";g.fillText("Kapás",X,150);
+    g.fillStyle=side;g.font="600 250px Fraunces";g.fillText(String(S.y),X-8,400);
+    g.fillStyle=lbl;g.font="500 52px Figtree";g.fillText("az évem a vízparton",X,470);
+    g.fillStyle=sun;g.font="600 290px Fraunces";const tn=String(S.total);g.fillText(tn,X-8,780);const tw=g.measureText(tn).width;
+    g.fillStyle=side;g.font="600 110px Fraunces";g.fillText("hal",X+tw+24,780);
+    let y=830;
+    if(S.rec){box(X,y,MW,170,36);let tx=X+40;
+      const src=mediaData(S.rec);if(src){try{const img=await loadImg(src),r=65,cx=X+40+r,cy=y+85,sc=Math.max(2*r/img.width,2*r/img.height);
+        g.save();g.beginPath();g.arc(cx,cy,r,0,7);g.clip();g.drawImage(img,cx-img.width*sc/2,cy-img.height*sc/2,img.width*sc,img.height*sc);g.restore();tx=cx+r+36}catch(e){}}
+      g.fillStyle=lbl;g.font="500 38px Figtree";g.fillText("Az év hala",tx,y+68);
+      g.fillStyle=side;fitFont(recText(S.rec),"600 $px Fraunces",64,X+MW-40-tx);g.fillText(recText(S.rec),tx,y+135);y+=230}
+    const sp=S.species.slice(0,3),smax=sp.length?sp[0][1]:1;
+    sp.forEach(([nm,n])=>{g.fillStyle=side;fitFont(nm,"600 $px Figtree",46,MW-160);g.fillText(nm,X,y+40);g.textAlign="right";g.font="600 46px Figtree";g.fillText(n+" hal",X+MW,y+40);g.textAlign="left";
+      g.fillStyle=chip;g.fillRect(X,y+62,MW,14);g.fillStyle=sun;g.fillRect(X,y+62,MW*n/smax,14);y+=112});
+    y+=20;const facts=yearFacts(S),bw=(MW-30)/2;
+    facts.forEach(([k,v],i)=>{const bx=X+(i%2)*(bw+30),by=y+Math.floor(i/2)*180;box(bx,by,bw,155,32);
+      g.fillStyle=lbl;g.font="500 34px Figtree";g.fillText(k,bx+32,by+58);g.fillStyle=side;fitFont(v,"600 $px Fraunces",50,bw-64);g.fillText(v,bx+32,by+122)});
+    g.fillStyle=lbl;g.globalAlpha=.85;g.font="500 34px Figtree";g.textAlign="center";g.fillText("Fogásnapló magyar horgászoknak · Kapás",W/2,H-70);g.textAlign="left";g.globalAlpha=1;
+    return cv.toDataURL("image/jpeg",.9);
+  }
+  async function shareYear(S){
+    toast("Évösszefoglaló készítése…");
+    let url;try{url=await yearCardImage(S)}catch(e){toast("A képet nem sikerült elkészíteni.");return}
+    shareDataUrl(url,"Az évem a vízparton ("+S.y+"): "+S.total+" hal"+(S.rec?", az év hala: "+recText(S.rec):"")+". #Kapás","kapas-"+S.y+".jpg");
   }
 
   /* ---------- map picker ---------- */
