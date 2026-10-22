@@ -1,0 +1,6 @@
+{
+  "name": "kapas-tailwind",
+  "private": true,
+  "scripts": { "build": "tailwindcss -c tailwind.config.js -i input.css -o ../app/src/main/assets/tw.css --minify" },
+  "devDependencies": { "tailwindcss": "3.4.17" }
+}

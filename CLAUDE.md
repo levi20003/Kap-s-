@@ -127,6 +127,15 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 - Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
   ha új szín kell, vegyél fel tokent mindkét blokkba.
 - A kontrasztot (WCAG) mindkét témában ellenőrizd: a szöveg legalább 4,5:1, a nagy szöveg és ikon legalább 3:1.
+- **Tailwind + Lucide réteg** (`tailwind/`): a stílus forrása `tailwind/input.css` (a meglévő osztályokra `@apply`-jal), a fordított
+  `app/src/main/assets/tw.css` a repóban van, így offline is működik. Újraépítés: `tailwind/build.sh` (a `tailwind/node_modules` ki van zárva a gitből).
+  A `tw.css` a `index.html` végén, a saját `<style>` után töltődik, ezért az osztályok felülírják a régit. Preflight ki van kapcsolva.
+  Kivétel a token-szabály alól: a `border-emerald-900/30`, `zinc-*` és `emerald-500/20` a Tailwind palettáját használja (a felhasználó kérésére).
+  A `light:` variáns a `[data-theme="light"]`-ra vonatkozik; alapértelmezés a sötét.
+  Kártyák: `rounded-2xl border shadow-sm`; számok (`.now-t b`, `.kpi b`, `.rcard .big`, `.citem .csize`): `text-3xl font-extrabold`;
+  másodlagos szöveg: `text-zinc-400`; specifikációk pirula (`.spec`, a csali, a hely, a dátum, a kept-címke); fülsáv aktív pirula: `bg-emerald-500/20`.
+  A statisztika kártyái bento-rácsban: az első (fogás idén) teljes szélességű.
+- Ikonok: a `ICONS` tábla **Lucide** (lucide-static) rajzolatokat tartalmaz; új ikonhoz a `lucide-static/icons/<név>.svg` belső elemeit másold be.
 
 ## Tilalmi idők és méretkorlátok
 

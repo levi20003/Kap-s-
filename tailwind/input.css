@@ -1,0 +1,42 @@
+@tailwind components;
+@tailwind utilities;
+
+/* Cards: soft border, shadow-sm, rounded-2xl. Dark border emerald-900/30, light border zinc-200. */
+@layer components {
+  .row, .citem, .rcard, .kpi, .panel, .empty-card, .wx, .vinfo, .astro, .today, .yearcard {
+    @apply rounded-2xl border border-emerald-900/30 light:border-zinc-200 shadow-sm;
+  }
+
+  /* Numbers that matter: weight, length, temperature */
+  .kpi b, .rcard .big, .now-t b, .citem .csize {
+    @apply text-3xl font-extrabold;
+  }
+
+  /* Secondary info */
+  .citem .t2, .score .sub, .now-t span, .today .foot, .kpi span {
+    @apply text-zinc-400 light:text-zinc-500;
+  }
+
+  /* Specs as pills: lure, place, size */
+  .spec {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap;
+    @apply bg-emerald-900/30 text-zinc-200 light:bg-zinc-100 light:text-zinc-700;
+  }
+
+  .specs {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  /* Bento: the headline tile spans the row, the rest sit in pairs */
+  .kpis {
+    @apply grid grid-cols-2 gap-3;
+  }
+  .kpis > .kpi:first-child {
+    @apply col-span-2;
+  }
+
+  /* Bottom nav: rounded pill behind the active tab */
+  .tabind::after {
+    @apply rounded-full bg-emerald-500/20;
+  }
+}
