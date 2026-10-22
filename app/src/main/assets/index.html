@@ -603,8 +603,12 @@ button{transition:transform .15s}
       <div class="sechead"><h2><span class="ic" data-ic="calendar"></span>Havonta</h2></div>
       <div class="panel" id="monthStats"></div>
     </section>
+    <section id="speciesSec" hidden>
+      <div class="sechead"><h2><span class="ic" data-ic="fish"></span>Halfajonként</h2></div>
+      <div class="panel"><div class="lures" id="speciesList"></div></div>
+    </section>
     <section id="lureSec">
-      <div class="sechead"><h2><span class="ic acc" data-ic="bolt"></span>Legjobb csalik</h2></div>
+      <div class="sechead"><h2><span class="ic acc" data-ic="bolt"></span>Csalik rangsora</h2></div>
       <div class="panel"><div class="lures" id="lures"></div></div>
     </section>
     <section id="bestSec">
@@ -683,6 +687,8 @@ button{transition:transform .15s}
   </div>
 </div>
 
+<button class="fab" id="fab" type="button" aria-label="Gyors fogásrögzítés"><span data-ic="plus"></span></button>
+<div class="overlay" id="quickWrap" hidden><div class="sheet quick" id="quick" role="dialog" aria-modal="true" aria-labelledby="quickTitle"></div></div>
 <nav class="tabbar" role="tablist">
   <div class="in">
     <i class="tabind" id="tabind" aria-hidden="true"></i>
@@ -909,6 +915,7 @@ button{transition:transform .15s}
     wind:'<path d="M12.8 19.6A2 2 0 1 0 14 16H2" /> <path d="M17.5 8a2.5 2.5 0 1 1 2 4H2" /> <path d="M9.8 4.4A2 2 0 1 1 11 8H2" />',
     sunrise:'<path d="M12 2v8" /> <path d="m4.93 10.93 1.41 1.41" /> <path d="M2 18h2" /> <path d="M20 18h2" /> <path d="m19.07 10.93-1.41 1.41" /> <path d="M22 22H2" /> <path d="m8 6 4-4 4 4" /> <path d="M16 18a4 4 0 0 0-8 0" />',
     sunset:'<path d="M12 10V2" /> <path d="m4.93 10.93 1.41 1.41" /> <path d="M2 18h2" /> <path d="M20 18h2" /> <path d="m19.07 10.93-1.41 1.41" /> <path d="M22 22H2" /> <path d="m16 6-4 4-4-4" /> <path d="M16 18a4 4 0 0 0-8 0" />',
+    plus:'<path d="M5 12h14" /> <path d="M12 5v14" />',
     snow:'<path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" />',
   };
   const icoSvg=(n,c)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(c?' class="'+c+'"':'')+'>'+ICONS[n]+'</svg>';
@@ -1082,12 +1089,22 @@ button{transition:transform .15s}
       tile("check",false,kept||rel?String(kept):"–",kept||rel?"elvitt"+(rel?" · "+rel+" elengedve":""):"nincs megjelölve");
       tile("trophy",true,big?(big.w?kg(big.w):big.l+" cm"):"–",big?spName(big.sp):"legnagyobb hal");
     }
-    // lure stats
-    const lc=new Map();yearCatches.forEach(c=>{if(c.lure){const k=c.lure.trim();lc.set(k,(lc.get(k)||0)+1)}});
-    const lures=[...lc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+    // species share of the season
+    const spRows=state.species.map(sp=>({sp,n:yearCatches.filter(c=>c.sp===sp.id).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
+    $("speciesSec").hidden=!spRows.length;
+    const sl=$("speciesList");sl.replaceChildren();
+    spRows.forEach(({sp,n})=>{const pct=Math.round(n/yearCatches.length*100);const r=el("div","lure");
+      r.append(el("span",null,sp.name));r.append(el("b",null,n+" db · "+pct+"%"));const bar=el("div","bar"),i=el("i");i.style.width=pct+"%";bar.append(i);r.append(bar);sl.append(r)});
+
+    // lure ranking: how many, and the biggest fish on each
+    const lc=new Map();yearCatches.forEach(c=>{if(c.lure){const k=c.lure.trim();const o=lc.get(k)||{k,n:0,big:null};o.n++;if((c.w||c.l)&&better(c,o.big))o.big=c;lc.set(k,o)}});
+    const cmpBig=(x,y)=>!x?(y?1:0):!y?-1:better(x,y)?-1:better(y,x)?1:0;
+    const lures=[...lc.values()].sort((a,b)=>b.n-a.n||cmpBig(a.big,b.big)).slice(0,6);
     $("lureSec").hidden=!lures.length;
-    const lb=$("lures");lb.replaceChildren();const lmax=lures.length?lures[0][1]:1;
-    lures.forEach(([name,n])=>{const r=el("div","lure");r.append(el("span",null,name));r.append(el("b",null,n+" hal"));const bar=el("div","bar"),i=el("i");i.style.width=(n/lmax*100)+"%";bar.append(i);r.append(bar);lb.append(r)});
+    const lb=$("lures");lb.replaceChildren();
+    lures.forEach((o,i)=>{const r=el("div","lure-row");r.append(el("span","rk"+(i<3?" top":""),String(i+1)));
+      const t=el("div","lt");t.append(el("b",null,o.k));const pills=el("div","specs");pills.append(el("span","spec",o.n+" fogás"));
+      if(o.big)pills.append(el("span","spec big",spName(o.big.sp)+" · "+(o.big.w?kg(o.big.w):o.big.l+" cm")));t.append(pills);r.append(t);lb.append(r)});
 
     // weather stats
     const wxs=yearCatches.filter(c=>c.wx);
@@ -1218,11 +1235,11 @@ button{transition:transform .15s}
 
   /* ---------- actions ---------- */
   let bumpId=null;
-  function quickCatch(sp){
+  function quickCatch(sp,lure){
     const y=state.year,now=new Date();
     const at=y===NOW_Y?now:new Date(y,11,31,12);
     bumpId=sp;
-    const id=store.addCatch({sp,at:at.toISOString(),y,t:y===NOW_Y});
+    const id=store.addCatch({sp,at:at.toISOString(),y,t:y===NOW_Y,...(lure?{lure}:{})});
     openEditor({mode:"edit",id,fresh:true});
     if(y===NOW_Y){
       if(ed)ed.locating=true;
@@ -2093,6 +2110,32 @@ button{transition:transform .15s}
     state.year=NOW_Y;go("home");window.scrollTo(0,0);quickCatch(sp.id);
   };
 
+  /* ---------- quick log: a floating button, one tap per species, lure picked first ---------- */
+  const QUICK_SPECIES=["Balin","Süllő","Sügér","Csuka","Harcsa"];
+  const QUICK_LURES=["Salmo Thrill","Spintail","Stickbait","Wobbler"];
+  let quickLure=null;
+  $("fab").onclick=()=>{if(ed||view||!$("picker").hidden){toast("Előbb fejezd be a nyitott fogást.");return}openQuick()};
+  $("quickWrap").addEventListener("click",e=>{if(e.target.id==="quickWrap")closeQuick()});
+  function openQuick(){if(!state.species.length){toast("Előbb vegyél fel egy halfajt a Beállításokban.");return}$("quickWrap").hidden=false;document.body.style.overflow="hidden";renderQuick()}
+  function closeQuick(){$("quickWrap").hidden=true;document.body.style.overflow="";if(!ed&&!view)render()}
+  function quickPick(name){
+    let sp=state.species.find(s=>norm(s.name)===norm(name));
+    if(!sp){store.addSpecies(name);sp=data.species.find(s=>norm(s.name)===norm(name))}
+    closeQuick();if(state.tab!=="home")go("home");state.year=NOW_Y;window.scrollTo(0,0);quickCatch(sp.id,quickLure||undefined);
+  }
+  function renderQuick(){
+    const box=$("quick");box.replaceChildren();
+    box.append(el("h3",null,"Gyors fogás"),el("div","sub","Válaszd a csalit, aztán a halat: a fogás azonnal mentődik, a részleteket utána pótolhatod."));
+    const lg=el("div","fgroup");lg.append(el("div","flabel","Csali"));const lc=el("div","chips quick-pills");
+    QUICK_LURES.forEach(n=>{const b=el("button","pill"+(quickLure===n?" on":""),n);b.type="button";b.setAttribute("aria-pressed",quickLure===n?"true":"false");
+      b.onclick=()=>{quickLure=quickLure===n?null:n;renderQuick()};lc.append(b)});
+    lg.append(lc);box.append(lg);
+    const sg=el("div","fgroup");sg.append(el("div","flabel","Hal"));const sc=el("div","chips quick-pills");
+    QUICK_SPECIES.forEach(n=>{const b=el("button","pill species",n);b.type="button";b.onclick=()=>quickPick(n);sc.append(b)});
+    sg.append(sc);box.append(sg);
+    const act=el("div","sheet-actions");const x=el("button","btn-ghost","Mégse");x.type="button";x.onclick=closeQuick;act.append(x);box.append(act);
+  }
+
   /* ---------- theme: light / dark sage, automatic by the phone's mode ---------- */
   const THEME_KEY="fogasnaplo.theme";
   const themePref=()=>{try{return localStorage.getItem(THEME_KEY)||"auto"}catch(e){return"auto"}};
@@ -2141,6 +2184,7 @@ button{transition:transform .15s}
 
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){
+    if(!$("quickWrap").hidden){closeQuick();return true}
     if(!$("picker").hidden){closePicker();return true}
     if(ed){closeEditor();return true}
     if(view){closeViewer();return true}

@@ -54,6 +54,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   „Részletek” alatt 7 + légnyomás-görbe, horgászablakok, indoklás és magyarázat a pontozásról / hPa-ról). Kompakt/nyitott: `fogasnaplo.todayOpen`.
   A pontozás (`scoreToday`) változásakor a felületi magyarázatot (`explainEl`) is igazítsd.
   Üres naplónál a Kezdőlap a gyakori halfajokat kínálja egy koppintásra.
+- **Gyors rögzítés** (`#fab`, lebegő gomb a fülsáv felett): a `#quickWrap` lapon csali (`QUICK_LURES`, egy érintés kiválaszt/visszavon) és hal
+  (`QUICK_SPECIES`) gombok. Halra koppintva `quickPick` → `quickCatch(sp, lure)` mentés, és a részletek szerkesztő azonnal nyílik. Ha a halfaj még nincs
+  a listán, `store.addSpecies` felveszi. A `__fnBack` is bezárja.
+- Statisztika: **halfajonkénti megoszlás** (`#speciesList`, darab és %), és **csali-rangsor** (`#lures`, `.lure-row`): fogásszám és a csali
+  legnagyobb hala (`better`), a csali szerinti legnagyobb hal a rangsor kártyáján.
 - Statisztika teteje: **év összefoglaló** (`renderYearCard`, `yearSummary`): fogásszám, az év hala, legtöbb faj, legjobb hónap, horgásznapok;
   „Évösszefoglaló megosztása” → `yearCardImage` 1080×1920-as sztori-kép (`shareDataUrl`, ugyanaz az út, mint a fogáskártyánál).
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).

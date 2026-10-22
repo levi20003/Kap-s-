@@ -395,6 +395,38 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(cs.find(c => c.id === 'o2').wx.noon === true, 'idő nélküli fogás: déli adat');
     await ctx.close();
   }
+  // quick log button, and the season's species share and lure ranking
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear(), at = (m, d) => new Date(Y, m, d, 10).toISOString();
+    const catches = [
+      { id: 'b1', sp: 's1', at: at(4, 3), y: Y, t: true, l: 40, lure: 'Wobbler' }, { id: 'b2', sp: 's1', at: at(4, 9), y: Y, t: true, l: 50, lure: 'Wobbler' },
+      { id: 'b3', sp: 's1', at: at(5, 2), y: Y, t: true, l: 60, lure: 'Wobbler' }, { id: 'c1', sp: 's2', at: at(5, 5), y: Y, t: true, l: 80, lure: 'Spintail' }];
+    await q.addInitScript(({ catches }) => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Csuka' }], catches }));
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
+    }, { catches });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(200);
+    const sp = await q.locator('#speciesList').innerText();
+    ok(sp.includes('Balin') && sp.includes('3 db · 75%') && sp.includes('Csuka') && sp.includes('1 db · 25%'), 'statisztika: halfajonkénti megoszlás darabbal és %-kal');
+    const lr = await q.locator('#lures .lure-row').first().innerText();
+    ok(lr.includes('Wobbler') && lr.includes('3 fogás') && lr.includes('Balin · 60 cm'), 'csali-rangsor: a legtöbb fogású csali legnagyobb hala is látszik');
+    await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(200);
+    ok(await q.locator('#fab').isVisible(), 'gyors rögzítés: a gomb látszik');
+    await q.locator('#fab').click(); await q.waitForTimeout(200);
+    ok(await q.locator('#quick .pill').count() === 9 && await q.locator('#quick .pill.species').count() === 5, 'gyors rögzítés: 4 csali és 5 halfaj gomb');
+    await q.locator('#quick .pill', { hasText: 'Spintail' }).click();
+    await q.locator('#quick .pill', { hasText: 'Harcsa' }).click(); await q.waitForTimeout(300);
+    const st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    const nc = st.catches.find(c => c.sp && st.species.find(x => x.id === c.sp && x.name === 'Harcsa'));
+    ok(st.species.some(x => x.name === 'Harcsa') && nc && nc.lure === 'Spintail', 'gyors rögzítés: hiányzó halfaj felkerül, a fogás a választott csalival mentődik');
+    ok(await q.locator('#sheet h3').innerText().then(t => t.includes('Harcsa rögzítve')), 'gyors rögzítés: a részletek szerkesztő azonnal nyílik');
+    await q.locator('#sheet .sheet-actions .btn-ghost').click(); await q.waitForTimeout(100);
+    ok(await q.locator('#fab').isVisible() && await q.locator('#sheetWrap').isHidden(), 'gyors rögzítés: a szerkesztő bezárása után a kezdőlap látszik');
+    await ctx.close();
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

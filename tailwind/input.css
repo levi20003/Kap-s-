@@ -35,6 +35,50 @@
     @apply col-span-2;
   }
 
+  /* Quick log: floating button above the tab bar */
+  .fab {
+    @apply fixed right-4 z-[510] flex h-14 w-14 items-center justify-center rounded-full shadow-lg;
+    @apply bg-emerald-500 text-white active:scale-95 transition-transform;
+    bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom, 0px));
+  }
+  .fab svg {
+    @apply h-6 w-6;
+  }
+  .quick-pills {
+    @apply gap-2;
+  }
+  .pill {
+    @apply inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold;
+    @apply border-emerald-900/30 bg-transparent text-zinc-200 light:border-zinc-200 light:text-zinc-700;
+  }
+  .pill.on {
+    @apply border-emerald-500 bg-emerald-500/20 text-emerald-300 light:text-emerald-700;
+  }
+  .pill.species {
+    @apply text-base px-5 py-2.5;
+  }
+
+  /* Lure ranking */
+  .lure-row {
+    @apply flex items-center gap-3 border-b border-emerald-900/20 py-2.5 last:border-0 light:border-zinc-200;
+  }
+  .lure-row .rk {
+    @apply flex h-7 w-7 flex-none items-center justify-center rounded-full text-xs font-bold;
+    @apply bg-zinc-700/40 text-zinc-300 light:bg-zinc-100 light:text-zinc-600;
+  }
+  .lure-row .rk.top {
+    @apply bg-emerald-500/20 text-emerald-300 light:text-emerald-700;
+  }
+  .lure-row .lt {
+    @apply flex min-w-0 flex-1 flex-col gap-1.5;
+  }
+  .lure-row .lt b {
+    @apply truncate font-semibold;
+  }
+  .spec.big {
+    @apply bg-emerald-500/20 text-emerald-200 light:text-emerald-800;
+  }
+
   /* Bottom nav: rounded pill behind the active tab */
   .tabind::after {
     @apply rounded-full bg-emerald-500/20;
