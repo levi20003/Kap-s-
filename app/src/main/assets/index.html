@@ -38,7 +38,7 @@
   --bg-glow:#1d2a22; --bg-top:#151e18; --tint:rgba(239,235,225,.045); --tint-2:rgba(239,235,225,.09); --track:rgba(197,212,190,.14);
   --on-water:#15201a; --on-danger:#2a0a08; --hero-a:#3f604b; --hero-b:#2f4a3a; --hero-c:#1f3328; --hero-lbl:#d8e2d3; --hero-side:#eef2ea;
   --hero-sun:#f2a66e; --hero-hill1:rgba(220,230,217,.13); --hero-hill2:rgba(220,230,217,.2); --hero-hill3:rgba(14,26,19,.45); --hero-river:rgba(239,235,225,.22);
-  --hero-chip:rgba(255,255,255,.12); --hero-chip-line:rgba(255,255,255,.18); --hero-btn:#efebe1; --hero-btn-ink:#1f3328; --hero-dot:rgba(255,255,255,.16);
+  --video-bg:#000000; --hero-chip:rgba(255,255,255,.12); --hero-chip-line:rgba(255,255,255,.18); --hero-btn:#efebe1; --hero-btn-ink:#1f3328; --hero-dot:rgba(255,255,255,.16);
   --card-a:#1f2a23; --card-b:#1a231d; --thumb-a:#7d9579; --thumb-b:#2f4a3a; --thumb-fg:#efebe1;
   --map-bg:#1a231d; --attr-bg:rgba(18,25,21,.75); --tabbar-bg:rgba(24,33,27,.94); --moon-dark:#2f3d33; --moon-lit:#f1ead2; --grid:rgba(255,255,255,.06);
   --tile-filter:invert(.9) hue-rotate(180deg) brightness(1.18) contrast(.98) saturate(.5) sepia(.15);
@@ -62,7 +62,7 @@
   --bg-glow:#ebe4d6; --bg-top:#f0ebe1; --tint:rgba(70,60,40,.045); --tint-2:rgba(47,74,58,.1); --track:rgba(47,74,58,.12);
   --on-water:#ffffff; --on-danger:#ffffff; --hero-a:#4a6b55; --hero-b:#2f4a3a; --hero-c:#22382b; --hero-lbl:#dfe8da; --hero-side:#f1f4ee;
   --hero-sun:#f0a46b; --hero-hill1:rgba(228,236,224,.16); --hero-hill2:rgba(228,236,224,.24); --hero-hill3:rgba(16,30,22,.4); --hero-river:rgba(244,240,232,.28);
-  --hero-chip:rgba(255,255,255,.14); --hero-chip-line:rgba(255,255,255,.22); --hero-btn:#fdfbf7; --hero-btn-ink:#22382b; --hero-dot:rgba(255,255,255,.18);
+  --video-bg:#000000; --hero-chip:rgba(255,255,255,.14); --hero-chip-line:rgba(255,255,255,.22); --hero-btn:#fdfbf7; --hero-btn-ink:#22382b; --hero-dot:rgba(255,255,255,.18);
   --card-a:#fdfbf7; --card-b:#fdfbf7; --thumb-a:#a9bba5; --thumb-b:#2f4a3a; --thumb-fg:#ffffff;
   --map-bg:#ece7dd; --attr-bg:rgba(255,255,255,.8); --tabbar-bg:rgba(253,251,247,.95); --moon-dark:#d6d2c4; --moon-lit:#d6b86e; --grid:rgba(31,43,35,.08);
   --tile-filter:saturate(.75) sepia(.12);
@@ -299,6 +299,34 @@ textarea.inp{resize:vertical;min-height:68px}
 .placebox .pt{flex:1;min-width:0;font-size:.92rem}
 .placebox .pt small{display:block;color:var(--muted);font-size:.76rem;font-variant-numeric:tabular-nums}
 .xbtn{border:0;background:none;color:var(--muted);font-size:1.3rem;width:36px;height:36px;border-radius:50%}
+/* catch card (viewer) */
+.sheet.viewing{position:relative}
+.vclose{position:absolute;top:22px;right:14px;z-index:3;width:38px;height:38px;background:var(--scrim);color:var(--hero-side)}
+.vcar{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;scrollbar-width:none;flex:none}
+.vcar::-webkit-scrollbar{display:none}
+.vslide{flex:0 0 100%;scroll-snap-align:center;aspect-ratio:4/3;background:var(--bg-2);overflow:hidden}
+.vslide img{width:100%;height:100%;object-fit:cover;display:block}
+.vslide video{width:100%;height:100%;object-fit:contain;display:block;background:var(--video-bg)}
+.vdots{display:flex;justify-content:center;gap:6px;margin-top:-8px}
+.vdots i{width:6px;height:6px;border-radius:3px;background:var(--line);transition:width .2s,background .2s}.vdots i.on{width:18px;background:var(--water)}
+.vnone{margin:0 -16px;height:130px;flex:none;display:grid;place-items:center;background:linear-gradient(160deg,var(--hero-a),var(--hero-c))}
+.vnone .badge{width:68px;height:68px;font-size:2.1rem;background:var(--hero-chip);color:var(--hero-side)}
+.vhead{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.vhead h3{font-size:2.1rem}
+.vsize{font-family:var(--f-display);font-weight:600;font-size:1.5rem;color:var(--accent-txt)}
+.chip.kept{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.vinfo{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 16px;margin:0;padding:14px 16px;background:var(--surface);border:1px solid var(--edge);border-radius:20px}
+.vinfo dt{color:var(--muted);font-size:.82rem;padding-top:2px}
+.vinfo dd{margin:0;font-size:.94rem;overflow-wrap:anywhere}
+.vmoon{display:inline-flex;align-items:center;gap:6px}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.mtile{position:relative;aspect-ratio:1;border-radius:16px;overflow:hidden;background:var(--water-soft)}
+.mtile img{width:100%;height:100%;object-fit:cover;display:block}
+.mtile .xbtn{position:absolute;top:4px;right:4px;width:30px;height:30px;font-size:1.1rem;background:var(--scrim);color:var(--hero-side)}
+.mbadge{position:absolute;left:6px;bottom:6px;font-size:.7rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--scrim);color:var(--hero-side)}
+.media-add{display:flex;flex-wrap:wrap;gap:8px}.media-add .btn-ghost{flex:1 1 90px}
+.thumb{position:relative}
+.mcount{position:absolute;right:4px;bottom:4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;display:grid;place-items:center;font-family:var(--f-body);font-size:.68rem;font-weight:700;background:var(--scrim);color:var(--hero-side)}
 .photo-prev{position:relative;width:100%;max-width:300px}
 .photo-prev img{width:100%;border-radius:16px;display:block}
 .photo-prev .xbtn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff}
@@ -802,8 +830,14 @@ button{transition:transform .15s}
     deleteCatch(id,keepPhoto){const c=data.catches.find(c=>c.id===id);if(c&&!keepPhoto)dropPhoto(c);data.catches=data.catches.filter(c=>c.id!==id);save();return c},
     restoreCatch(c){if(!data.catches.some(x=>x.id===c.id)){data.catches.push(c);save()}}
   };
-  function dropPhoto(c){const p=c.photo;if(!p||!ANDROID||!ANDROID.deletePhoto)return;
-    [p.src,p.thumb].forEach(u=>{if(u&&u.startsWith("file:")){try{ANDROID.deletePhoto(u)}catch(e){}}})}
+  // photos and videos of a catch: c.media = [{src,thumb,video?,dur?}]; older catches only have one c.photo
+  const mediaOf=c=>Array.isArray(c.media)?c.media:c.photo&&(c.photo.src||c.photo.thumb)?[{src:c.photo.src,thumb:c.photo.thumb}]:[];
+  // c.photo stays the first picture, so older versions (and their backups) still show one
+  function setMedia(c,list){if(list.length)c.media=list;else delete c.media;const p=list.find(m=>!m.video);if(p)c.photo={src:p.src,thumb:p.thumb};else delete c.photo}
+  const coverOf=c=>{const m=mediaOf(c)[0];return m?m.thumb||(!m.video&&m.src)||null:null};
+  const fileUris=items=>{const u=[];items.forEach(m=>[m.src,m.thumb].forEach(x=>{if(x&&x.startsWith("file:"))u.push(x)}));return u};
+  function dropFiles(items){if(!ANDROID||!ANDROID.deletePhoto)return;fileUris(items).forEach(u=>{try{ANDROID.deletePhoto(u)}catch(e){}})}
+  function dropPhoto(c){dropFiles(mediaOf(c))}
   // a deleted catch can be brought back for a few seconds; its photo is only removed after that
   let undoDel=null;
   function finishDelete(){if(!undoDel)return;clearTimeout(undoDel.timer);dropPhoto(undoDel.c);undoDel=null}
@@ -973,7 +1007,7 @@ button{transition:transform .15s}
     const recs=state.species.filter(s=>st[s.id].rec).map(s=>({s,r:st[s.id].rec})).sort((a,b)=>(b.r.w||0)-(a.r.w||0)||(b.r.l||0)-(a.r.l||0)).slice(0,6);
     if(!recs.length){box.append(el("div","empty-card","Ha megadod a hal súlyát vagy hosszát, itt látod fajonként a legnagyobbat."));return}
     recs.forEach((x,i)=>{
-      const b=el("button","rcard"+(i===0?" gold":""));b.type="button";b.onclick=()=>openEditor({mode:"edit",id:x.r.id});
+      const b=el("button","rcard"+(i===0?" gold":""));b.type="button";b.onclick=()=>openViewer(x.r.id);
       b.append(el("span","medal",i+1));
       b.append(el("div","big",x.r.w?kg(x.r.w):x.r.l+" cm"));
       b.append(el("div","sp",x.s.name));
@@ -1006,9 +1040,9 @@ button{transition:transform .15s}
     shown.forEach(c=>{
       const d=new Date(c.at),mkey=d.getFullYear()+"-"+d.getMonth();
       if(mkey!==lastMonth){lastMonth=mkey;box.append(el("div","month",d.toLocaleDateString("hu-HU",{year:"numeric",month:"long"})))}
-      const it=el("button","citem");it.onclick=()=>openEditor({mode:"edit",id:c.id});
+      const it=el("button","citem");it.onclick=()=>openViewer(c.id);
       const th=el("div","thumb");
-      if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.alt="";im.src=c.photo.thumb||c.photo.src;th.append(im)}else th.textContent=spName(c.sp).charAt(0);
+      const cv=coverOf(c);if(cv){const im=document.createElement("img");im.alt="";im.src=cv;th.append(im);const n=mediaOf(c).length;if(n>1)th.append(el("span","mcount",String(n)));else if(mediaOf(c)[0].video)th.append(el("span","mcount","▶"))}else th.textContent=spName(c.sp).charAt(0);
       const mid=el("div");mid.style.minWidth="0";
       const bits=[fmtShort(c.at)+(c.t?" "+fmtTime(c.at):"")];if(c.lure)bits.push(c.lure);if(c.place)bits.push(c.place.name||"Térképen jelölve");
       mid.append(el("div","t1",spName(c.sp)),el("div","t2",bits.join(" · ")));if(c.wx)mid.append(el("div","t3",wxLine(c.wx)));
@@ -1160,13 +1194,13 @@ button{transition:transform .15s}
       const co=coordsOf(c),gpsOnly=!(c.place&&c.place.lat!=null);
       const m=L.marker([co.lat,co.lng],{icon:pinIcon(gpsOnly?"gps":"")}).addTo(bigLayer);ll.push([co.lat,co.lng]);
       const box=el("div");
-      if(c.photo&&(c.photo.thumb||c.photo.src)){const im=document.createElement("img");im.src=c.photo.thumb||c.photo.src;box.append(im)}
+      const cv=coverOf(c);if(cv){const im=document.createElement("img");im.src=cv;box.append(im)}
       const b=el("b",null,spName(c.sp));box.append(b);const sz=sizeText(c);if(sz)box.append(" · "+sz);
       box.append(el("div",null,fmtDate(c.at)+(c.t?" "+fmtTime(c.at):"")));
       if(c.lure)box.append(el("div",null,"Csali: "+c.lure));
       if(c.wx)box.append(el("div",null,wxLine(c.wx)));
       if(gpsOnly)box.append(el("div",null,"Rögzítéskori GPS-hely"));else if(c.place.name)box.append(el("div",null,c.place.name));
-      const ed=el("button","linkbtn","Szerkesztés");ed.onclick=()=>openEditor({mode:"edit",id:c.id});box.append(ed);
+      const ed=el("button","linkbtn","Részletek");ed.onclick=()=>openViewer(c.id);box.append(ed);
       m.bindPopup(box);
     });
     setTimeout(()=>{if(ll.length===1)bigMap.setView(ll[0],14);else if(ll.length>1)bigMap.fitBounds(ll,{padding:[30,30],maxZoom:15})},30);
@@ -1208,15 +1242,58 @@ button{transition:transform .15s}
     else{const now=new Date();const sp=state.filterSp||(state.species[0]&&state.species[0].id);
       if(!sp){toast("Előbb vegyél fel egy halfajt a Számlálónál.");return}
       draft={sp,at:(state.year===NOW_Y?now:new Date(state.year,5,15,12)).toISOString(),y:state.year,t:false}}
-    ed={...opts,draft,confirmDel:false};
+    ed={...opts,draft,confirmDel:false,added:[]};
     $("sheetWrap").hidden=false;document.body.style.overflow="hidden";
     renderSheet();
   }
-  function closeEditor(){ed=null;$("sheetWrap").hidden=true;document.body.style.overflow="";render()}
-  $("sheetWrap").addEventListener("click",e=>{if(e.target.id==="sheetWrap")closeEditor()});
+  function closeEditor(){discardAdded();const back=ed&&ed.fromView&&state.catches.some(c=>c.id===ed.id)?ed.id:null;
+    ed=null;$("sheetWrap").hidden=true;document.body.style.overflow="";render();if(back)openViewer(back)}
+  $("sheetWrap").addEventListener("click",e=>{if(e.target.id!=="sheetWrap")return;if(view)closeViewer();else closeEditor()});
+
+  /* ---------- catch card (read-only); editing is a separate step ---------- */
+  let view=null; // {id}
+  function openViewer(id){if(!state.catches.some(c=>c.id===id))return;view={id};$("sheetWrap").hidden=false;document.body.style.overflow="hidden";renderViewer()}
+  function closeViewer(){view=null;$("sheetWrap").hidden=true;document.body.style.overflow="";
+    $("sheet").querySelectorAll("video").forEach(v=>{try{v.pause()}catch(e){}});render()}
+  function renderViewer(){
+    const c=state.catches.find(c=>c.id===view.id);if(!c){closeViewer();return}
+    const sh=$("sheet");sh.replaceChildren();sh.scrollTop=0;sh.classList.add("viewing");
+    const items=mediaOf(c),name=spName(c.sp);
+    const x=el("button","xbtn vclose","×");x.type="button";x.setAttribute("aria-label","Bezárás");x.onclick=closeViewer;sh.append(x);
+    if(items.length){
+      const car=el("div","vcar");car.setAttribute("role","group");car.setAttribute("aria-label","Fotók és videók");
+      items.forEach((m,i)=>{const sl=el("div","vslide");
+        if(m.video){const v=document.createElement("video");v.src=m.src;v.controls=true;v.preload="metadata";v.playsInline=true;if(m.thumb)v.poster=m.thumb;
+          v.setAttribute("aria-label","Videó "+(i+1));sl.append(v)}
+        else{const im=document.createElement("img");im.alt="Fotó "+(i+1);im.src=m.src||m.thumb;im.onerror=()=>{if(m.thumb&&im.src!==m.thumb)im.src=m.thumb};sl.append(im)}
+        car.append(sl)});
+      sh.append(car);
+      if(items.length>1){const dots=el("div","vdots");items.forEach((_,i)=>dots.append(el("i",i?"":"on")));sh.append(dots);
+        car.addEventListener("scroll",()=>{const k=Math.round(car.scrollLeft/car.clientWidth);dots.querySelectorAll("i").forEach((d,j)=>d.classList.toggle("on",j===k))},{passive:true})}
+    }else{const ph=el("div","vnone");ph.append(badgeEl(name));sh.append(ph)}
+    const head=el("div","vhead");const h=el("h3",null,name);head.append(h);
+    const sz=sizeText(c);if(sz)head.append(el("div","vsize",sz));sh.append(head);
+    const tags=el("div","chips");
+    tags.append(el("span","chip solid",fmtDate(c.at)+(c.t?", "+fmtTime(c.at):"")));
+    if(c.kept===true)tags.append(el("span","chip solid kept","Elvitt"));else if(c.kept===false)tags.append(el("span","chip solid","Visszaengedett"));
+    sh.append(tags);
+    const rows=el("dl","vinfo");
+    const row=(k,v)=>{if(!v)return;rows.append(el("dt",null,k));const dd=el("dd");if(typeof v==="string")dd.textContent=v;else dd.append(v);rows.append(dd)};
+    const co=coordsOf(c);row("Hely",c.place&&c.place.name?c.place.name:co?(c.place&&c.place.lat!=null?"Térképen jelölve":"Rögzítéskori GPS-hely"):null);
+    row("Csali",c.lure);
+    if(c.wx)row("Időjárás",wxLine(c.wx)+([c.wx.noon?"déli adat":null,c.wx.near?c.wx.near.charAt(0).toLowerCase()+c.wx.near.slice(1):null].filter(Boolean).map(x=>" ("+x+")").join("")));
+    const mp=moonPhase(new Date(c.at));const mo=el("span","vmoon");mo.append(moonSvg(mp,16));mo.append(moonName(mp));row("Hold",mo);
+    if(c.t){const cco=co||homeLoc()||{lat:HU_CENTER[0],lng:HU_CENTER[1]};const rel=sunRel(c.at,sunTimes(new Date(c.at),cco.lat,cco.lng));if(rel)row("Nap","Fogás "+rel)}
+    row("Megjegyzés",c.note);
+    if(rows.childElementCount)sh.append(rows);
+    const act=el("div","sheet-actions");
+    const share=el("button","btn-ghost","Megosztás");share.type="button";share.onclick=()=>shareCatch(c);
+    const edit=el("button","btn-main","Szerkesztés");edit.type="button";edit.onclick=()=>{const id=c.id;view=null;sh.classList.remove("viewing");openEditor({mode:"edit",id,fromView:true})};
+    act.append(share,edit);sh.append(act);
+  }
 
   function renderSheet(){
-    const d=ed.draft,sh=$("sheet");const keepScroll=sh.scrollTop;sh.replaceChildren();requestAnimationFrame(()=>{sh.scrollTop=keepScroll});
+    const d=ed.draft,sh=$("sheet");sh.classList.remove("viewing");const keepScroll=sh.scrollTop;sh.replaceChildren();requestAnimationFrame(()=>{sh.scrollTop=keepScroll});
     const s=state.species.find(s=>s.id===d.sp);const rule=s?ruleFor(s.name):null;
     sh.append(el("h3",null,ed.fresh?(s?s.name:"Fogás")+" rögzítve":ed.mode==="create"?"Új fogás":"Fogás részletei"));
     sh.append(el("div","sub",ed.fresh?"Minden mező opcionális. Töltsd ki, amit szeretnél, vagy hagyd ki.":"Minden mező opcionális."));
@@ -1280,18 +1357,21 @@ button{transition:transform .15s}
     }
     sh.append(gP);
 
-    // photo
-    const gF=el("div","fgroup");gF.append(el("div","flabel","Fotó"));
-    if(d.photo&&(d.photo.src||d.photo.thumb)){
-      const pv=el("div","photo-prev");const im=document.createElement("img");im.alt="Fotó a fogásról";im.src=d.photo.src||d.photo.thumb;im.onerror=()=>{if(d.photo.thumb&&im.src!==d.photo.thumb)im.src=d.photo.thumb};
-      const x=el("button","xbtn","×");x.setAttribute("aria-label","Fotó eltávolítása");x.onclick=()=>{if(ed.newPhoto===d.photo.src){dropPhoto({photo:d.photo});ed.newPhoto=null}delete d.photo;renderSheet()};
-      pv.append(im,x);gF.append(pv);
-    }else{
-      const row=el("div","fields");
-      const cam=el("button","btn-ghost","📷 Fotó készítése");cam.onclick=()=>pickPhoto("camera");
-      const gal=el("button","btn-ghost","🖼 Galériából");gal.onclick=()=>pickPhoto("gallery");
-      row.append(cam,gal);gF.append(row);
-    }
+    // photos and videos
+    const gF=el("div","fgroup");gF.append(el("div","flabel","Fotók és videók"));
+    const items=mediaOf(d);
+    if(items.length){const grid=el("div","media-grid");
+      items.forEach((m,i)=>{const t=el("div","mtile"+(m.video?" vid":""));const im=document.createElement("img");im.alt=m.video?"Videó":"Fotó";im.src=m.thumb||m.src;
+        im.onerror=()=>{if(m.thumb&&im.src!==m.thumb)im.src=m.thumb};t.append(im);
+        if(m.video)t.append(el("span","mbadge","▶ "+fmtDur(m.dur)));
+        const x=el("button","xbtn","×");x.type="button";x.setAttribute("aria-label",(m.video?"Videó":"Fotó")+" eltávolítása");
+        x.onclick=()=>{const list=mediaOf(d).slice();const [gone]=list.splice(i,1);if(ed.added.includes(gone.src)){dropFiles([gone]);ed.added=ed.added.filter(u=>u!==gone.src)}setMedia(d,list);renderSheet()};
+        t.append(x);grid.append(t)});
+      gF.append(grid)}
+    if(items.length<MEDIA_MAX){const row=el("div","media-add");
+      const add=(label,src)=>{const b=el("button","btn-ghost",label);b.type="button";b.onclick=()=>pickPhoto(src);row.append(b)};
+      add("📷 Fotó","camera");if(ANDROID&&ANDROID.pickPhoto)add("🎥 Videó","video");add("🖼 Galéria","gallery");
+      gF.append(row)}
     sh.append(gF);
 
     // moon + sun, weather
@@ -1306,16 +1386,13 @@ button{transition:transform .15s}
     // delete
     if(ed.mode==="edit"){
       if(ed.confirmDel){const cf=el("div","confirm");cf.append(el("span",null,"Biztosan törlöd ezt a fogást?"));
-        const y=el("button","yes","Törlés");y.onclick=()=>{const id=ed.id;closeEditor();deleteWithUndo(id,"Fogás törölve")};
+        const y=el("button","yes","Törlés");y.onclick=()=>{const id=ed.id;ed.fromView=false;closeEditor();deleteWithUndo(id,"Fogás törölve")};
         const n=el("button","no","Mégse");n.onclick=()=>{ed.confirmDel=false;renderSheet()};cf.append(y,n);sh.append(cf)}
       else{const db=el("button","danger-link","Fogás törlése");db.onclick=()=>{ed.confirmDel=true;renderSheet()};sh.append(db)}
     }
 
     const act=el("div","sheet-actions");
-    const cancel=el("button","btn-ghost",ed.fresh?"Kihagyás":"Mégse");cancel.onclick=()=>{
-      if(ed.newPhoto){const saved=ed.mode==="edit"?state.catches.find(c=>c.id===ed.id):null;
-        if(!saved||!saved.photo||saved.photo.src!==ed.newPhoto)dropPhoto({photo:{src:ed.newPhoto}})}
-      closeEditor()};
+    const cancel=el("button","btn-ghost",ed.fresh?"Kihagyás":"Mégse");cancel.onclick=()=>{discardAdded();closeEditor()};
     const ok=el("button","btn-main","Mentés");ok.onclick=saveEditor;
     act.append(cancel,ok);sh.append(act);
   }
@@ -1324,29 +1401,81 @@ button{transition:transform .15s}
     let sid;
     if(ed.mode==="edit"){
       const old=state.catches.find(c=>c.id===ed.id);
-      if(old&&old.photo&&old.photo.src&&(!d.photo||d.photo.src!==old.photo.src))dropPhoto(old);
+      if(old){const keep=new Set(fileUris(mediaOf(d)));dropFiles(mediaOf(old).filter(m=>!fileUris([m]).some(u=>keep.has(u))))}
       store.replaceCatch(ed.id,rest);sid=ed.id;
     }else sid=store.addCatch(rest);
     setTimeout(()=>ensureWx(sid),0);
     if(d.y!==state.year&&ed.mode!=="edit")state.year=d.y;
-    toast("Mentve");closeEditor();
+    ed.added=[];toast("Mentve");closeEditor();
   }
 
   /* ---------- photo ---------- */
+  const MEDIA_MAX=12;
+  const fmtDur=ms=>{const t=Math.round((ms||0)/1000);return Math.floor(t/60)+":"+pad(t%60)};
+  // photos/videos added in this editor session that were never saved: remove their files
+  function discardAdded(){if(!ed||!ed.added.length)return;const saved=ed.mode==="edit"?state.catches.find(c=>c.id===ed.id):null;
+    const keep=new Set(saved?mediaOf(saved).map(m=>m.src):[]);dropFiles(mediaOf(ed.draft).filter(m=>ed.added.includes(m.src)&&!keep.has(m.src)));ed.added=[]}
   function pickPhoto(src){
     if(ANDROID&&ANDROID.pickPhoto){ANDROID.pickPhoto(src);return}
-    const inp=document.createElement("input");inp.type="file";inp.accept="image/*";if(src==="camera")inp.capture="environment";
-    inp.onchange=async()=>{const f=inp.files[0];if(!f)return;try{const img=await loadImg(URL.createObjectURL(f));
-      window.__fnPhoto({src:scale(img,1280,.82),thumb:scale(img,240,.7)})}catch(e){toast("A képet nem sikerült betölteni.")}};
+    const inp=document.createElement("input");inp.type="file";inp.accept="image/*";if(src==="camera")inp.capture="environment";else inp.multiple=true;
+    inp.onchange=async()=>{for(const f of [...inp.files]){try{const img=await loadImg(URL.createObjectURL(f));
+      window.__fnPhoto({src:scale(img,1280,.82),thumb:scale(img,240,.7)})}catch(e){toast("A képet nem sikerült betölteni.")}}};
     inp.click();
   }
   function loadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u})}
   function scale(img,max,q){const r=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",q)}
   window.__fnPhoto=function(p){
-    if(!ed)return;if(!p||p.error){toast(p&&p.error?p.error:"A fotó nem sikerült.");return}
-    if(ed.newPhoto&&ed.draft.photo&&ed.draft.photo.src===ed.newPhoto)dropPhoto({photo:ed.draft.photo});
-    ed.draft.photo={src:p.src,thumb:p.thumb};ed.newPhoto=p.src;renderSheet();
+    if(!ed){if(p&&p.src)dropFiles([p]);return}if(!p||p.error){toast(p&&p.error?p.error:"A fotó nem sikerült.");return}
+    const list=mediaOf(ed.draft).slice();if(list.length>=MEDIA_MAX){dropFiles([p]);toast("Legfeljebb "+MEDIA_MAX+" fotó vagy videó fér egy fogáshoz.");return}
+    const m={src:p.src,thumb:p.thumb};if(p.video){m.video=true;if(p.dur)m.dur=p.dur}
+    list.push(m);setMedia(ed.draft,list);ed.added.push(m.src);renderSheet();
   };
+
+  /* ---------- share a catch as a picture card ---------- */
+  const shareText=c=>[spName(c.sp)+(sizeText(c)?" – "+sizeText(c):""),fmtDate(c.at),c.place&&c.place.name].filter(Boolean).join(" · ")+" #Kapás";
+  // the picture as a data url: local files cannot be painted on a canvas directly (it would be "tainted"), the app hands them over
+  function mediaData(c){
+    for(const m of mediaOf(c)){const u=m.video?m.thumb:m.src||m.thumb;if(!u)continue;if(u.startsWith("data:"))return u;
+      try{const d=m.video?ANDROID&&ANDROID.readThumb&&ANDROID.readThumb(u):ANDROID&&ANDROID.readPhoto&&ANDROID.readPhoto(u);if(d)return d}catch(e){}}
+    return null;
+  }
+  async function catchCardImage(c){
+    const W=1080,H=1350,PH=830,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+    const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
+    try{await Promise.all(["600 96px Fraunces","500 40px Figtree","600 40px Figtree"].map(f=>document.fonts.load(f)))}catch(e){}
+    const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,col("--hero-a"));bg.addColorStop(.55,col("--hero-b"));bg.addColorStop(1,col("--hero-c"));g.fillStyle=bg;g.fillRect(0,0,W,H);
+    const src=mediaData(c);let drewPhoto=false;
+    if(src){try{const img=await loadImg(src),r=Math.max(W/img.width,PH/img.height),w=img.width*r,h=img.height*r;
+      g.drawImage(img,(W-w)/2,(PH-h)/2,w,h);drewPhoto=true;
+      const fade=g.createLinearGradient(0,PH-260,0,PH);fade.addColorStop(0,"rgba(0,0,0,0)");fade.addColorStop(1,col("--hero-b"));g.fillStyle=fade;g.fillRect(0,PH-260,W,260)}catch(e){}}
+    if(!drewPhoto){ // the river-valley scene of the home card
+      g.save();g.scale(W/360,PH/210);g.fillStyle=col("--hero-sun");g.beginPath();g.arc(282,86,24,0,7);g.fill();
+      [["--hero-hill1","M0 140C50 112 96 104 146 122S250 84 360 110V210H0Z"],["--hero-hill2","M0 162C66 136 124 150 186 138S300 124 360 142V210H0Z"],
+       ["--hero-river","M142 210C176 186 222 170 300 160L316 162C252 174 212 190 196 210Z"],["--hero-hill3","M0 186C58 170 112 190 172 180S282 168 360 182V210H0Z"]]
+        .forEach(([t,d])=>{g.fillStyle=col(t);g.fill(new Path2D(d))});g.restore()}
+    const pad=72,maxW=W-pad*2;
+    const fit=(txt,font,size,min)=>{let s=size;do{g.font=font.replace("$",s);if(g.measureText(txt).width<=maxW)break;s-=4}while(s>min);return txt};
+    let y=PH+120;g.textBaseline="alphabetic";
+    g.fillStyle=col("--hero-side");fit(spName(c.sp),"600 $px Fraunces",104,56);g.fillText(spName(c.sp),pad,y);
+    const sz=sizeText(c);if(sz){g.fillStyle=col("--hero-sun");g.font="600 64px Fraunces";const tw=g.measureText(sz).width;
+      const nw=(g.font="600 104px Fraunces",g.measureText(spName(c.sp)).width);g.font="600 64px Fraunces";
+      if(nw+tw+40<=maxW){g.textAlign="right";g.fillText(sz,W-pad,y);g.textAlign="left"}else{y+=80;g.fillText(sz,pad,y)}}
+    y+=72;g.fillStyle=col("--hero-lbl");
+    const lines=[fmtDate(c.at)+(c.t?", "+fmtTime(c.at):""),c.place&&c.place.name,c.lure?"Csali: "+c.lure:null,c.wx?wxLine(c.wx):null].filter(Boolean);
+    lines.slice(0,y>PH+200?3:4).forEach(t=>{fit(t,"500 $px Figtree",40,26);g.fillText(t,pad,y);y+=56});
+    g.fillStyle=col("--hero-lbl");g.globalAlpha=.75;g.font="600 34px Fraunces";g.fillText("Kapás",pad,H-56);g.font="500 28px Figtree";g.textAlign="right";g.fillText("fogásnapló",W-pad,H-58);g.textAlign="left";g.globalAlpha=1;
+    return cv.toDataURL("image/jpeg",.9);
+  }
+  async function shareCatch(c){
+    toast("Kártya készítése…");
+    let url;try{url=await catchCardImage(c)}catch(e){toast("A kártyát nem sikerült elkészíteni.");return}
+    const text=shareText(c);
+    if(ANDROID&&ANDROID.shareImage){try{ANDROID.shareImage(url,text)}catch(e){toast("A megosztás nem sikerült.")}return}
+    const bin=atob(url.split(",")[1]),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+    const file=new File([buf],"kapas-fogas.jpg",{type:"image/jpeg"});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}catch(e){if(e&&e.name==="AbortError")return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=file.name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  }
 
   /* ---------- map picker ---------- */
   let pickMap=null,pickMarker=null,pick=null;
@@ -1479,14 +1608,17 @@ button{transition:transform .15s}
   const DIRS=["É","ÉK","K","DK","D","DNy","Ny","ÉNy"];
   const dirName=d=>DIRS[Math.round(((d%360)+360)%360/45)%8];
   function coordsOf(c){if(c.place&&c.place.lat!=null)return{lat:c.place.lat,lng:c.place.lng};if(c.gps)return c.gps;return null}
-  function wxKey(c){const co=coordsOf(c);if(!co)return null;const d=new Date(c.at);
+  // a catch without a place gets the weather of the home spot, else of the weather card's place (pressure trends are regional)
+  function wxCoords(c){const co=coordsOf(c);if(co)return co;const h=homeLoc();if(h)return{lat:h.lat,lng:h.lng,approx:"A szokásos horgászhelyed környéki"};
+    const w=wxPlace();return{lat:w.lat,lng:w.lng,approx:w.name+" környéki"}}
+  function wxKey(c){const co=wxCoords(c);if(!co)return null;const d=new Date(c.at);
     return co.lat.toFixed(2)+","+co.lng.toFixed(2)+"@"+ymd(d)+"T"+(c.t?pad(Math.min(23,d.getHours()+(d.getMinutes()>=30?1:0))):"12")}
   const trendOf=dp=>dp==null?null:dp>=1?"up":dp<=-1?"down":"flat";
   const TREND_TXT={up:"emelkedő",down:"csökkenő",flat:"stabil"};
   async function fetchT(url,ms){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||15000);
     try{return await fetch(url,{signal:ac.signal})}finally{clearTimeout(t)}}
   async function fetchWx(c){
-    const co=coordsOf(c);if(!co)return null;
+    const co=wxCoords(c);if(!co)return null;
     const d=new Date(c.at),day=ymd(d);const prev=new Date(d);prev.setDate(prev.getDate()-1);
     const ageDays=(Date.now()-d.getTime())/864e5;
     const hourly="temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,weather_code,precipitation";
@@ -1501,7 +1633,7 @@ button{transition:transform .15s}
     let rain=0;for(let k=Math.max(0,i-2);k<=i;k++)rain+=H.precipitation[k]||0;
     return{key:wxKey(c),temp:Math.round(H.temperature_2m[i]*10)/10,p:Math.round(p),dp:p3==null?null:Math.round((p-p3)*10)/10,
       ws:Math.round(H.wind_speed_10m[i]),wg:H.wind_gusts_10m?Math.round(H.wind_gusts_10m[i]):null,wd:H.wind_direction_10m[i],
-      cc:H.cloud_cover[i],code:H.weather_code[i],rain:Math.round(rain*10)/10,noon:!c.t};
+      cc:H.cloud_cover[i],code:H.weather_code[i],rain:Math.round(rain*10)/10,noon:!c.t,...(co.approx?{near:co.approx}:{})};
   }
   const wxBusy=new Set();
   async function ensureWx(id){
@@ -1516,8 +1648,10 @@ button{transition:transform .15s}
     finally{wxBusy.delete(id)}
   }
   async function retryPendingWx(){
-    const todo=data.catches.filter(c=>coordsOf(c)&&(c.wxPending||!c.wx||c.wx.key!==wxKey(c)));
-    for(const c of todo.slice(0,20)){await ensureWx(c.id)}
+    // newest first; old catches without weather get it from the archive, a few dozen per start
+    const todo=data.catches.filter(c=>c.wxPending||!c.wx||c.wx.key!==wxKey(c)).sort((a,b)=>a.at<b.at?1:-1);
+    let done=0;for(const c of todo.slice(0,40)){await ensureWx(c.id);if(++done%8===0)render()}
+    if(done)render();
   }
   window.addEventListener("online",()=>retryPendingWx());
   function wxLine(w){
@@ -1534,7 +1668,7 @@ button{transition:transform .15s}
     det.append(el("br"));det.append("Szél ");det.append(el("b",null,dirName(w.wd)+" "+w.ws+" km/h"));if(w.wg)det.append(", lökés "+w.wg);
     if(w.rain>0){det.append(" · Csapadék ");det.append(el("b",null,String(w.rain).replace(".",",")+" mm"))}
     box.append(det);
-    box.append(el("div","src",(w.noon?"Déli adat, mert nincs megadva idő. ":"")+"Forrás: Open-Meteo"));
+    box.append(el("div","src",(w.noon?"Déli adat, mert nincs megadva idő. ":"")+(w.near?w.near+" adat, mert nincs megadva hely. ":"")+"Forrás: Open-Meteo"));
     return box;
   }
 
@@ -1934,6 +2068,7 @@ button{transition:transform .15s}
   window.__fnBack=function(){
     if(!$("picker").hidden){closePicker();return true}
     if(ed){closeEditor();return true}
+    if(view){closeViewer();return true}
     if(state.tab!=="home"){go("home");return true}
     return false;
   };
@@ -1941,9 +2076,10 @@ button{transition:transform .15s}
   /* ---------- backup ---------- */
   async function exportJson(){
     const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,
-      catches:data.catches.map(c=>{if(!c.photo)return c;let th=c.photo.thumb;
-        if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
-        return{...c,photo:{thumb:th,src:c.photo.src&&c.photo.src.startsWith("data:")?undefined:c.photo.src}}})};
+      catches:data.catches.map(c=>{if(!mediaOf(c).length)return c;
+        const emb=m=>{let th=m.thumb;if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
+          return{...m,thumb:th,src:m.src&&m.src.startsWith("data:")?undefined:m.src}};
+        const o={...c};if(c.media)o.media=c.media.map(emb);if(c.photo)o.photo=emb(c.photo);return o})};
     const name="fogasnaplo-"+ymd(new Date())+".json";const json=JSON.stringify(out,null,1);
     if(ANDROID&&ANDROID.saveBackup){ANDROID.saveBackup(json,name);return}
     const blob=new Blob([json],{type:"application/json"});
@@ -1965,8 +2101,8 @@ button{transition:transform .15s}
     return{newSp,newC};
   }
   function applyImport(plan){
-    plan.newC.forEach(c=>{const th=c.photo&&c.photo.thumb;
-      if(th&&th.startsWith("data:")&&ANDROID&&ANDROID.saveThumb){try{const u=ANDROID.saveThumb(th);if(u)c.photo={...c.photo,thumb:u}}catch(e){}}});
+    const keepTh=m=>{const th=m&&m.thumb;if(th&&th.startsWith("data:")&&ANDROID&&ANDROID.saveThumb){try{const u=ANDROID.saveThumb(th);if(u)return{...m,thumb:u}}catch(e){}}return m};
+    plan.newC.forEach(c=>{if(c.photo)c.photo=keepTh(c.photo);if(Array.isArray(c.media))c.media=c.media.map(keepTh)});
     data.species.push(...plan.newSp);data.catches.push(...plan.newC);save();
   }
   $("importFile").onchange=async e=>{
@@ -2025,8 +2161,8 @@ button{transition:transform .15s}
     catch(e){$("backupMsg").textContent="Ez a fájl nem Kapás ZIP-mentés.";return}
     // the photos were unpacked under their own names into this phone's folders
     const seg=u=>u.slice(u.lastIndexOf("/")+1);
-    d.catches.forEach(c=>{if(!c||!c.photo)return;const p={...c.photo};
-      if(p.src&&p.src.startsWith("file:"))p.src=r.photos+seg(p.src);if(p.thumb&&p.thumb.startsWith("file:"))p.thumb=r.thumbs+seg(p.thumb);c.photo=p});
+    const move=m=>{const p={...m};if(p.src&&p.src.startsWith("file:"))p.src=r.photos+seg(p.src);if(p.thumb&&p.thumb.startsWith("file:"))p.thumb=r.thumbs+seg(p.thumb);return p};
+    d.catches.forEach(c=>{if(!c)return;if(c.photo)c.photo=move(c.photo);if(Array.isArray(c.media))c.media=c.media.map(move)});
     askImport(d);
   };
   function renderAutoBk(){
@@ -2062,8 +2198,8 @@ button{transition:transform .15s}
   }
   function sweepFiles(){
     if(!ANDROID||!ANDROID.cleanup||!loadedOk||!data.catches.length)return;
-    const keep=[];data.catches.forEach(c=>{if(c.photo)[c.photo.src,c.photo.thumb].forEach(u=>{if(u&&u.startsWith("file:"))keep.push(u)})});
-    try{ANDROID.cleanup(JSON.stringify(keep))}catch(e){}
+    const keep=new Set();data.catches.forEach(c=>fileUris(mediaOf(c).concat(c.photo?[c.photo]:[])).forEach(u=>keep.add(u)));
+    try{ANDROID.cleanup(JSON.stringify([...keep]))}catch(e){}
   }
 
   /* ---------- wiring ---------- */

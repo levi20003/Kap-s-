@@ -67,7 +67,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - A fogásadatok a WebView `localStorage`-ában vannak, kulcs: **`fogasnaplo.v1`**.
 - Egyéb kulcsok: `fogasnaplo.region`, `fogasnaplo.home`, `fogasnaplo.today` (időjárás-gyorsítótár: `h` óránkénti, `d` napi), `fogasnaplo.wxplace` (időjárás helye).
 - A kulcsot vagy az adatformátumot ne változtasd meg migráció nélkül, különben a felhasználók elveszítik a naplójukat.
-- Fotók: a teljes kép `files/photos/`, az előnézet `files/thumbs/` (Android), a naplóban csak `file://` uri van.
+- Fotók és videók: fogásonként `media: [{src, thumb, video?, dur?}]` (max. 12; `mediaOf(c)` olvas, `setMedia(c, list)` ír). A régi `photo: {src, thumb}`
+  mező **megmarad és mindig az első fotó** (régebbi verziók és mentések miatt); a régi fogásoknak csak `photo`-juk van, a `mediaOf` ebből is listát ad.
+  Videó: kamera (`ACTION_VIDEO_CAPTURE`, max. 30 mp) vagy galéria (több elem egyszerre, kép + videó), `.mp4` a `files/photos/`-ban (max. 200 MB),
+  előnézet az első képkockából. A teljes kép `files/photos/`, az előnézet `files/thumbs/` (Android), a naplóban csak `file://` uri van.
   1.4-ig az előnézet base64-ként a localStorage-ban volt; induláskor `migrateThumbs` átköltözteti (a localStorage ~5 MB-nál megtelik).
   Új adatot soha ne tegyél base64-ként a naplóba.
 - Induláskor `sweepFiles` → `ANDROID.cleanup` törli a naplóban nem szereplő fotókat (1 óra türelmi idővel), üres naplónál nem fut.
@@ -82,6 +85,12 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Heti automatikus mentés: a mappa SAF tree uri-ja a `SharedPreferences`-ben (`backupTree`), állapot a `fogasnaplo.autobackup` kulcsban.
   Induláskor és előtérbe jövéskor `maybeAutoBackup()`; a mappában a 4 legutóbbi `fogasnaplo-ÉÉÉÉ-HH-NN.zip` marad.
 - Törlés (− gomb, „Fogás törlése”) 6 mp-ig visszavonható (`deleteWithUndo`); a fotó csak utána törlődik.
+- Fogásra koppintva (lista, rekord, térkép-buborék „Részletek”) **megtekintő kártya** nyílik (`openViewer`: lapozható fotók/videók, adatok);
+  szerkeszteni a „Szerkesztés” gombbal lehet (`openEditor({fromView:true})`, mentés/mégse után vissza a kártyára). A gyors „+” rögzítés közvetlenül a szerkesztőt nyitja.
+- „Megosztás”: `catchCardImage` 1080×1350-es képet rajzol (fotó + zöld sáv: faj, méret, dátum, hely, csali, idő), Androidon `shareImage` → megosztás-menü.
+  A helyi fotót a WebView nem engedi vászonra rajzolni, ezért `ANDROID.readPhoto` adja át data url-ként.
+- Fogás időjárása (`ensureWx`, induláskor `retryPendingWx` a hiányzókat pótolja, 85 napnál régebbire az archív API-ból). Hely nélküli fogásnál
+  `wxCoords`: a szokásos hely, ennek híján az időjárás helye (Szeged); ilyenkor `wx.near` jelzi, hogy közelítő adat.
 
 ## „Erdei csend” design – két téma
 

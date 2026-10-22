@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     private static final int REQ_OPEN = 2;
     private static final int REQ_CAM = 3;
     private static final int REQ_GAL = 4;
+    private static final int REQ_VID = 8;
     private static final int REQ_TREE = 5;
     private static final int REQ_ZIP_OUT = 6;
     private static final int REQ_ZIP_IN = 7;
@@ -594,12 +595,31 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void startVideo() {
+        File f = ShotProvider.clipFile(this);
+        if (f.exists()) f.delete();
+        Uri out = Uri.parse("content://" + getPackageName() + ".shot/clip.mp4");
+        Intent i = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        i.putExtra(MediaStore.EXTRA_OUTPUT, out);
+        i.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
+        i.putExtra(MediaStore.EXTRA_SIZE_LIMIT, 120L * 1024 * 1024);
+        i.setClipData(ClipData.newRawUri("", out));
+        i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivityForResult(i, REQ_VID);
+        } catch (Exception e) {
+            js("__fnPhoto", err("Nem találtam videófelvevő alkalmazást. Válaszd a Galéria gombot."));
+        }
+    }
+
     private void startGallery() {
         Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-        i.setType("image/*");
+        i.setType("*/*");
+        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
+        i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         i.addCategory(Intent.CATEGORY_OPENABLE);
         try {
-            startActivityForResult(Intent.createChooser(i, "Fotó kiválasztása"), REQ_GAL);
+            startActivityForResult(Intent.createChooser(i, "Fotók, videók kiválasztása"), REQ_GAL);
         } catch (Exception e) {
             js("__fnPhoto", err("Nem sikerült megnyitni a galériát."));
         }
@@ -607,46 +627,116 @@ public class MainActivity extends Activity {
 
     private interface StreamSource { InputStream open() throws Exception; }
 
-    private void processPhoto(StreamSource src) {
+    /** Photos and videos one after the other, in order; each arrives in the page through __fnPhoto. */
+    private void processMedia(List<Uri> uris) {
         new Thread(() -> {
-            try {
-                BitmapFactory.Options b = new BitmapFactory.Options();
-                b.inJustDecodeBounds = true;
-                try (InputStream in = src.open()) { BitmapFactory.decodeStream(in, null, b); }
-                if (b.outWidth <= 0) throw new Exception("decode");
-                int sample = 1;
-                while (Math.max(b.outWidth, b.outHeight) / (sample * 2) >= 1600) sample *= 2;
-                BitmapFactory.Options o = new BitmapFactory.Options();
-                o.inSampleSize = sample;
-                Bitmap bmp;
-                try (InputStream in = src.open()) { bmp = BitmapFactory.decodeStream(in, null, o); }
-                int rot = 0;
-                try (InputStream in = src.open()) {
-                    int ori = new ExifInterface(in).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                    if (ori == ExifInterface.ORIENTATION_ROTATE_90) rot = 90;
-                    else if (ori == ExifInterface.ORIENTATION_ROTATE_180) rot = 180;
-                    else if (ori == ExifInterface.ORIENTATION_ROTATE_270) rot = 270;
-                } catch (Exception ignored) {}
-                Bitmap full = fit(bmp, 1600, rot);
-                if (full != bmp) bmp.recycle();
-                File dir = new File(getFilesDir(), "photos");
-                dir.mkdirs();
-                File outF = new File(dir, UUID.randomUUID().toString() + ".jpg");
-                try (OutputStream os = new FileOutputStream(outF)) { full.compress(Bitmap.CompressFormat.JPEG, 85, os); }
-                Bitmap th = fit(full, 240, 0);
-                ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                th.compress(Bitmap.CompressFormat.JPEG, 70, bo);
-                if (th != full) th.recycle();
-                full.recycle();
-                File thF = writeThumb(bo.toByteArray());
-                JSONObject r = new JSONObject();
-                r.put("src", Uri.fromFile(outF).toString());
-                r.put("thumb", thF != null ? Uri.fromFile(thF).toString() : "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP));
-                js("__fnPhoto", r);
-            } catch (Throwable t) {
-                js("__fnPhoto", err("A fotót nem sikerült betölteni."));
+            for (Uri u : uris) {
+                String type = getContentResolver().getType(u);
+                StreamSource src = () -> getContentResolver().openInputStream(u);
+                boolean video = type != null && type.startsWith("video/");
+                try { js("__fnPhoto", video ? videoFrom(src) : photoFrom(src)); }
+                catch (TooBig t) { js("__fnPhoto", err("A videó túl nagy (legfeljebb 200 MB).")); }
+                catch (Throwable t) { js("__fnPhoto", err(video ? "A videót nem sikerült betölteni." : "A fotót nem sikerült betölteni.")); }
             }
         }).start();
+    }
+
+    private void processPhoto(StreamSource src) {
+        new Thread(() -> {
+            try { js("__fnPhoto", photoFrom(src)); }
+            catch (Throwable t) { js("__fnPhoto", err("A fotót nem sikerült betölteni.")); }
+        }).start();
+    }
+
+    private void processVideo(StreamSource src) {
+        new Thread(() -> {
+            try { js("__fnPhoto", videoFrom(src)); }
+            catch (TooBig t) { js("__fnPhoto", err("A videó túl nagy (legfeljebb 200 MB).")); }
+            catch (Throwable t) { js("__fnPhoto", err("A videót nem sikerült menteni.")); }
+        }).start();
+    }
+
+    private JSONObject photoFrom(StreamSource src) throws Exception {
+        BitmapFactory.Options b = new BitmapFactory.Options();
+        b.inJustDecodeBounds = true;
+        try (InputStream in = src.open()) { BitmapFactory.decodeStream(in, null, b); }
+        if (b.outWidth <= 0) throw new Exception("decode");
+        int sample = 1;
+        while (Math.max(b.outWidth, b.outHeight) / (sample * 2) >= 1600) sample *= 2;
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inSampleSize = sample;
+        Bitmap bmp;
+        try (InputStream in = src.open()) { bmp = BitmapFactory.decodeStream(in, null, o); }
+        int rot = 0;
+        try (InputStream in = src.open()) {
+            int ori = new ExifInterface(in).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            if (ori == ExifInterface.ORIENTATION_ROTATE_90) rot = 90;
+            else if (ori == ExifInterface.ORIENTATION_ROTATE_180) rot = 180;
+            else if (ori == ExifInterface.ORIENTATION_ROTATE_270) rot = 270;
+        } catch (Exception ignored) {}
+        Bitmap full = fit(bmp, 1600, rot);
+        if (full != bmp) bmp.recycle();
+        File dir = new File(getFilesDir(), "photos");
+        dir.mkdirs();
+        File outF = new File(dir, UUID.randomUUID().toString() + ".jpg");
+        try (OutputStream os = new FileOutputStream(outF)) { full.compress(Bitmap.CompressFormat.JPEG, 85, os); }
+        JSONObject r = new JSONObject();
+        r.put("src", Uri.fromFile(outF).toString());
+        r.put("thumb", thumbOf(full, 240));
+        full.recycle();
+        return r;
+    }
+
+    private static class TooBig extends Exception {}
+
+    /** Copies the clip into the photo folder (max 200 MB) and takes its first frame as the thumbnail. */
+    private JSONObject videoFrom(StreamSource src) throws Exception {
+        File dir = new File(getFilesDir(), "photos");
+        dir.mkdirs();
+        File outF = new File(dir, UUID.randomUUID().toString() + ".mp4");
+        long total = 0, max = 200L * 1024 * 1024;
+        try (InputStream in = src.open(); OutputStream os = new FileOutputStream(outF)) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                total += n;
+                if (total > max) throw new TooBig();
+                os.write(buf, 0, n);
+            }
+        } catch (Exception e) {
+            outF.delete();
+            throw e;
+        }
+        if (total == 0) { outF.delete(); throw new Exception("empty"); }
+        long dur = 0;
+        String thumb = null;
+        android.media.MediaMetadataRetriever mr = new android.media.MediaMetadataRetriever();
+        try {
+            mr.setDataSource(outF.getPath());
+            String d = mr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
+            if (d != null) dur = Long.parseLong(d);
+            Bitmap fr = mr.getFrameAtTime(Math.min(500000L, dur * 500L), android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+            if (fr != null) { thumb = thumbOf(fr, 360); fr.recycle(); }
+        } catch (Exception ignored) {
+        } finally {
+            try { mr.release(); } catch (Exception ignored) {}
+        }
+        JSONObject r = new JSONObject();
+        r.put("src", Uri.fromFile(outF).toString());
+        if (thumb != null) r.put("thumb", thumb);
+        r.put("video", true);
+        r.put("dur", dur);
+        return r;
+    }
+
+    /** A small jpeg of the picture, as a file:// uri (or a data url if the file cannot be written). */
+    private String thumbOf(Bitmap src, int max) {
+        Bitmap th = fit(src, max, 0);
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        th.compress(Bitmap.CompressFormat.JPEG, 72, bo);
+        if (th != src) th.recycle();
+        File thF = writeThumb(bo.toByteArray());
+        return thF != null ? Uri.fromFile(thF).toString() : "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
     }
 
     /* ---------- thumbnails as files (localStorage holds only ~5 MB) ---------- */
@@ -724,10 +814,17 @@ public class MainActivity extends Activity {
         } else if (req == REQ_CAM) {
             final File f = ShotProvider.shotFile(this);
             if (res == RESULT_OK && f.exists() && f.length() > 0) processPhoto(() -> new FileInputStream(f));
+        } else if (req == REQ_VID) {
+            final File f = ShotProvider.clipFile(this);
+            if (res == RESULT_OK && f.exists() && f.length() > 0) processVideo(() -> new FileInputStream(f));
+            else if (res == RESULT_OK && data != null && data.getData() != null) { final Uri u = data.getData(); processVideo(() -> getContentResolver().openInputStream(u)); }
         } else if (req == REQ_GAL) {
-            if (res == RESULT_OK && data != null && data.getData() != null) {
-                final Uri u = data.getData();
-                processPhoto(() -> getContentResolver().openInputStream(u));
+            if (res == RESULT_OK && data != null) {
+                List<Uri> uris = new ArrayList<>();
+                ClipData cd = data.getClipData();
+                if (cd != null) for (int k = 0; k < cd.getItemCount(); k++) { Uri u = cd.getItemAt(k).getUri(); if (u != null) uris.add(u); }
+                else if (data.getData() != null) uris.add(data.getData());
+                if (!uris.isEmpty()) processMedia(uris);
             }
         } else if (req == REQ_TREE) {
             if (res == RESULT_OK && data != null && data.getData() != null) setBackupTree(data.getData());
@@ -799,7 +896,7 @@ public class MainActivity extends Activity {
                 File[] fs = new File(getFilesDir(), d).listFiles();
                 if (fs == null) continue;
                 for (File f : fs) {
-                    if (!f.isFile() || !f.getName().endsWith(".jpg")) continue;
+                    if (!f.isFile() || !(f.getName().endsWith(".jpg") || f.getName().endsWith(".mp4"))) continue;
                     z.putNextEntry(new ZipEntry(d + "/" + f.getName()));
                     try (InputStream in = new FileInputStream(f)) {
                         int n;
@@ -883,7 +980,7 @@ public class MainActivity extends Activity {
                     String n = e.getName();
                     if (n.equals("fogasnaplo.json")) {
                         json = readAll(z, buf);
-                    } else if (n.matches("(photos|thumbs)/[A-Za-z0-9-]+\\.jpg")) {
+                    } else if (n.matches("(photos|thumbs)/[A-Za-z0-9-]+\\.(jpg|mp4)")) {
                         File f = new File(n.startsWith("photos/") ? photos : thumbs, n.substring(7));
                         if (f.exists()) continue;
                         File tmp = new File(f.getPath() + ".tmp");
@@ -1051,6 +1148,7 @@ public class MainActivity extends Activity {
         public void pickPhoto(String source) {
             runOnUiThread(() -> {
                 if ("camera".equals(source)) startCamera();
+                else if ("video".equals(source)) startVideo();
                 else startGallery();
             });
         }
@@ -1087,6 +1185,43 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
+        }
+
+        /** file:// uri of a full photo -> data url, for drawing the share card. "" if missing or too big. */
+        @JavascriptInterface
+        public String readPhoto(String src) {
+            File f = ownFile(src);
+            if (f == null || !f.isFile() || !f.getName().endsWith(".jpg") || f.length() > 10 * 1024 * 1024) return "";
+            try (InputStream in = new FileInputStream(f)) {
+                byte[] b = new byte[(int) f.length()];
+                int off = 0, n;
+                while (off < b.length && (n = in.read(b, off, b.length - off)) > 0) off += n;
+                return "data:image/jpeg;base64," + Base64.encodeToString(b, 0, off, Base64.NO_WRAP);
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** The catch card (a jpeg data url) to the share sheet. */
+        @JavascriptInterface
+        public void shareImage(String dataUrl, String text) {
+            int comma = dataUrl.indexOf(',');
+            if (!dataUrl.startsWith("data:image/jpeg") || comma < 0) return;
+            File f = ShotProvider.shareFile(MainActivity.this);
+            try (OutputStream os = new FileOutputStream(f)) {
+                os.write(Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT));
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "A kártyát nem sikerült menteni", Toast.LENGTH_SHORT).show());
+                return;
+            }
+            Uri u = Uri.parse("content://" + getPackageName() + ".shot/share.jpg");
+            Intent i = new Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, u).putExtra(Intent.EXTRA_TEXT, text);
+            i.setClipData(ClipData.newRawUri("", u));
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            runOnUiThread(() -> {
+                try { startActivity(Intent.createChooser(i, "Fogás megosztása")); }
+                catch (Exception e) { Toast.makeText(MainActivity.this, "Nincs alkalmazás a megosztáshoz", Toast.LENGTH_SHORT).show(); }
+            });
         }
 
         /** keepJson: array of every photo/thumb uri still in the log. */

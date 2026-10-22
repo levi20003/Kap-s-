@@ -89,6 +89,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
   ok(await p.evaluate(() => !!window.L) && await p.locator('#bigMap.leaflet-container').count() === 1, 'térkép fül: térkép betöltődött');
   await p.locator('.tabbar button[data-tab="list"]').click(); await p.waitForTimeout(200);
   await p.locator('.citem').first().click(); await p.waitForTimeout(200);
+  ok(await p.locator('#sheet .vhead h3').isVisible() && await p.locator('#sheet input, #sheet textarea, #sheet select').count() === 0, 'fogásra koppintva megtekintő kártya nyílik (nem szerkesztő)');
+  await p.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click(); await p.waitForTimeout(150);
   await p.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await p.waitForTimeout(500);
   ok(await p.locator('#picker').isVisible() && await p.locator('#pickMap.leaflet-container').count() === 1, 'helyválasztó térkép megnyílt');
   await p.locator('#pickCancel').click();
@@ -280,6 +282,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#bigMap .pin.gps').count() === 1 && (await q.locator('#mapHint').innerText()).includes('GPS'), 'térkép: GPS-es fogás kék jelölővel látszik');
 
     await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
     await q.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await q.waitForTimeout(500);
     ok((await q.locator('#pickHint').innerText()).includes('rögzítéskori helyed'), 'helyválasztó: a rögzítéskori GPS-hely előre kijelölve');
     ok(await q.evaluate(() => document.querySelector('#pickMap').querySelectorAll('.pin').length) === 1, 'helyválasztó: jelölő a GPS-helyen');
@@ -294,6 +297,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [{ id: 'n1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear() }] })));
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click();
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
     await q.locator('#sheet button', { hasText: 'Hely megadása' }).click(); await q.waitForTimeout(500);
     const box = await q.locator('#pickMap').boundingBox(); await q.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await q.waitForTimeout(400);
     ok((await q.locator('#pickHint').innerText()).includes('Ránagyítottam') && await q.locator('#pickMap .pin').count() === 0, 'országos nézetben koppintás: ránagyít, nem tesz le jelölőt');
@@ -321,6 +325,68 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'light' && (await q.evaluate(() => window.__th)).slice(-1)[0] === true, 'Android nappali mód: világos téma, a rendszersávok is világosak');
     await q.evaluate(() => window.__fnSysTheme({ night: true }));
     ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark' && (await q.evaluate(() => window.__th)).slice(-1)[0] === false, 'telefon sötét módra vált: az app is átvált');
+    await ctx.close();
+  }
+  // catch card, several photos + video, share card
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    await q.addInitScript(({ PX }) => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [{ id: 'm1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear(), t: true, l: 62,
+        lure: 'Gumihal', note: 'Akadó mellől', place: { name: 'Holt-Tisza', lat: 46.3, lng: 20.1 }, photo: { src: 'file:///data/photos/p1.jpg', thumb: 'file:///data/thumbs/t1.jpg' } }] }));
+      let n = 1; window.__m = { deleted: [], share: null };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, readThumb() { return PX; }, readPhoto() { return PX; },
+        deletePhoto(u) { window.__m.deleted.push(u); }, shareImage(u, t) { window.__m.share = { u, t }; },
+        pickPhoto(src) { setTimeout(() => window.__fnPhoto(src === 'video' ? { src: 'file:///data/photos/v1.mp4', thumb: 'file:///data/thumbs/v1.jpg', video: true, dur: 12000 }
+          : { src: 'file:///data/photos/p' + (++n) + '.jpg', thumb: 'file:///data/thumbs/t' + n + '.jpg' })); } };
+    }, { PX });
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    const st = () => q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).catches[0]);
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
+    const info = await q.locator('#sheet .vinfo').innerText();
+    ok((await q.locator('#sheet .vhead').innerText()).includes('62 cm') && info.includes('Gumihal') && info.includes('Holt-Tisza') && info.includes('Akadó mellől') && await q.locator('#sheet .vslide').count() === 1, 'megtekintő: régi fotó, méret, csali, hely, megjegyzés');
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click(); await q.waitForTimeout(100);
+    await q.locator('#sheet .media-add button', { hasText: 'Videó' }).click(); await q.waitForTimeout(100);
+    await q.locator('#sheet .media-add button', { hasText: 'Fotó' }).click(); await q.waitForTimeout(100);
+    ok(await q.locator('#sheet .mtile').count() === 3 && (await q.locator('#sheet .mtile.vid .mbadge').innerText()).includes('0:12'), 'szerkesztő: több fotó és videó (hossz a jelvényen)');
+    await q.locator('#sheet .btn-main', { hasText: 'Mentés' }).click(); await q.waitForTimeout(150);
+    let c = await st();
+    ok(c.media.length === 3 && c.media[1].video && c.photo.src.endsWith('p1.jpg') && await q.locator('#sheet .vslide').count() === 3 && await q.locator('#sheet .vslide video').count() === 1 && await q.locator('#sheet .vdots i').count() === 3,
+      'mentés után vissza a kártyára: 3 elem lapozva, videó lejátszóval; a régi „photo” mező az első fotó marad');
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
+    await q.locator('#sheet .mtile .xbtn').first().click(); await q.locator('#sheet .btn-main', { hasText: 'Mentés' }).click(); await q.waitForTimeout(150);
+    c = await st();
+    ok(c.media.length === 2 && c.photo.src.endsWith('p2.jpg') && (await q.evaluate(() => window.__m.deleted)).includes('file:///data/photos/p1.jpg'), 'eltávolított fotó: fájl törölve, a „photo” a következő fotó');
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
+    await q.locator('#sheet .media-add button', { hasText: 'Fotó' }).click(); await q.waitForTimeout(100);
+    await q.locator('#sheet .btn-ghost', { hasText: 'Mégse' }).click(); await q.waitForTimeout(100);
+    ok((await st()).media.length === 2 && (await q.evaluate(() => window.__m.deleted)).includes('file:///data/photos/p3.jpg') && await q.locator('#sheet .vhead').isVisible(), 'Mégse: az új fotó fájlja törlődik, vissza a kártyára');
+    await q.locator('#sheet .btn-ghost', { hasText: 'Megosztás' }).click(); await q.waitForTimeout(600);
+    const sh = await q.evaluate(() => window.__m.share);
+    ok(sh && sh.u.startsWith('data:image/jpeg') && sh.u.length > 5000 && sh.t.includes('Csuka') && sh.t.includes('62 cm'), 'megosztás: fogáskártya kép + szöveg');
+    ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#sheetWrap').isHidden(), 'vissza gomb: bezárja a kártyát');
+    ok((await q.locator('.citem .mcount').innerText()) === '2', 'listában: a bélyegképen a darabszám');
+    await ctx.close();
+  }
+  // old catches without weather (and without a place) get it from the archive, near the weather place
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear() - 1;
+    await q.addInitScript(({ Y }) => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+      catches: [{ id: 'o1', sp: 's1', at: new Date(Y, 4, 21, 19, 20).toISOString(), y: Y, t: true }, { id: 'o2', sp: 's1', at: new Date(Y, 7, 15, 12).toISOString(), y: Y, t: false }] })), { Y });
+    const urls = [];
+    await q.route('https://archive-api.open-meteo.com/**', r => { const u = new URL(r.request().url()); urls.push(u);
+      const s = u.searchParams.get('start_date'), e = u.searchParams.get('end_date'), time = [];
+      for (const d of [s, e]) for (let h = 0; h < 24; h++) time.push(d + 'T' + String(h).padStart(2, '0') + ':00');
+      const n = time.length, f = v => Array(n).fill(v);
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: { time, temperature_2m: f(19), pressure_msl: time.map((_, k) => 1016 - k * 0.3), wind_speed_10m: f(8),
+        wind_direction_10m: f(140), wind_gusts_10m: f(15), cloud_cover: f(60), weather_code: f(3), precipitation: f(0) } }) }); });
+    await q.route('https://api.open-meteo.com/**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(2500);
+    const cs = (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')))).catches;
+    ok(cs.every(c => c.wx && c.wx.p && c.wx.dp != null && c.wx.near === 'Szeged környéki') && urls.length === 2 && urls.every(u => u.searchParams.get('latitude').startsWith('46.2')),
+      'régi, hely nélküli fogások: archív időjárás Szeged környékéről (' + urls.length + ' kérés)');
+    ok(cs.find(c => c.id === 'o2').wx.noon === true, 'idő nélküli fogás: déli adat');
     await ctx.close();
   }
   // test build: update banner
