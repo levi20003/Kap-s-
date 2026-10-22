@@ -261,6 +261,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#today .day.today').count() === 1 && !(await q.locator('#today .day.today').evaluate(e => e.classList.contains('on'))) && (await q.locator('#today .day.on').getAttribute('aria-label')).startsWith('Holnap'), 'másik nap: kiválasztva, a „Ma” jelölése megmarad');
     await q.locator('#today .today-more').click();
     ok(await q.locator('#today svg.spark').count() === 1 && await q.locator('#today .days .day').count() === 7 && (await q.locator('#today .today-more').innerText()).includes('Kevesebb'), 'Részletek: 7 nap és a légnyomás-görbe');
+    const eve = (await q.locator('#today .win').nth(1).innerText()).match(/(\d\d):(\d\d)–(\d\d):(\d\d)/), mins = eve && (eve[3] * 60 + +eve[4]) - (eve[1] * 60 + +eve[2]);
+    ok(eve && eve[1] + ':' + eve[2] === '17:44' && mins >= 25 && mins <= 45, 'esti rablás: napnyugtától kb. fél óra (' + (eve && eve[0]) + ')');
     ok(await q.locator('#today .wx-explain').count() === 1 && (await q.locator('#today .wx-explain').textContent()).includes('hektopascal'), 'Részletek: magyarázat az értékelésről és a hPa-ról');
     await q.locator('#wxPlaceBtn').click();
     await q.locator('#today .wxsearch input').fill('Csongrád'); await q.locator('#today .wxsearch button').click(); await q.waitForTimeout(300);

@@ -1079,7 +1079,7 @@ button{transition:transform .15s}
       const dc=[0,0,0,0];timed.forEach(c=>{const k=daypart(c);if(k!=null)dc[k]++});
       const dmx=Math.max(1,...dc);const wrap=el("div","dayparts");
       ["Hajnal","Nappal","Alkony","Éjszaka"].forEach((l,i)=>{const r=el("div","dp");r.append(el("span",null,l));const bar=el("div","bar"),bi=el("i");bi.style.width=(dc[i]/dmx*100)+"%";bar.append(bi);r.append(bar);r.append(el("b",null,dc[i]));wrap.append(r)});
-      ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±1,5 óra. Csak az időponttal rögzített fogások számítanak."));
+      ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±30 perc. Csak az időponttal rögzített fogások számítanak."));
     }
     renderMonths(yearCatches);
     renderBest(yearCatches);
@@ -1443,7 +1443,7 @@ button{transition:transform .15s}
   function daypart(c){
     if(!c.t)return null;const co=coordsOf(c)||homeLoc()||{lat:HU_CENTER[0],lng:HU_CENTER[1]};
     const d=new Date(c.at),st=sunTimes(d,co.lat,co.lng);if(!st)return null;
-    const t=d.getTime(),H=90*6e4;
+    const t=d.getTime(),H=30*6e4;
     if(Math.abs(t-st.rise.getTime())<=H)return 0;   // dawn
     if(Math.abs(t-st.set.getTime())<=H)return 2;    // dusk
     if(t>st.rise.getTime()&&t<st.set.getTime())return 1; // day
@@ -1608,7 +1608,7 @@ button{transition:transform .15s}
   // a day's rating: the average of its daylight hours (6–20 h), so one good hour does not make a good day
   function dayLevel(H,date){
     const day=ymd(date);let s=0,n=0;
-    for(let h=6;h<=20;h++){const k=H.time.indexOf(day+"T"+pad(h)+":00");if(k>=3){s+=scoreToday(H,k,date).sc;n++}}
+    for(let h=6;h<=20;h++){const k=H.time.indexOf(day+"T"+pad(h)+":00");if(k>=3){s+=scoreToday(H,k,parseLocal(H.time[k])).sc;n++}} // each hour scored at its own time (moon phase), so the same day always gets the same rating
     return n?Math.max(1,Math.min(5,Math.round(s/n+1))):0;
   }
   function sparkSvg(H,i){
@@ -1803,10 +1803,11 @@ button{transition:transform .15s}
     if(stT){
       const w=el("div","windows");const add=(lbl,a,b)=>{const x=el("div","win");x.append(el("span",null,lbl));x.append(el("b",null,fmtHM(a)+"–"+fmtHM(b)));w.append(x)};
       const tom=new Date(now);tom.setDate(tom.getDate()+1);const st2=sunOf(tom);
-      const dawnPast=now.getTime()>stT.rise.getTime()+90*6e4;
+      // the twilight around sunrise / sunset, about half an hour (the same "hajnal" / "alkony" the sun arc shows)
+      const dawnPast=now.getTime()>stT.rise.getTime();
       const r=dawnPast&&st2?st2.rise:stT.rise;
-      add(dawnPast?"Holnap hajnal":"Hajnali rablás",new Date(r.getTime()-60*6e4),new Date(r.getTime()+90*6e4));
-      add("Esti rablás",new Date(stT.set.getTime()-90*6e4),new Date(stT.set.getTime()+45*6e4));
+      add(dawnPast?"Holnap hajnal":"Hajnali rablás",new Date(r.getTime()-twilightMs(r,loc.lat)),r);
+      add("Esti rablás",stT.set,new Date(stT.set.getTime()+twilightMs(stT.set,loc.lat)));
       card.append(w);
     }
     card.append(el("div","wx-sub","Miért "+LEVELS[lv].toLowerCase()+" ma? A mostani óra alapján:"));
