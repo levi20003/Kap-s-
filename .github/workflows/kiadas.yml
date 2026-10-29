@@ -31,6 +31,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Pre-release checks (placeholders that must not ship)
+        run: |
+          if grep -q 'ide jön a fejlesztői e-mail-cím' docs/adatvedelem.html; then echo "A docs/adatvedelem.html még a helyőrző e-mail-címet tartalmazza."; exit 1; fi
+          if grep -q 'const FEEDBACK_EMAIL="";' app/src/main/assets/index.html; then echo "A FEEDBACK_EMAIL üres az index.html-ben (visszajelzési cím)."; exit 1; fi
       - name: SDK (platform 36, build-tools 36.0.0)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: bundletool

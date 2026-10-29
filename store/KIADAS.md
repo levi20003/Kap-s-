@@ -2,6 +2,15 @@
 
 A szövegek és válaszok a `play-aruhaz.md`-ben, a képek a `kepek/` mappában vannak. Ez a lap a sorrendet mutatja.
 
+## 0a. Mielőtt bármit kiadsz (egyszer, ellenőrző lista)
+
+1. **Tesztelés valódi telefonon:** `store/TELEFONOS-TESZT.md`, az 1–6. szakasz minden pontja rendben, legalább két telefonon.
+2. **Visszajelzési cím:** `app/src/main/assets/index.html`, a `const FEEDBACK_EMAIL="";` sorba írd be a saját e-mail-címed. A Beállítások
+   „Visszajelzés küldése” gombja erre küld, előre kitöltött levéllel (verzió, build-azonosító, képernyőméret, a telefon azonosítója; a naplód,
+   a helyed és a fotóid nincsenek benne). A kiadási workflow **megáll**, ha ez üres.
+3. **Adatvédelmi oldal:** `docs/adatvedelem.html`, a `[ide jön a fejlesztői e-mail-cím]` helyére ugyanazt az e-mail-címet. A kiadási workflow ezt is ellenőrzi.
+4. A tesztek zöldek (`cd tests && npm test`), a CI is zöld az ágon.
+
 ## 0. Ami kell hozzá
 
 - **Google Play Console fejlesztői fiók**: <https://play.google.com/console/signup>. Egyszeri díj (25 USD), személyazonosság-ellenőrzés,
@@ -39,10 +48,19 @@ A build ellenőrzi, hogy a csomag a valódi `hu.fogasnaplo.app`, targetSdk 36, �
 
 **Alkalmazás létrehozása**: név `Kapás – horgász fogásnapló`, alapértelmezett nyelv **magyar**, Alkalmazás, Ingyenes.
 
-**⚠️ Aláírás – fontos a telefonodon lévő adataid miatt.** A Play alapból saját kulccsal írja alá az appot, és akkor a Play-es verzió nem tud
+**⚠️ Aláírás (PEPK) – fontos a telefonodon lévő adataid miatt.** A Play alapból saját kulccsal írja alá az appot, és akkor a Play-es verzió nem tud
 ráfrissülni a telefonodon lévő Kapásra (csak törlés után telepíthető, ami az adatokat is törli). Két megoldás:
-- **Ajánlott:** az első feltöltésnél a „Play-alkalmazásaláírás” résznél válaszd: *Aláírókulcs módosítása → Kulcs exportálása és feltöltése
-  Java-kulcstárból* (a Console megadja a PEPK eszközt és a parancsot). Így a Play a te mostani kulcsoddal ír alá, és a meglévő app adatostul frissül.
+- **Ajánlott:** az első feltöltésnél a „Play-alkalmazásaláírás” résznél válaszd: *Kulcs exportálása és feltöltése Java-kulcstárból*.
+  A Console ilyenkor letölthetővé teszi a `pepk.jar` eszközt és egy `encryption_public_key.pem` titkosító kulcsot. Futtasd a saját gépeden, ahol a kulcsod van:
+
+  ```
+  java -jar pepk.jar --keystore=fogasnaplo.keystore --alias=fogasnaplo --output=kapas-kulcs.zip \
+       --include-cert --rsa-aes-encryption --encryption-key-path=encryption_public_key.pem
+  ```
+
+  (a jelszavakat az eszköz kérdezi; a kulcstár jelszava a `keystore-jelszo.txt`-ben van). A keletkező `kapas-kulcs.zip`-et töltsd fel a Console-ban.
+  Ez a fájl a titkosított kulcsod: nem kerül a repóba, a feltöltés után töröld. Így a Play a te mostani kulcsoddal ír alá,
+  és a telefonodon lévő app adatostul frissíthető marad. Az eljárás egyszeri és **nem visszavonható**, ezért előtte csinálj mentést (6.6 pont).
 - Vagy: a Play-es telepítés előtt a régi appban **Mentés most** (ZIP), töröld a régit, telepítsd a Play-ből, majd **Visszaállítás**.
 
 **Az alkalmazás beállítása** (Irányítópult → feladatlista), a válaszok a `play-aruhaz.md`-ben:
@@ -67,10 +85,17 @@ be kell lépnie a zárt tesztbe. Utána kérhetsz hozzáférést az éles kiadá
 3. Kérd meg őket, hogy a 14 nap alatt tényleg használják (rögzítsenek egy-két fogást), és ha van, írjanak visszajelzést.
 4. 14 nap után: **Irányítópult → Hozzáférés kérése az éles verzióhoz**. Pár kérdésre kell válaszolni a tesztelésről.
 
-## 6. Éles kiadás
+## 6. Éles kiadás, fokozatos bevezetéssel
 
-**Éles → Új verzió** → ugyanaz az `.aab` (vagy egy újabb) → országok: Magyarország (később bővíthető) → ellenőrzésre küldés.
-Az első ellenőrzés általában néhány nap.
+1. **Mielőtt feltöltöd az AAB-t, ellenőrizd:** a GitHub Actions kiadási futása zöld, az artifact `Kapas-<verzió>.aab`. Ha magadnál akarod ellenőrizni:
+   `java -jar bundletool.jar validate --bundle=Kapas-2.0.aab`, majd
+   `java -jar bundletool.jar build-apks --bundle=Kapas-2.0.aab --output=check.apks --mode=universal --ks=fogasnaplo.keystore --ks-key-alias=fogasnaplo`
+   (a `check.apks` egy zip, benne a `universal.apk`, ami telepíthető egy telefonra). A CI ugyanezt minden pushnál elvégzi.
+2. **Éles → Új verzió** → töltsd fel az `.aab`-t → országok: Magyarország (később bővíthető) → „Újdonságok” szöveg a `play-aruhaz.md`-ből.
+3. **Fokozatos bevezetés (staged rollout):** a kiadásnál add meg a százalékot, és lépj sorban: **10% → 25% → 50% → 100%**. Minden lépés között
+   nézd meg a Play Console **Android vitals** részét (összeomlási arány, ANR) és az értékeléseket néhány napig. Ha összeomlás-hullám van,
+   a **Kiadás leállítása** gombbal megáll, a javított verzió új versionCode-dal megy tovább.
+4. Az első ellenőrzés általában néhány nap; a bevezetés a jóváhagyás után indul.
 
 ## Később: frissítés
 

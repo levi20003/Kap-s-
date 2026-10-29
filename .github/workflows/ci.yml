@@ -63,7 +63,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "targetSdkVersion:'36'"
       - name: Test app for the phone (installs next to the real app)
         run: |
-          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts)"
+          APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh $((1000 + GITHUB_RUN_NUMBER)) "$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts)-${GITHUB_SHA::7}"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|application-label):"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app.teszt'"
           mv out/Fogasnaplo.apk out/Fogasnaplo-TESZT.apk

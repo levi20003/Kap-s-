@@ -680,6 +680,8 @@ button{transition:transform .15s}
       <div class="sechead"><h2><span class="ic" data-ic="info"></span>Az appról</h2></div>
       <div class="panel">
         <p class="hint">Verzió: <b id="verLine">–</b></p>
+        <div class="backup"><button class="btn-ghost" id="feedbackBtn" type="button">Visszajelzés küldése</button></div>
+        <p class="hint">A levélben automatikusan szerepel az app verziója, a képernyőméret és a telefon típusa. A naplód, a helyed és a fotóid nincsenek benne.</p>
         <details class="more"><summary>Honnan jönnek a tilalmi idők és korlátok?</summary>
           <p class="hint">Az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
         </details>
@@ -1196,9 +1198,31 @@ button{transition:transform .15s}
     const chips=$("chips");chips.replaceChildren();
     COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
     renderNotify();renderAutoBk();
-    let v="böngésző";try{if(ANDROID&&ANDROID.appVersion)v=ANDROID.appVersion()}catch(e){}
-    $("verLine").textContent=v;
+    $("verLine").textContent=appVersionText();
   }
+
+  /* ---------- feedback: an email with the diagnostics that make a bug report useful ---------- */
+  const FEEDBACK_EMAIL=""; // where the feedback goes; empty = the person picks the recipient in their mail app
+  function appVersionText(){let v="böngésző";try{if(ANDROID&&ANDROID.appVersion)v=ANDROID.appVersion()}catch(e){}return v}
+  // only technical facts: no catches, places, photos or coordinates
+  function feedbackInfo(){
+    const sc=window.screen||{},nav=navigator;
+    let test="";try{test=ANDROID&&ANDROID.isTestBuild&&ANDROID.isTestBuild()?" (tesztverzió)":""}catch(e){}
+    return["Verzió: "+appVersionText()+test,
+      "Képernyő: "+sc.width+"×"+sc.height+" @"+(window.devicePixelRatio||1)+"x, ablak "+innerWidth+"×"+innerHeight,
+      "Telefon: "+nav.userAgent,
+      "Téma: "+document.documentElement.dataset.theme+(themePref()==="auto"?" (automatikus)":" (kézi)"),
+      "Nyelv: "+nav.language+", hálózat: "+(nav.onLine?"online":"offline")+", natív híd: "+(ANDROID?"igen":"nem"),
+      "Adatok: "+state.catches.length+" fogás, "+state.species.length+" halfaj",
+      "Időpont: "+new Date().toISOString()].join("\n");
+  }
+  function sendFeedback(){
+    const subject="Kapás visszajelzés – "+appVersionText();
+    const body="Ide írd a visszajelzésed (mi történt, mit vártál helyette):\n\n\n\n--- Diagnosztika (kérlek, ne töröld) ---\n"+feedbackInfo();
+    if(ANDROID&&ANDROID.sendFeedback){try{ANDROID.sendFeedback(FEEDBACK_EMAIL,subject,body);return}catch(e){}}
+    window.location.href="mailto:"+FEEDBACK_EMAIL+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+  }
+  $("feedbackBtn").onclick=sendFeedback;
 
   /* ---------- big map ---------- */
   let bigMap=null,bigLayer=null;

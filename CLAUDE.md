@@ -20,7 +20,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   `jarsigner`). Kell hozzá `bundletool.jar` (alapból a projekt gyökerében, vagy `BUNDLETOOL=…`). A CI minden pushnál megépíti és ellenőrzi (universal APK-vá alakítja).
 - **Kiadás**: a „Kiadás (Play Áruház)” workflow (`.github/workflows/kiadas.yml`, kézzel indítva, versionCode/versionName bemenettel) a valódi kulccsal
   (secrets: `FOGASNAPLO_KEYSTORE_B64`, `FOGASNAPLO_KEYSTORE_PASS`) aláírt AAB-t és APK-t ad artifactként. Lépések, Play Console-válaszok, képek:
-  `store/KIADAS.md`, `store/play-aruhaz.md`, `store/kepek/`. Adatvédelmi oldal: `docs/adatvedelem.html` (GitHub Pages).
+  `store/KIADAS.md`, `store/play-aruhaz.md`, `store/kepek/`. Adatvédelmi oldal: `docs/adatvedelem.html` (GitHub Pages, `docs/` mappa, `.nojekyll`).
+  Telefonos tesztlista a kiadás előtt: `store/TELEFONOS-TESZT.md`.
 - Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
 - A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,
@@ -67,6 +68,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   `checkGame` (a `sync` végén) XP-növekedéskor egyszer jelzi a szintlépést és az új jelvényt (`toast`, 0,9 mp késéssel, visszavonás-sávot nem ír felül);
   a már bejelentett állás a `fogasnaplo.kihivasok` kulcsban, első induláskor csendben indul. Színek: olíva/homok (`tailwind.config.js`).
   A Tailwind gradiens-osztályai preflight/base nélkül nem működnek: gradienshez sima CSS kell `theme()`-mel.
+- **Visszajelzés** (Beállítások → Az appról, `#feedbackBtn`): `sendFeedback` előre kitöltött levelet nyit (`ANDROID.sendFeedback` → `ACTION_SENDTO`; levelező nélkül
+  vágólapra másol). A levélben csak technikai adat van (`feedbackInfo`: verzió, képernyő, UA, téma, nyelv, fogás/halfaj darabszám), a napló, a hely és a fotók nincsenek;
+  ezt teszt védi. Címzett: `FEEDBACK_EMAIL` az `index.html`-ben (üresen a felhasználó írja be); a kiadási workflow megáll, ha üres vagy ha az adatvédelmi oldalon
+  helyőrző e-mail maradt. A tesztapp versionName-je a CI-ban `1.8-<commit>`, így a levélben a build-azonosító is ott van.
 - Statisztika teteje: **év összefoglaló** (`renderYearCard`, `yearSummary`): fogásszám, az év hala, legtöbb faj, legjobb hónap, horgásznapok;
   „Évösszefoglaló megosztása” → `yearCardImage` 1080×1920-as sztori-kép (`shareDataUrl`, ugyanaz az út, mint a fogáskártyánál).
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).

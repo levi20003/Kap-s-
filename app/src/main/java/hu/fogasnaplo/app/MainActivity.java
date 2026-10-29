@@ -1046,6 +1046,24 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** Opens the mail app with a prepared message; without a mail app the text goes to the clipboard. */
+        @JavascriptInterface
+        public void sendFeedback(String to, String subject, String body) {
+            runOnUiThread(() -> {
+                String addr = to == null ? "" : to.trim();
+                Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:" + addr));
+                i.putExtra(Intent.EXTRA_SUBJECT, subject);
+                i.putExtra(Intent.EXTRA_TEXT, body);
+                if (!addr.isEmpty()) i.putExtra(Intent.EXTRA_EMAIL, new String[]{addr});
+                if (i.resolveActivity(getPackageManager()) != null) {
+                    try { startActivity(Intent.createChooser(i, "Visszajelzés küldése")); return; } catch (Exception ignored) {}
+                }
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Kapás visszajelzés", body));
+                Toast.makeText(MainActivity.this, "Nincs levelező alkalmazás: a diagnosztikát a vágólapra másoltam.", Toast.LENGTH_LONG).show();
+            });
+        }
+
         /** True when the phone is in dark mode (the page's "automatic" theme follows it). */
         @JavascriptInterface
         public boolean isNight() {

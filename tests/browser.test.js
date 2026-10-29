@@ -457,6 +457,29 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(/\+\d+ XP/.test(t) && t.includes('Új jelvény: Harcsa') && t.includes('Új jelvény: Spintail'), 'kihívások: új fogás után XP és új jelvények értesítése (' + t + ')');
     await ctx.close();
   }
+  // feedback email with device diagnostics
+  {
+    const ctx = await b.newContext({ viewport: { width: 412, height: 915 }, userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) TestAgent/1.0', deviceScaleFactor: 2.5 });
+    const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+        catches: [{ id: 'f1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear(), t: true, note: 'TITOKHELY-123', place: { name: 'Titkos-holtág', lat: 46.123456, lng: 20.654321 } }] }));
+      window.__fb = null;
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {}, appVersion() { return '1.8-abc1234 (1042)'; }, isTestBuild() { return true; },
+        sendFeedback(to, subject, body) { window.__fb = { to, subject, body }; } };
+    });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(200);
+    ok(await q.locator('#feedbackBtn').isVisible(), 'visszajelzés: a gomb látszik a Beállításokban');
+    await q.locator('#feedbackBtn').click(); await q.waitForTimeout(150);
+    const fb = await q.evaluate(() => window.__fb);
+    ok(fb && fb.subject.includes('1.8-abc1234 (1042)'), 'visszajelzés: a tárgyban az app verziója és a build-azonosító');
+    ok(fb && /Verzió: 1\.8-abc1234 \(1042\) \(tesztverzió\)/.test(fb.body) && fb.body.includes('Képernyő: ') && fb.body.includes('ablak 412×915') && fb.body.includes('TestAgent/1.0') && fb.body.includes('Telefon: '),
+      'visszajelzés: verzió, képernyőméret, felbontás és a telefon azonosítója a levélben');
+    ok(fb && fb.body.includes('1 fogás, 1 halfaj') && !fb.body.includes('TITOKHELY') && !fb.body.includes('Titkos') && !fb.body.includes('46.123'), 'visszajelzés: csak darabszám megy ki, a napló, a hely és a megjegyzés nem');
+    await ctx.close();
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
