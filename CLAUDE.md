@@ -55,6 +55,15 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   „Részletek” alatt 7 + légnyomás-görbe, horgászablakok, indoklás és magyarázat a pontozásról / hPa-ról). Kompakt/nyitott: `fogasnaplo.todayOpen`.
   A pontozás (`scoreToday`) változásakor a felületi magyarázatot (`explainEl`) is igazítsd.
   Üres naplónál a Kezdőlap a gyakori halfajokat kínálja egy koppintásra.
+- **Csalitár és csaliajánló.** A csalik a naplóban: `data.lures = [{id, name, type, color?, size?, note?}]` (opcionális mező, régi mentésekben nincs;
+  `lureBox()` olvas, `store.addLure/removeLure/restoreLure` ír). Típusok `LURE_TYPES`, színek `LURE_COLORS`. A mentés (JSON és ZIP) is viszi,
+  a visszaállítás név vagy id szerint fésüli össze (`planImport` → `newL`). Beállítások → „Csalitáram” (`#lureBoxSec`, `renderLureBox`);
+  a szerkesztő csali-gombjai (`knownLures`) a csalitárral kezdődnek.
+  Kezdőlap → „Mivel horgássz?” (`#planSec`, `renderPlan`, az időjárás alatt): hal, nap (7 nap), napszak (hajnal/nappal/alkony/éjszaka) választható,
+  a választás a `fogasnaplo.terv` kulcsban. `rankLures` halanként top 3-at ad a csalitárból: típus–hal illeszkedés (`LURE_FIT`), napszak (`PART_FIT`),
+  évszak (`COLD_FIT` nov–márc., `WARM_FIT` jún–szept.), a nap előrejelzéséből fény és víz (`planWx` → szín), méret, és a saját fogások
+  (pontosan azzal a csalival +3/fogás, max +6; azonos típussal kevesebb). Azonos típusból csak ha nincs más (−3). Okok és vezetési tipp (`lureTip`),
+  hiányzó csalitípus javaslata (`MISSING`, éjszakára sötét szín), tilalmi időben lévő halra nem ajánl. Éjszakánál figyelmeztet a helyi szabályra.
 - **Gyors rögzítés** (`#fab`, lebegő gomb a fülsáv felett): a `#quickWrap` lapon csali (`QUICK_LURES`, egy érintés kiválaszt/visszavon) és hal
   (`QUICK_SPECIES`) gombok. Halra koppintva `quickPick` → `quickCatch(sp, lure)` mentés, és a részletek szerkesztő azonnal nyílik. Ha a halfaj még nincs
   a listán, `store.addSpecies` felveszi. A `__fnBack` is bezárja.

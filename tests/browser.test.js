@@ -480,6 +480,56 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(fb && fb.body.includes('1 fogás, 1 halfaj') && !fb.body.includes('TITOKHELY') && !fb.body.includes('Titkos') && !fb.body.includes('46.123'), 'visszajelzés: csak darabszám megy ki, a napló, a hely és a megjegyzés nem');
     await ctx.close();
   }
+  // lure box and the day's lure plan
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const lures = [{ id: 'l1', name: 'Popper pikkely', type: 'popper', color: 'natur', size: 8 }, { id: 'l2', name: 'VIB ezüst', type: 'vib', color: 'ezust', size: 5 },
+      { id: 'l3', name: 'Spintail kék', type: 'spintail', color: 'ezust', size: 5 }, { id: 'l4', name: 'Minnow 11', type: 'minnow', color: 'natur', size: 11 },
+      { id: 'l5', name: 'Körforgó 3', type: 'korforgo', color: 'fluo', size: 6 }];
+    const Y = new Date().getFullYear();
+    await q.addInitScript(({ lures, Y }) => {
+      if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }],
+        catches: [{ id: 'k1', sp: 's2', at: new Date(Y, 0, 5, 18).toISOString(), y: Y, t: true, lure: 'Spintail kék' }, { id: 'k2', sp: 's2', at: new Date(Y, 0, 9, 18).toISOString(), y: Y, t: true, lure: 'Spintail kék' }], lures }));
+      localStorage.setItem('fogasnaplo.terv', JSON.stringify({ sp: ['s1', 's2'], day: 0, parts: ['alkony', 'ejjel'] }));
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
+    }, { lures, Y });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    ok(await q.locator('#plan .plan-res').count() === 2 && await q.locator('#plan .plan-res').first().innerText().then(t => t.includes('Balin')), 'csaliajánló: a kiválasztott két halra külön lista');
+    const sullo = q.locator('#plan .plan-res', { hasText: 'Süllő' });
+    const items = await sullo.locator('.plan-item b').allInnerTexts();
+    ok(items.length === 3 && !items.includes('Popper pikkely'), 'csaliajánló: süllőre 3 csali, popper nincs köztük (' + items.join(', ') + ')');
+    ok(items[0] === 'Spintail kék' && (await sullo.locator('.plan-item').first().innerText()).includes('A naplód szerint ezzel már 2 süllő jött'), 'csaliajánló: amivel már fogtál, az kerül előre, és ezt meg is írja');
+    ok((await sullo.locator('.plan-miss').innerText()).includes('Gumihal') && (await sullo.locator('.plan-miss').innerText()).includes('sötét'), 'csaliajánló: szól, hogy süllőre gumihal és éjszakára sötét csali hiányzik a dobozból');
+    ok((await q.locator('#plan').innerText()).includes('helyi horgászrend'), 'csaliajánló: éjszakánál figyelmeztet a helyi szabályra');
+    await q.locator('#plan .plan-row', { hasText: 'Napszak' }).locator('.pill', { hasText: 'Éjszaka' }).click(); await q.waitForTimeout(100);
+    ok(await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.terv')).parts.join()) === 'alkony', 'csaliajánló: a napszak-választás megmarad');
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(150);
+    ok((await q.locator('#lureBoxTitle').innerText()).includes('(5)'), 'csalitár: a Beállításokban a csalik listája');
+    await q.locator('#lureName').fill('Gumihal 10 cm'); await q.locator('#lureType').selectOption('gumi'); await q.locator('#lureColor').selectOption('fluo'); await q.locator('#lureSize').fill('10');
+    await q.locator('#lureForm button').click(); await q.waitForTimeout(100);
+    let st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(st.lures.length === 6 && st.lures[5].type === 'gumi' && st.lures[5].size === 10 && st.catches.length === 2, 'csalitár: új csali felvéve, a napló többi része érintetlen');
+    await q.locator('#lureBoxList .myrow', { hasText: 'Popper pikkely' }).locator('.del').click(); await q.waitForTimeout(100);
+    ok((await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).lures.length)) === 5, 'csalitár: törlés');
+    await q.locator('#toast button').click(); await q.waitForTimeout(100);
+    ok((await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).lures.map(l => l.name).join())) .startsWith('Popper pikkely'), 'csalitár: a törlés visszavonható, a helyére kerül');
+    await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(150);
+    ok(!(await q.locator('#plan .plan-res', { hasText: 'Süllő' }).innerText()).includes('Gumihal 8–10'), 'csaliajánló: gumihal után már nem jelzi hiányként');
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
+    ok(await q.locator('#sheet .chip', { hasText: 'Gumihal 10 cm' }).count() === 1, 'csalitár: a szerkesztő csali-gombjai között ott vannak a saját csalik');
+    await q.locator('#sheet .sheet-actions .btn-ghost').click(); await q.waitForTimeout(100); await q.evaluate(() => window.__fnBack());
+    // a backup file with a lure box merges into it
+    const f = path.join(os.tmpdir(), 'kapas-csalitar-teszt.json');
+    fs.writeFileSync(f, JSON.stringify({ app: 'fogasnaplo', version: 2, species: [], catches: [], lures: [{ id: 'x1', name: 'Stickbait 9', type: 'stick', color: 'ezust' }, { id: 'zz', name: 'VIB ezüst', type: 'vib' }] }));
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#importFile').setInputFiles(f); await q.waitForTimeout(300);
+    ok((await q.locator('#importAsk').innerText()).includes('1 új csali'), 'mentésből: a csalitár is betölthető (azonos nevűt nem duplikál)');
+    await q.locator('#importAsk .btn-main').click(); await q.waitForTimeout(100);
+    st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(st.lures.length === 7 && st.lures.some(l => l.name === 'Stickbait 9'), 'mentésből: a csali bekerült');
+    await ctx.close();
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

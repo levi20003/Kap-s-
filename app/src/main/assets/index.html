@@ -559,6 +559,11 @@ button{transition:transform .15s}
       <div id="today"></div>
     </section>
 
+    <section id="planSec">
+      <div class="sechead"><h2><span class="ic" data-ic="target"></span>Mivel horgássz?</h2></div>
+      <div id="plan"></div>
+    </section>
+
     <section>
       <div class="sechead">
         <h2><span class="ic" data-ic="fish"></span>Halfajok</h2>
@@ -649,6 +654,21 @@ button{transition:transform .15s}
         </form>
         <div class="chips" id="chips"></div>
         <p class="hint err" id="addErr" hidden></p>
+      </div>
+    </section>
+
+    <section id="lureBoxSec">
+      <div class="sechead"><h2><span class="ic" data-ic="bolt"></span><span id="lureBoxTitle">Csalitáram</span></h2></div>
+      <div class="panel">
+        <p class="hint">A csalijaid alapján állítja össze a Kezdőlap „Mivel horgássz?” ajánlását, és a fogásoknál is ezek közül választhatsz.</p>
+        <div class="mylist" id="lureBoxList"></div>
+        <form class="lureform" id="lureForm" autocomplete="off">
+          <input id="lureName" maxlength="50" placeholder="Csali neve, pl. Spintail kék-ezüst" aria-label="Csali neve">
+          <select id="lureType" aria-label="Csali típusa"></select>
+          <select id="lureColor" aria-label="Csali színe"></select>
+          <input id="lureSize" type="number" inputmode="decimal" min="1" max="40" step="0.5" placeholder="cm" aria-label="Méret (cm)">
+          <button type="submit" class="btn-main">Hozzáad</button>
+        </form>
       </div>
     </section>
 
@@ -845,7 +865,10 @@ button{transition:transform .15s}
     updateCatch(id,patch){data.catches=data.catches.map(c=>c.id===id?{...c,...patch}:c);save()},
     replaceCatch(id,full){data.catches=data.catches.map(c=>c.id===id?{id,...full}:c);save()},
     deleteCatch(id,keepPhoto){const c=data.catches.find(c=>c.id===id);if(c&&!keepPhoto)dropPhoto(c);data.catches=data.catches.filter(c=>c.id!==id);save();return c},
-    restoreCatch(c){if(!data.catches.some(x=>x.id===c.id)){data.catches.push(c);save()}}
+    restoreCatch(c){if(!data.catches.some(x=>x.id===c.id)){data.catches.push(c);save()}},
+    addLure(l){if(!Array.isArray(data.lures))data.lures=[];data.lures.push({id:rid(),...l});save()},
+    removeLure(id){const i=lureBox().findIndex(l=>l.id===id);if(i<0)return null;const [l]=data.lures.splice(i,1);save();return{l,i}},
+    restoreLure(x){if(!Array.isArray(data.lures))data.lures=[];if(!data.lures.some(l=>l.id===x.l.id)){data.lures.splice(Math.min(x.i,data.lures.length),0,x.l);save()}}
   };
   // photos and videos of a catch: c.media = [{src,thumb,video?,dur?}]; older catches only have one c.photo
   const mediaOf=c=>Array.isArray(c.media)?c.media:c.photo&&(c.photo.src||c.photo.thumb)?[{src:c.photo.src,thumb:c.photo.thumb}]:[];
@@ -887,7 +910,7 @@ button{transition:transform .15s}
   function knownLures(){
     const cnt=new Map();state.catches.forEach(c=>{if(c.lure){const k=c.lure.trim();cnt.set(k,(cnt.get(k)||0)+1)}});
     const used=[...cnt.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
-    const out=[...used];LURES.forEach(l=>{if(!out.some(u=>norm(u)===norm(l)))out.push(l)});return out.slice(0,12);
+    const out=[];lureBox().map(l=>l.name).concat(used,LURES).forEach(l=>{if(!out.some(u=>norm(u)===norm(l)))out.push(l)});return out.slice(0,lureBox().length?24:12);
   }
 
   /* ---------- icons ---------- */
@@ -988,6 +1011,7 @@ button{transition:transform .15s}
   function renderHome(st){
     const y=state.year;renderGreet();
     $("todaySec").hidden=y!==NOW_Y;if(y===NOW_Y)renderToday();
+    $("planSec").hidden=y!==NOW_Y;if(y===NOW_Y)renderPlan();
     $("regionSel").value=state.region;
     const total=state.species.reduce((a,s)=>a+st[s.id].n,0);
     countTo($("totalN"),total);
@@ -1197,7 +1221,7 @@ button{transition:transform .15s}
     const have=new Set(state.species.map(s=>norm(s.name)));
     const chips=$("chips");chips.replaceChildren();
     COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
-    renderNotify();renderAutoBk();
+    renderNotify();renderAutoBk();renderLureBox();
     $("verLine").textContent=appVersionText();
   }
 
@@ -1598,6 +1622,170 @@ button{transition:transform .15s}
     let url;try{url=await yearCardImage(S)}catch(e){toast("A képet nem sikerült elkészíteni.");return}
     shareDataUrl(url,"Az évem a vízparton ("+S.y+"): "+S.total+" hal"+(S.rec?", az év hala: "+recText(S.rec):"")+". #Kapás","kapas-"+S.y+".jpg");
   }
+
+  /* ---------- lure box (Csalitáram) and the day's lure plan ("Mivel horgássz?") ----------
+     The plan ranks the person's own lures for each chosen fish: how well the lure type suits that fish, the part of the day,
+     the season (water temperature), the forecast of that day (light, clouds, wind, rain -> colour), and what they already caught with it. */
+  const LURE_TYPES=[["korforgo","Körforgó"],["spintail","Spintail"],["vib","Fém VIB / cicada"],["minnow","Minnow wobbler"],["crank","Mélyen futó wobbler"],
+    ["lipless","Lipless (rattlin’)"],["popper","Popper"],["stick","Stickbait"],["tamolygo","Támolygó"],["gumi","Gumihal / jig"],["twister","Twister"]];
+  const LURE_COLORS=[["ezust","Ezüst, holo"],["natur","Natúr, élethű"],["arany","Arany, narancs"],["fluo","Élénk (fluo, firetiger)"],["piros","Piros fej, fehér"],["sotet","Sötét, fekete"]];
+  const typeName=k=>(LURE_TYPES.find(t=>t[0]===k)||[k,k])[1],colorName=k=>(LURE_COLORS.find(t=>t[0]===k)||[k,k])[1];
+  const lureBox=()=>Array.isArray(data.lures)?data.lures:[];
+  const PARTS=[["hajnal","Hajnal"],["nappal","Nappal"],["alkony","Alkony"],["ejjel","Éjszaka"]];
+  // how well a lure type suits a fish (0–10), river predators of the Tisza
+  const LURE_FIT={
+    balin:{spintail:9,stick:8,tamolygo:8,minnow:7,korforgo:7,popper:6,vib:6,lipless:6,crank:3,gumi:3,twister:3},
+    fogassüllő:{gumi:10,vib:8,twister:7,crank:7,minnow:6,lipless:6,spintail:5,korforgo:3,tamolygo:3,stick:1,popper:0},
+    sügér:{korforgo:9,gumi:7,twister:7,minnow:6,spintail:6,vib:5,crank:5,lipless:5,tamolygo:5,popper:3,stick:2},
+    csuka:{crank:8,minnow:8,tamolygo:8,gumi:8,korforgo:7,lipless:7,spintail:5,vib:5,stick:5,twister:5,popper:4},
+    harcsa:{gumi:8,crank:7,lipless:6,vib:6,spintail:4,twister:4,minnow:3,korforgo:3,tamolygo:3,popper:2,stick:1}};
+  const PART_FIT={popper:{hajnal:2,nappal:-2,alkony:3,ejjel:-1},stick:{hajnal:2,nappal:-1,alkony:3,ejjel:-1},minnow:{hajnal:1,nappal:0,alkony:2,ejjel:2},
+    crank:{hajnal:0,nappal:1,alkony:0,ejjel:1},lipless:{hajnal:0,nappal:0,alkony:1,ejjel:2},vib:{hajnal:0,nappal:1,alkony:0,ejjel:1},
+    gumi:{hajnal:0,nappal:1,alkony:1,ejjel:1},twister:{hajnal:0,nappal:1,alkony:0,ejjel:0},spintail:{hajnal:1,nappal:2,alkony:1,ejjel:-1},
+    korforgo:{hajnal:0,nappal:1,alkony:0,ejjel:-2},tamolygo:{hajnal:1,nappal:1,alkony:0,ejjel:-2}};
+  const PART_WHY={popper:"a felszíni rablások ideje",stick:"a felszíni rablások ideje",minnow:"gyenge fényben a lassan vezetett minnow a partél mentén hoz",
+    lipless:"a zörgése sötétben is odacsalja a halat",spintail:"nappal messzire dobva gyorsan vezethető",vib:"a fenék közelében, függőlegesen is jól dolgozik",
+    crank:"a mélyebb törésvonal mentén tartja a mélységet",gumi:"a fenéken ugráltatva a legbiztosabb",korforgo:"nappal, áramló vízben villog",tamolygo:"messzire dobható, nappal villog"};
+  const COLD_FIT={vib:2,gumi:2,crank:1,lipless:1,spintail:1,twister:1,korforgo:-1,minnow:0,tamolygo:0,popper:-4,stick:-3};
+  const WARM_FIT={popper:2,stick:2,spintail:1,minnow:1,korforgo:1};
+  // a fish the box has nothing really good for: what to get
+  const MISSING={balin:["stick","Stickbait vagy kis felszíni csali (7–9 cm): alkonyatkor a felszíni rablásokhoz."],
+    fogassüllő:["gumi","Gumihal 8–10 cm, 10–14 g-os jigfejjel: süllőre, főleg sötétedés után és hideg vízben, ez a legbiztosabb, és a dobozodból hiányzik."],
+    sügér:["twister","Kis twister vagy gumihal (5–7 cm) könnyű jigfejen: a sügér a fenék közelében, lassan vezetve kapja."],
+    csuka:["gumi","Nagyobb gumihal (12–15 cm) vagy nagy támolygó: a csuka a nagyobb falatot szereti."],
+    harcsa:["gumi","Nagy gumihal (15–20 cm) erős jigfejjel: a harcsa a mélyben, lassú vezetésre jön."]};
+  const GENERIC_LURE={spintail:"spintail",wobbler:"minnow",popper:"popper",stickbait:"stick","körforgó":"korforgo",gumihal:"gumi",jig:"gumi",twister:"twister","támolygó":"tamolygo",villantó:"tamolygo","salmo thrill":"minnow"};
+  const PLAN_KEY="fogasnaplo.terv";
+  function planPrefs(){
+    let p=null;try{p=JSON.parse(localStorage.getItem(PLAN_KEY)||"null")}catch(e){}
+    p=p||{};const ids=new Set(state.species.map(s=>s.id));
+    if(!Array.isArray(p.sp))p.sp=state.species.map(s=>({s,n:state.catches.filter(c=>c.sp===s.id).length})).sort((a,b)=>b.n-a.n).slice(0,2).map(x=>x.s.id);
+    p.sp=p.sp.filter(id=>ids.has(id));if(!(p.day>=0&&p.day<=6))p.day=0;
+    if(!Array.isArray(p.parts)||!p.parts.length)p.parts=[partNow()];
+    return p;
+  }
+  function setPlan(p){try{localStorage.setItem(PLAN_KEY,JSON.stringify(p))}catch(e){}renderPlan()}
+  function partNow(){
+    const now=new Date(),co=homeLoc()||wxPlace(),st=sunTimes(now,co.lat,co.lng);if(!st)return"nappal";
+    const t=now.getTime(),H=60*6e4;
+    if(Math.abs(t-st.rise.getTime())<=H)return"hajnal";if(Math.abs(t-st.set.getTime())<=H)return"alkony";
+    return t>st.rise.getTime()&&t<st.set.getTime()?"nappal":"ejjel";
+  }
+  // light and water from the forecast of the chosen day: clouds in those hours, wind, rain
+  function planWx(date,parts){
+    const T=today.data;if(!T||!T.h||!T.d)return null;const H=T.h,D=T.d,day=ymd(date),dk=D.time.indexOf(day);if(dk<0)return null;
+    const rise=D.sunrise?parseLocal(D.sunrise[dk]).getHours():6,set=D.sunset?parseLocal(D.sunset[dk]).getHours():18;
+    const hrs=[];parts.forEach(p=>{const r=p==="hajnal"?[rise]:p==="alkony"?[set-1,set]:p==="nappal"?[10,11,12,13,14,15]:[Math.min(23,set+2),Math.min(23,set+3),23];hrs.push(...r)});
+    const cc=hrs.map(h=>H.cloud_cover[H.time.indexOf(day+"T"+pad(h)+":00")]).filter(v=>v!=null);
+    return{cloud:cc.length?cc.reduce((a,b)=>a+b,0)/cc.length:null,wind:D.wind_speed_10m_max?D.wind_speed_10m_max[dk]:null,rain:D.precipitation_sum?D.precipitation_sum[dk]||0:0,temp:D.temperature_2m_max?D.temperature_2m_max[dk]:null};
+  }
+  const sameLure=(a,b)=>norm(a)===norm(b);
+  function rankLures(sp,date,parts,wx){
+    const key=canon(sp.name),fit=LURE_FIT[key],m=date.getMonth(),cold=m>=10||m<=2,warm=m>=5&&m<=8;
+    const avgFit=t=>{const v=Object.values(LURE_FIT).map(f=>f[t]||0);return v.reduce((a,b)=>a+b,0)/v.length};
+    const low=parts.some(p=>p!=="nappal"),dark=parts.includes("ejjel"),day=parts.includes("nappal");
+    const cloudy=wx&&wx.cloud!=null&&wx.cloud>=60,sunny=wx&&wx.cloud!=null&&wx.cloud<40&&day,murky=wx&&((wx.rain||0)>=2||(wx.wind||0)>=25);
+    const mine=state.catches.filter(c=>c.sp===sp.id&&c.lure);
+    const scored=lureBox().map(l=>{
+      const why=[];let sc=fit?(fit[l.type]!=null?fit[l.type]:3):avgFit(l.type);
+      if(sc>=8)why.push([3,sp.name+" egyik legjobb csalitípusa"]);
+      const pf=parts.reduce((a,p)=>a+((PART_FIT[l.type]||{})[p]||0),0)/parts.length;sc+=pf;
+      if(pf>=1.5)why.push([pf,(parts.length===1?PARTS.find(x=>x[0]===parts[0])[1]:"Ilyenkor")+" "+PART_WHY[l.type]]);
+      const se=cold?(COLD_FIT[l.type]||0):warm?(WARM_FIT[l.type]||0):0;sc+=se;
+      if(cold&&se>=1)why.push([se,"hideg vízben, lassan, a fenék közelében vezetve dolgozik"]);
+      if(warm&&se>=2)why.push([se,"meleg vízben a felszínen rabló halra"]);
+      let cs=0,cw=null;const c=l.color;
+      if(c){
+        if(dark&&c==="sotet"){cs+=1.5;cw="sötétben a sötét csali sziluettje látszik a legjobban"}
+        if(murky&&(c==="fluo"||c==="piros")){cs+=1.5;cw="zavaros, felkavart vízben az élénk szín látszik"}
+        if(sunny&&(c==="ezust"||c==="natur")){cs+=1.5;cw=cw||"napos, tiszta időben a natúr, ezüstös villanás a legjobb"}
+        if(low&&(c==="fluo"||c==="piros")){cs+=1;cw=cw||"gyenge fényben az élénk szín feltűnőbb"}
+        if(cloudy&&!dark&&(c==="arany"||c==="fluo")){cs+=1;cw=cw||"borult égnél a meleg, élénk szín jobban látszik"}
+        if(low&&!dark&&c==="ezust"){cs+=0.5;cw=cw||"alkonyatkor az ezüst villanás még messzire látszik"}
+        if(murky&&c==="natur")cs-=0.5;
+      }
+      sc+=cs;if(cw&&cs>=1)why.push([cs,cw]);
+      if(l.size){if(key==="sügér"){if(l.size<=6)sc+=1;else if(l.size>=10)sc-=1.5}if((key==="csuka"||key==="harcsa")&&l.size>=10)sc+=1;if(key==="balin"&&l.size>=12)sc-=0.5}
+      const own=mine.filter(x=>sameLure(x.lure,l.name)).length,gen=mine.filter(x=>GENERIC_LURE[norm(x.lure)]===l.type).length;
+      if(own){sc+=Math.min(6,3*own);why.unshift([5,"a naplód szerint ezzel már "+own+" "+sp.name.toLowerCase()+" jött"])}
+      else if(gen){sc+=Math.min(2,gen);why.push([2,"ilyen típusú csalival már "+gen+" "+sp.name.toLowerCase()+" jött"])}
+      return{l,sc,why:why.sort((a,b)=>b[0]-a[0]).slice(0,2).map(x=>x[1])};
+    }).sort((a,b)=>b.sc-a.sc);
+    // three different kinds of lure where the box allows it
+    const top=[];
+    while(top.length<3&&scored.length){let bi=0,bs=-1e9;scored.forEach((x,i)=>{const v=x.sc-(top.some(t=>t.l.type===x.l.type)?3:0);if(v>bs){bs=v;bi=i}});top.push(scored.splice(bi,1)[0])}
+    let miss=null;const mm=MISSING[key];
+    if(mm&&!lureBox().some(l=>l.type===mm[0]||(mm[0]==="gumi"&&l.type==="twister")||(mm[0]==="twister"&&l.type==="gumi"))){
+      const want=(fit?fit[mm[0]]:5)+parts.reduce((a,p)=>a+((PART_FIT[mm[0]]||{})[p]||0),0)/parts.length+(cold?(COLD_FIT[mm[0]]||0):warm?(WARM_FIT[mm[0]]||0):0);
+      if(!top.length||want>top[0].sc-1)miss=mm[1];
+    }
+    if(dark&&(key==="fogassüllő"||key==="harcsa")&&!lureBox().some(l=>l.color==="sotet"))
+      miss=(miss?miss+" ":"")+"Éjszakára egy sötét (fekete, sötétkék) csali is kellene: sötétben a sziluettje látszik a legjobban, ilyen most nincs a dobozodban.";
+    return{top,miss,cold,warm,dark};
+  }
+  function lureTip(type,key,parts,cold){
+    const dark=parts.includes("ejjel");
+    if(type==="spintail")return key==="balin"&&!cold?"Messzire dobva, gyorsan, a felszín alatt fél méterrel; ha nincs rablás, hagyd lesüllyedni és rántásokkal emeld.":"Fenékre engedve, rövid emelésekkel, a süllyedésnél figyeld a zsinórt.";
+    if(type==="vib")return"Fenékre engedve rövid, éles emelésekkel (20–40 cm); a kapás többnyire süllyedés közben jön.";
+    if(type==="minnow")return dark?"Lassan, egyenletesen, a felszín közelében, a sekély partél mentén.":"Twitchelve: rövid rántások, közte egy-két másodperc megállás.";
+    if(type==="crank")return"Lassan, hogy időnként a fenékhez koccanjon; a törésvonal mentén vezesd.";
+    if(type==="lipless")return"Közepes tempóval, időnként megállítva és lesüllyesztve; a zörgés messziről odacsalja.";
+    if(type==="popper")return"A rablások felé dobva, rövid rántásokkal „pukkantva”, utána egy-két másodperc szünet.";
+    if(type==="stick")return"Ütemes rántásokkal cikázva a felszínen (walk-the-dog), a rablás után ne állj meg.";
+    if(type==="korforgo")return"Egyenletesen, épp csak forogjon a lapát; az áramlás szélén, a kövek mellett.";
+    if(type==="tamolygo")return"Messzire dobva, változó tempóval, néha egy pillanatra leejtve.";
+    return"Jigfejjel a fenéken ugráltatva; a süllyedésnél figyeld a zsinórt, ott jön a kapás.";
+  }
+  function renderPlan(){
+    const box=$("plan");if(!box)return;box.replaceChildren();
+    if(!state.species.length){box.append(el("div","hint","Vegyél fel halfajt, és itt összeállítom, mivel érdemes horgászni."));return}
+    const P=planPrefs(),base=new Date();base.setHours(12,0,0,0);const date=new Date(base);date.setDate(date.getDate()+P.day);
+    const card=el("div","plan-card");
+    const row=(label,items)=>{const g=el("div","plan-row");g.append(el("div","flabel",label));const c=el("div","chips quick-pills");items.forEach(x=>c.append(x));g.append(c);card.append(g)};
+    const pill=(txt,on,fn)=>{const b=el("button","pill"+(on?" on":""),txt);b.type="button";b.setAttribute("aria-pressed",on?"true":"false");b.onclick=fn;return b};
+    row("Hal",state.species.map(s=>pill(s.name,P.sp.includes(s.id),()=>{P.sp=P.sp.includes(s.id)?P.sp.filter(x=>x!==s.id):P.sp.concat(s.id);setPlan(P)})));
+    row("Mikor",Array.from({length:7},(_,i)=>{const d=new Date(base);d.setDate(d.getDate()+i);return pill(i===0?"Ma":i===1?"Holnap":WDAY_S[d.getDay()].replace(".","")+" "+d.getDate()+".",P.day===i,()=>{P.day=i;setPlan(P)})}));
+    row("Napszak",PARTS.map(([k,l])=>pill(l,P.parts.includes(k),()=>{const has=P.parts.includes(k);if(has&&P.parts.length===1)return;P.parts=has?P.parts.filter(x=>x!==k):P.parts.concat(k);setPlan(P)})));
+    box.append(card);
+    if(!lureBox().length){const e=el("div","empty-card");e.append(el("b",null,"Még üres a csalitárad."),el("p","hint","Vedd fel a csalijaidat a Beállításokban (vagy töltsd be egy mentésből), és itt összeállítom halanként a legjobb hármat."));
+      const b=el("button","btn-main","Csalitár megnyitása");b.type="button";b.onclick=()=>{go("more");setTimeout(()=>{const x=$("lureBoxSec");if(x)x.scrollIntoView()},50)};e.append(b);box.append(e);return}
+    const sps=state.species.filter(s=>P.sp.includes(s.id));
+    if(!sps.length){box.append(el("div","hint","Jelölj ki egy vagy több halat."));return}
+    const wx=planWx(date,P.parts),partTxt=PARTS.filter(x=>P.parts.includes(x[0])).map(x=>x[1].toLowerCase()).join(" és ");
+    sps.forEach(sp=>{
+      const res=el("div","plan-res");const h=el("div","plan-head");h.append(el("h3",null,sp.name),el("span","spec",(P.day===0?"ma":P.day===1?"holnap":fmtDM(date))+", "+partTxt));res.append(h);
+      const st=ruleStatus(ruleFor(sp.name),date);
+      if(st&&st.kind==="closed"){res.append(el("p","note closed",sp.name+": "+st.text.toLowerCase()+". Erre a halra most nem ajánlok csalit; ha mégis megakad, vissza kell engedni."));box.append(res);return}
+      if(st&&st.kind==="soon")res.append(el("p","note warn",st.text+"."));
+      const R=rankLures(sp,date,P.parts,wx);
+      if(canon(sp.name)==="balin"&&P.parts.length===1&&P.parts[0]==="ejjel")res.append(el("p","hint","Éjszaka a balin ritkán rabol: a sötétedés előtti utolsó órát érdemes kihasználni."));
+      const ol=el("ol","plan-list");
+      R.top.forEach((x,i)=>{const li=el("li","plan-item");li.append(el("span","rk"+(i===0?" top":""),String(i+1)));const t=el("div","pi");
+        t.append(el("b",null,x.l.name));const pills=el("div","specs");pills.append(el("span","spec",typeName(x.l.type)));if(x.l.color)pills.append(el("span","spec",colorName(x.l.color)));if(x.l.size)pills.append(el("span","spec",String(x.l.size).replace(".",",")+" cm"));t.append(pills);
+        if(x.why.length){const w=x.why.join("; ");t.append(el("div","plan-why",w.charAt(0).toUpperCase()+w.slice(1)+"."))}t.append(el("div","plan-tip",lureTip(x.l.type,canon(sp.name),P.parts,R.cold)));li.append(t);ol.append(li)});
+      res.append(ol);
+      if(R.miss){const m=el("div","plan-miss");m.append(el("b",null,"Ami hiányzik: "),R.miss);res.append(m)}
+      box.append(res);
+    });
+    const notes=[];if(wx&&wx.cloud!=null)notes.push("Az ajánlás a nap előrejelzését is figyelembe veszi ("+Math.round(wx.cloud)+"% felhő"+(wx.rain>=0.1?", "+mm(wx.rain)+" mm eső":"")+(wx.wind!=null?", szél max "+Math.round(wx.wind)+" km/h":"")+").");
+    if(P.parts.includes("ejjel"))notes.push("Éjszaka csak ott horgászhatsz, ahol a helyi horgászrend és az engedélyed megengedi.");
+    if(notes.length)box.append(el("p","hint",notes.join(" ")));
+  }
+  function renderLureBox(){
+    const list=$("lureBoxList");if(!list)return;list.replaceChildren();const L=lureBox();
+    $("lureBoxTitle").textContent="Csalitáram"+(L.length?" ("+L.length+")":"");
+    if(!L.length)list.append(el("div","empty","Még nincs csali felvéve."));
+    L.forEach(l=>{const r=el("div","myrow");const t=el("div","mytxt");t.append(el("b",null,l.name));const ps=el("div","specs");ps.append(el("span","spec",typeName(l.type)));
+      if(l.color)ps.append(el("span","spec",colorName(l.color)));if(l.size)ps.append(el("span","spec",String(l.size).replace(".",",")+" cm"));t.append(ps);
+      const d=el("button","del","Törlés");d.type="button";d.setAttribute("aria-label",l.name+" törlése");
+      d.onclick=()=>{const x=store.removeLure(l.id);if(x)toast(l.name+" törölve",{label:"Visszavonás",fn:()=>store.restoreLure(x)})};r.append(t,d);list.append(r)});
+    const ty=$("lureType");if(!ty.options.length){LURE_TYPES.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;ty.append(o)});ty.value="minnow"}
+    const co=$("lureColor");if(!co.options.length){const o0=el("option",null,"Szín (nem kötelező)");o0.value="";co.append(o0);LURE_COLORS.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;co.append(o)})}
+  }
+  $("lureForm").addEventListener("submit",e=>{e.preventDefault();const name=$("lureName").value.trim().replace(/\s+/g," ");if(!name)return;
+    if(lureBox().some(l=>norm(l.name)===norm(name))){toast("Ez a csali már szerepel a listán.");return}
+    const l={name,type:$("lureType").value};const c=$("lureColor").value;if(c)l.color=c;const z=parseFloat(String($("lureSize").value).replace(",","."));if(z>0)l.size=Math.round(z*10)/10;
+    store.addLure(l);$("lureName").value="";$("lureSize").value="";$("lureColor").value="";toast("Csali felvéve")});
 
   /* ---------- Kap-ás Kihívások: XP, levels, weekly streak, weekly quests, badges ----------
      Everything is worked out from the log itself, so nothing new is stored in it; fogasnaplo.kihivasok only remembers
@@ -2328,7 +2516,7 @@ button{transition:transform .15s}
 
   /* ---------- backup ---------- */
   async function exportJson(){
-    const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,
+    const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,lures:lureBox(),
       catches:data.catches.map(c=>{if(!mediaOf(c).length)return c;
         const emb=m=>{let th=m.thumb;if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
           return{...m,thumb:th,src:m.src&&m.src.startsWith("data:")?undefined:m.src}};
@@ -2351,12 +2539,19 @@ button{transition:transform .15s}
     const have=new Set(data.catches.map(c=>c.id)),newC=[];
     d.catches.forEach(c=>{if(!c||!c.id||have.has(c.id)||!spMap.has(c.sp)||!c.at||isNaN(new Date(c.at)))return;
       have.add(c.id);newC.push({...c,sp:spMap.get(c.sp),y:c.y||new Date(c.at).getFullYear()})});
-    return{newSp,newC};
+    // lures: by id or by name; the lure box is optional in older backups
+    const lIds=new Set(lureBox().map(l=>l.id)),lNames=new Set(lureBox().map(l=>norm(l.name))),newL=[];
+    (Array.isArray(d.lures)?d.lures:[]).forEach(l=>{if(!l||!l.name||lIds.has(l.id)||lNames.has(norm(l.name)))return;
+      const nl={id:String(l.id||rid()),name:String(l.name).slice(0,50),type:LURE_TYPES.some(t=>t[0]===l.type)?l.type:"minnow"};
+      if(LURE_COLORS.some(c=>c[0]===l.color))nl.color=l.color;if(+l.size>0)nl.size=Math.round(+l.size*10)/10;if(l.note)nl.note=String(l.note).slice(0,120);
+      lIds.add(nl.id);lNames.add(norm(nl.name));newL.push(nl)});
+    return{newSp,newC,newL};
   }
   function applyImport(plan){
     const keepTh=m=>{const th=m&&m.thumb;if(th&&th.startsWith("data:")&&ANDROID&&ANDROID.saveThumb){try{const u=ANDROID.saveThumb(th);if(u)return{...m,thumb:u}}catch(e){}}return m};
     plan.newC.forEach(c=>{if(c.photo)c.photo=keepTh(c.photo);if(Array.isArray(c.media))c.media=c.media.map(keepTh)});
-    data.species.push(...plan.newSp);data.catches.push(...plan.newC);save();
+    data.species.push(...plan.newSp);data.catches.push(...plan.newC);
+    if(plan.newL&&plan.newL.length)data.lures=lureBox().concat(plan.newL);save();
   }
   $("importFile").onchange=async e=>{
     const f=e.target.files[0];e.target.value="";if(!f)return;
@@ -2368,8 +2563,8 @@ button{transition:transform .15s}
   function askImport(d){
     const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     const plan=planImport(d);
-    if(!plan.newC.length&&!plan.newSp.length){$("backupMsg").textContent="Ebben a fájlban nincs új fogás, a naplód már mindent tartalmaz.";return}
-    const what=[plan.newC.length?plan.newC.length+" új fogás":"",plan.newSp.length?plan.newSp.length+" új halfaj":""].filter(Boolean).join(" és ");
+    if(!plan.newC.length&&!plan.newSp.length&&!plan.newL.length){$("backupMsg").textContent="Ebben a fájlban nincs új fogás vagy csali, a naplód már mindent tartalmaz.";return}
+    const what=[plan.newC.length?plan.newC.length+" új fogás":"",plan.newSp.length?plan.newSp.length+" új halfaj":"",plan.newL.length?plan.newL.length+" új csali":""].filter(Boolean).join(", ");
     ask.append(el("span",null,`A fájlból ${what} kerül a naplóba. A meglévő fogásaid nem változnak.`));
     const yes=el("button","btn-main","Betöltés");yes.type="button";
     yes.onclick=()=>{ask.hidden=true;applyImport(plan);$("backupMsg").textContent="Visszatöltve: "+what+".";toast("Visszatöltve")};
@@ -2383,7 +2578,7 @@ button{transition:transform .15s}
   function autoInfo(){try{return JSON.parse(localStorage.getItem(AUTO_KEY)||"null")||{}}catch(e){return{}}}
   function setAutoInfo(o){try{localStorage.setItem(AUTO_KEY,JSON.stringify(o))}catch(e){}}
   // photos travel as files in the zip, so the log keeps its file:// uris
-  const zipJson=()=>JSON.stringify({app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,catches:data.catches});
+  const zipJson=()=>JSON.stringify({app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,catches:data.catches,lures:lureBox()});
   const zipName=()=>"fogasnaplo-"+ymd(new Date())+".zip";
   let zipBusy=false;
   function backupNow(auto){

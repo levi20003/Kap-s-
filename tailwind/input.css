@@ -128,6 +128,35 @@
   .gm-help summary { @apply cursor-pointer py-1 text-sm font-semibold text-olive-400 light:text-olive-700; }
   .gm-help p { @apply mt-2; }
 
+  /* Lure plan ("Mivel horgássz?") and the lure box */
+  .plan-card, .plan-res {
+    @apply flex flex-col gap-3 rounded-2xl border p-4 shadow-sm;
+    @apply border-emerald-900/30 bg-zinc-900/70 light:border-zinc-200 light:bg-white;
+  }
+  #plan { @apply flex flex-col gap-3; }
+  .plan-row { @apply flex flex-col gap-1.5; }
+  .plan-row .pill { @apply px-3 py-1.5 text-sm; }
+  .plan-head { @apply flex flex-wrap items-baseline justify-between gap-2; }
+  .plan-head h3 { font-family: var(--f-display); @apply m-0 text-xl font-semibold text-sand-200 light:text-olive-700; }
+  .plan-list { @apply m-0 flex list-none flex-col gap-3 p-0; }
+  .plan-item { @apply flex items-start gap-3; }
+  .plan-item .rk {
+    @apply mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full text-xs font-bold;
+    @apply bg-zinc-700/40 text-zinc-300 light:bg-zinc-100 light:text-zinc-600;
+  }
+  .plan-item .rk.top { @apply bg-olive-500/25 text-olive-300 light:text-olive-700; }
+  .plan-item .pi { @apply flex min-w-0 flex-1 flex-col gap-1.5; }
+  .plan-item .pi b { @apply font-semibold leading-snug; }
+  .plan-why { @apply text-sm leading-snug text-zinc-300 light:text-zinc-700; }
+  .plan-tip { @apply text-xs leading-snug text-zinc-400 light:text-zinc-500; }
+  .plan-miss {
+    @apply rounded-xl border border-dashed p-3 text-sm leading-snug;
+    @apply border-sand-300/40 text-sand-200 light:border-olive-600/40 light:text-olive-700;
+  }
+  .lureform { @apply mt-2 grid grid-cols-2 gap-2; }
+  .lureform input#lureName { @apply col-span-2; }
+  .lureform select, .lureform input { @apply min-w-0; }
+
   /* Bottom nav: rounded pill behind the active tab */
   .tabind::after {
     @apply rounded-full bg-emerald-500/20;
