@@ -946,6 +946,7 @@ button{transition:transform .15s}
     lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" />',
     leaf:'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" /> <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />',
     award:'<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" /> <circle cx="12" cy="8" r="6" />',
+    camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" />',
     snow:'<path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" />',
   };
   const icoSvg=(n,c)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+(c?' class="'+c+'"':'')+'>'+ICONS[n]+'</svg>';
@@ -1505,7 +1506,13 @@ button{transition:transform .15s}
   }
   function loadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u})}
   function scale(img,max,q){const r=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",q)}
+  let photoFor=null; // {lure:id}: the next picture goes to that lure of the lure box
   window.__fnPhoto=function(p){
+    if(photoFor&&photoFor.lure){const id=photoFor.lure;photoFor=null;
+      if(!p||p.error){toast(p&&p.error?p.error:"A fotó nem sikerült.");return}
+      if(p.video){dropFiles([p]);toast("A csalihoz fotót válassz, ne videót.");return}
+      const l=lureBox().find(x=>x.id===id);if(!l){dropFiles([p]);return}
+      l.photo={src:p.src,thumb:p.thumb};lurePhotoOpen=null;save();toast("Csalifotó mentve");return}
     if(!ed){if(p&&p.src)dropFiles([p]);return}if(!p||p.error){toast(p&&p.error?p.error:"A fotó nem sikerült.");return}
     const list=mediaOf(ed.draft).slice();if(list.length>=MEDIA_MAX){dropFiles([p]);toast("Legfeljebb "+MEDIA_MAX+" fotó vagy videó fér egy fogáshoz.");return}
     const m={src:p.src,thumb:p.thumb};if(p.video){m.video=true;if(p.dur)m.dur=p.dur}
@@ -1760,7 +1767,7 @@ button{transition:transform .15s}
       const R=rankLures(sp,date,P.parts,wx);
       if(canon(sp.name)==="balin"&&P.parts.length===1&&P.parts[0]==="ejjel")res.append(el("p","hint","Éjszaka a balin ritkán rabol: a sötétedés előtti utolsó órát érdemes kihasználni."));
       const ol=el("ol","plan-list");
-      R.top.forEach((x,i)=>{const li=el("li","plan-item");li.append(el("span","rk"+(i===0?" top":""),String(i+1)));const t=el("div","pi");
+      R.top.forEach((x,i)=>{const li=el("li","plan-item");li.append(el("span","rk"+(i===0?" top":""),String(i+1)));if(lureThumb(x.l))li.append(lureImg(x.l,"lthumb plan-img"));const t=el("div","pi");
         t.append(el("b",null,x.l.name));const pills=el("div","specs");pills.append(el("span","spec",typeName(x.l.type)));if(x.l.color)pills.append(el("span","spec",colorName(x.l.color)));if(x.l.size)pills.append(el("span","spec",String(x.l.size).replace(".",",")+" cm"));t.append(pills);
         if(x.why.length){const w=x.why.join("; ");t.append(el("div","plan-why",w.charAt(0).toUpperCase()+w.slice(1)+"."))}t.append(el("div","plan-tip",lureTip(x.l.type,canon(sp.name),P.parts,R.cold)));li.append(t);ol.append(li)});
       res.append(ol);
@@ -1771,14 +1778,28 @@ button{transition:transform .15s}
     if(P.parts.includes("ejjel"))notes.push("Éjszaka csak ott horgászhatsz, ahol a helyi horgászrend és az engedélyed megengedi.");
     if(notes.length)box.append(el("p","hint",notes.join(" ")));
   }
+  const lureThumb=l=>l&&l.photo?l.photo.thumb||l.photo.src||null:null;
+  function lureImg(l,cls){const w=el("span",cls||"lthumb");const u=lureThumb(l);
+    if(u){const im=document.createElement("img");im.alt="";im.src=u;im.onerror=()=>{if(l.photo.src&&im.src!==l.photo.src)im.src=l.photo.src};w.append(im)}
+    else w.innerHTML=icoSvg("camera");return w}
+  let lurePhotoOpen=null;
   function renderLureBox(){
     const list=$("lureBoxList");if(!list)return;list.replaceChildren();const L=lureBox();
     $("lureBoxTitle").textContent="Csalitáram"+(L.length?" ("+L.length+")":"");
     if(!L.length)list.append(el("div","empty","Még nincs csali felvéve."));
-    L.forEach(l=>{const r=el("div","myrow");const t=el("div","mytxt");t.append(el("b",null,l.name));const ps=el("div","specs");ps.append(el("span","spec",typeName(l.type)));
+    L.forEach(l=>{const r=el("div","myrow");
+      const th=el("button","lthumb-btn");th.type="button";th.setAttribute("aria-label",(lureThumb(l)?"Fotó cseréje: ":"Fotó hozzáadása: ")+l.name);th.append(lureImg(l));
+      th.onclick=()=>{lurePhotoOpen=lurePhotoOpen===l.id?null:l.id;renderLureBox()};r.append(th);
+      const t=el("div","mytxt");t.append(el("b",null,l.name));const ps=el("div","specs");ps.append(el("span","spec",typeName(l.type)));
       if(l.color)ps.append(el("span","spec",colorName(l.color)));if(l.size)ps.append(el("span","spec",String(l.size).replace(".",",")+" cm"));t.append(ps);
       const d=el("button","del","Törlés");d.type="button";d.setAttribute("aria-label",l.name+" törlése");
-      d.onclick=()=>{const x=store.removeLure(l.id);if(x)toast(l.name+" törölve",{label:"Visszavonás",fn:()=>store.restoreLure(x)})};r.append(t,d);list.append(r)});
+      d.onclick=()=>{const x=store.removeLure(l.id);if(x)toast(l.name+" törölve",{label:"Visszavonás",fn:()=>store.restoreLure(x)})};r.append(t,d);
+      if(lurePhotoOpen===l.id){const m=el("div","lphoto-menu");
+        const go=(label,src)=>{const b=el("button","btn-ghost",label);b.type="button";b.onclick=()=>{photoFor={lure:l.id};pickPhoto(src)};m.append(b)};
+        go("📷 Fotó","camera");go("🖼 Galéria","gallery");
+        if(l.photo){const x=el("button","no","Kép törlése");x.type="button";x.onclick=()=>{delete l.photo;lurePhotoOpen=null;save()};m.append(x)}
+        r.append(m)}
+      list.append(r)});
     const ty=$("lureType");if(!ty.options.length){LURE_TYPES.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;ty.append(o)});ty.value="minnow"}
     const co=$("lureColor");if(!co.options.length){const o0=el("option",null,"Szín (nem kötelező)");o0.value="";co.append(o0);LURE_COLORS.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;co.append(o)})}
   }
@@ -2516,7 +2537,9 @@ button{transition:transform .15s}
 
   /* ---------- backup ---------- */
   async function exportJson(){
-    const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,lures:lureBox(),
+    const embTh=u=>{if(u&&!u.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{return ANDROID.readThumb(u)||undefined}catch(e){return undefined}}return u};
+    const out={app:"fogasnaplo",version:2,exported:new Date().toISOString(),species:data.species,
+      lures:lureBox().map(l=>l.photo?{...l,photo:{thumb:embTh(l.photo.thumb||l.photo.src)}}:l),
       catches:data.catches.map(c=>{if(!mediaOf(c).length)return c;
         const emb=m=>{let th=m.thumb;if(th&&!th.startsWith("data:")&&ANDROID&&ANDROID.readThumb){try{th=ANDROID.readThumb(th)||undefined}catch(e){th=undefined}}
           return{...m,thumb:th,src:m.src&&m.src.startsWith("data:")?undefined:m.src}};
@@ -2544,6 +2567,9 @@ button{transition:transform .15s}
     (Array.isArray(d.lures)?d.lures:[]).forEach(l=>{if(!l||!l.name||lIds.has(l.id)||lNames.has(norm(l.name)))return;
       const nl={id:String(l.id||rid()),name:String(l.name).slice(0,50),type:LURE_TYPES.some(t=>t[0]===l.type)?l.type:"minnow"};
       if(LURE_COLORS.some(c=>c[0]===l.color))nl.color=l.color;if(+l.size>0)nl.size=Math.round(+l.size*10)/10;if(l.note)nl.note=String(l.note).slice(0,120);
+      if(l.photo&&(typeof l.photo.thumb==="string"||typeof l.photo.src==="string")){const ph={};
+        if(typeof l.photo.thumb==="string"&&/^(data:image\/|file:)/.test(l.photo.thumb))ph.thumb=l.photo.thumb;
+        if(typeof l.photo.src==="string"&&l.photo.src.startsWith("file:"))ph.src=l.photo.src;if(ph.thumb||ph.src)nl.photo=ph}
       lIds.add(nl.id);lNames.add(norm(nl.name));newL.push(nl)});
     return{newSp,newC,newL};
   }
@@ -2551,7 +2577,7 @@ button{transition:transform .15s}
     const keepTh=m=>{const th=m&&m.thumb;if(th&&th.startsWith("data:")&&ANDROID&&ANDROID.saveThumb){try{const u=ANDROID.saveThumb(th);if(u)return{...m,thumb:u}}catch(e){}}return m};
     plan.newC.forEach(c=>{if(c.photo)c.photo=keepTh(c.photo);if(Array.isArray(c.media))c.media=c.media.map(keepTh)});
     data.species.push(...plan.newSp);data.catches.push(...plan.newC);
-    if(plan.newL&&plan.newL.length)data.lures=lureBox().concat(plan.newL);save();
+    if(plan.newL&&plan.newL.length){plan.newL.forEach(l=>{if(l.photo)l.photo=keepTh(l.photo)});data.lures=lureBox().concat(plan.newL)}save();
   }
   $("importFile").onchange=async e=>{
     const f=e.target.files[0];e.target.value="";if(!f)return;
@@ -2611,6 +2637,7 @@ button{transition:transform .15s}
     const seg=u=>u.slice(u.lastIndexOf("/")+1);
     const move=m=>{const p={...m};if(p.src&&p.src.startsWith("file:"))p.src=r.photos+seg(p.src);if(p.thumb&&p.thumb.startsWith("file:"))p.thumb=r.thumbs+seg(p.thumb);return p};
     d.catches.forEach(c=>{if(!c)return;if(c.photo)c.photo=move(c.photo);if(Array.isArray(c.media))c.media=c.media.map(move)});
+    if(Array.isArray(d.lures))d.lures.forEach(l=>{if(l&&l.photo)l.photo=move(l.photo)});
     askImport(d);
   };
   function renderAutoBk(){
@@ -2647,6 +2674,7 @@ button{transition:transform .15s}
   function sweepFiles(){
     if(!ANDROID||!ANDROID.cleanup||!loadedOk||!data.catches.length)return;
     const keep=new Set();data.catches.forEach(c=>fileUris(mediaOf(c).concat(c.photo?[c.photo]:[])).forEach(u=>keep.add(u)));
+    lureBox().forEach(l=>{if(l.photo)fileUris([l.photo]).forEach(u=>keep.add(u))});
     try{ANDROID.cleanup(JSON.stringify([...keep]))}catch(e){}
   }
 

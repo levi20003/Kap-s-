@@ -59,6 +59,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   `lureBox()` olvas, `store.addLure/removeLure/restoreLure` ír). Típusok `LURE_TYPES`, színek `LURE_COLORS`. A mentés (JSON és ZIP) is viszi,
   a visszaállítás név vagy id szerint fésüli össze (`planImport` → `newL`). Beállítások → „Csalitáram” (`#lureBoxSec`, `renderLureBox`);
   a szerkesztő csali-gombjai (`knownLures`) a csalitárral kezdődnek.
+  Csalifotó: `lure.photo = {src, thumb}` fájlként (a Csalitár sorában a képre koppintva fotó/galéria, `photoFor` irányítja a `__fnPhoto`-t a csalihoz);
+  a takarítás (`sweepFiles`) megtartja, a JSON-mentés beágyazza, visszaállításkor `saveThumb` fájlba teszi, a ZIP-visszaállítás áthelyezi.
   Kezdőlap → „Mivel horgássz?” (`#planSec`, `renderPlan`, az időjárás alatt): hal, nap (7 nap), napszak (hajnal/nappal/alkony/éjszaka) választható,
   a választás a `fogasnaplo.terv` kulcsban. `rankLures` halanként top 3-at ad a csalitárból: típus–hal illeszkedés (`LURE_FIT`), napszak (`PART_FIT`),
   évszak (`COLD_FIT` nov–márc., `WARM_FIT` jún–szept.), a nap előrejelzéséből fény és víz (`planWx` → szín), méret, és a saját fogások

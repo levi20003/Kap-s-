@@ -530,6 +530,43 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(st.lures.length === 7 && st.lures.some(l => l.name === 'Stickbait 9'), 'mentésből: a csali bekerült');
     await ctx.close();
   }
+  // lure pictures: taken in the lure box, shown in the plan, kept by the file sweep, saved as files on restore
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    await q.addInitScript(({ PX }) => {
+      if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Süllő' }], catches: [{ id: 'c1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear() }],
+          lures: [{ id: 'v1', name: 'VIB sárga', type: 'vib', color: 'fluo' }] }));
+        localStorage.setItem('fogasnaplo.terv', JSON.stringify({ sp: ['s1'], day: 0, parts: ['ejjel'] })); }
+      window.__lp = { cleanup: null, saved: 0 };
+      window.FogasnaploAndroid = { getLocation() {}, cleanup(j) { window.__lp.cleanup = JSON.parse(j); },
+        saveThumb(d) { window.__lp.saved++; return 'file:///data/thumbs/imp' + window.__lp.saved + '.jpg'; },
+        pickPhoto() { setTimeout(() => window.__fnPhoto({ src: 'file:///data/photos/lure1.jpg', thumb: 'file:///data/thumbs/lure1.jpg' })); } };
+    }, { PX });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
+    await q.locator('#lureBoxList .lthumb-btn').first().click();
+    await q.locator('#lureBoxList .lphoto-menu button', { hasText: 'Fotó' }).first().click(); await q.waitForTimeout(150);
+    let st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(st.lures[0].photo && st.lures[0].photo.src === 'file:///data/photos/lure1.jpg' && st.catches.length === 1 && await q.locator('#sheetWrap').isHidden(),
+      'csalifotó: a kép a csalihoz kerül, nem nyit szerkesztőt');
+    ok(await q.locator('#lureBoxList .lthumb img').count() === 1, 'csalifotó: a csalitárban látszik');
+    await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(150);
+    ok(await q.locator('#plan .plan-item .plan-img img').count() === 1, 'csalifotó: az ajánlásban is látszik');
+    await q.reload(); await q.waitForTimeout(1300);
+    const keep = await q.evaluate(() => window.__lp.cleanup);
+    ok(keep && keep.includes('file:///data/photos/lure1.jpg') && keep.includes('file:///data/thumbs/lure1.jpg'), 'csalifotó: a fájltakarítás megtartja');
+    const f = path.join(os.tmpdir(), 'kapas-csalifoto-teszt.json');
+    fs.writeFileSync(f, JSON.stringify({ app: 'fogasnaplo', version: 2, species: [], catches: [], lures: [{ id: 'n1', name: 'Új minnow', type: 'minnow', photo: { thumb: PX } }] }));
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#importFile').setInputFiles(f); await q.waitForTimeout(300);
+    await q.locator('#importAsk .btn-main').click(); await q.waitForTimeout(100);
+    st = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    const nl = st.lures.find(l => l.name === 'Új minnow');
+    ok(nl && nl.photo && nl.photo.thumb.startsWith('file:') && !JSON.stringify(st).includes('base64'), 'mentésből: a csalifotó fájlba kerül, nem base64-ként a naplóba');
+    await ctx.close();
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

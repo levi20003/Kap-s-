@@ -153,6 +153,16 @@
     @apply rounded-xl border border-dashed p-3 text-sm leading-snug;
     @apply border-sand-300/40 text-sand-200 light:border-olive-600/40 light:text-olive-700;
   }
+  .lthumb-btn { @apply flex-none border-0 bg-transparent p-0; }
+  .lthumb {
+    @apply flex h-12 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border;
+    @apply border-emerald-900/30 bg-zinc-800 text-zinc-500 light:border-zinc-200 light:bg-zinc-100 light:text-zinc-400;
+  }
+  .lthumb img { @apply h-full w-full object-contain; }
+  .lthumb svg { @apply h-5 w-5; }
+  .plan-img { @apply h-11 w-14; }
+  .lphoto-menu { @apply flex w-full flex-wrap gap-2; }
+  .lphoto-menu .btn-ghost { @apply flex-1; }
   .lureform { @apply mt-2 grid grid-cols-2 gap-2; }
   .lureform input#lureName { @apply col-span-2; }
   .lureform select, .lureform input { @apply min-w-0; }
