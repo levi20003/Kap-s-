@@ -697,6 +697,27 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('.restore-offer').isVisible(), 'üres napló: a Kezdőlap felajánlja a visszaállítást mentésből');
     await ctx.close();
   }
+  // Google-account backup: the newest photos (no videos) go to the native side, the settings say how many fit
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear(), f = n => 'file:///data/files/photos/' + n;
+    const cs = [
+      { id: 'a', sp: 's1', at: new Date(Y, 3, 1).toISOString(), y: Y, photo: { src: f('old.jpg'), thumb: '' } },
+      { id: 'b', sp: 's1', at: new Date(Y, 6, 1).toISOString(), y: Y, media: [{ src: f('new1.jpg'), thumb: '' }, { src: f('clip.mp4'), thumb: '', video: true }, { src: f('new2.jpg'), thumb: '' }], photo: { src: f('new1.jpg'), thumb: '' } }];
+    await q.addInitScript(cs => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: cs,
+        lures: [{ id: 'l1', name: 'Spintail', type: 'spintail', photo: { src: 'file:///data/files/photos/lure.jpg', thumb: '' } }] }));
+      window.__bk = null; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
+        syncBackupPhotos(j) { window.__bk = JSON.parse(j); setTimeout(() => window.__fnBkPhotos({ n: 3, total: 4, bytes: 3.2 * 1048576 })); } }; }, cs);
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForFunction(() => window.__bk, null, { timeout: 8000 }).catch(() => {});
+    const list = await q.evaluate(() => window.__bk);
+    ok(JSON.stringify(list) === JSON.stringify([f('new1.jpg'), f('new2.jpg'), f('old.jpg'), 'file:///data/files/photos/lure.jpg']),
+      'Google-mentés: a fotók a legújabbtól visszafelé, videó nélkül, a csalifotóval (' + JSON.stringify(list) + ')');
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
+    const t = await q.locator('#gbkInfo').innerText();
+    ok(t.includes('legújabb 3 fotó a 4-ból') && t.includes('25 MB'), 'Google-mentés: a Beállítások kiírja, hány fotó fért bele');
+    await ctx.close();
+  }
   // river discharge: today's trend on the weather card and in the score, each catch's river, and "Mintázataid"
   {
     const now = new Date(), Y = now.getFullYear(), fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');

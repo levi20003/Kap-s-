@@ -97,6 +97,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        restoreBackupPhotos(); // before the page asks for any picture
         web = new WebView(this);
         root = new FrameLayout(this);
         root.setBackgroundColor(0xFF121915); // shows behind the status and navigation bars; the page sets it per theme
@@ -814,6 +815,104 @@ public class MainActivity extends Activity {
         if (tiles != null) for (File f : tiles) if (now - f.lastModified() > 60L * 24 * 3600 * 1000) f.delete();
     }
 
+    /* ---------- photos in Android's Google-account backup ----------
+       That backup holds at most 25 MB per app, and above that it saves nothing at all, so photos/ stays out of it.
+       Instead files/bkphotos/ keeps smaller copies (1280 px, JPEG 72) of the newest photos, as many as fit next to the
+       rest of the app's data under a safe budget. A new install gets them back into photos/ (same names, so the log's
+       file:// uris work again). Videos are too big for this; they travel in the ZIP / folder backup only. */
+    private static final long BACKUP_LIMIT = 22L * 1024 * 1024; // under Google's 25 MB, with room for the log to grow
+    private final Object bkLock = new Object();
+
+    private static long sizeOf(File f) {
+        if (f == null || !f.exists()) return 0;
+        if (f.isFile()) return f.length();
+        long n = 0;
+        File[] fs = f.listFiles();
+        if (fs != null) for (File x : fs) n += sizeOf(x);
+        return n;
+    }
+
+    /** Everything the cloud backup takes besides the photo copies (the rules leave out cache, photos/ and the temp file). */
+    private long backupBaseline() {
+        long n = 0;
+        File[] fs = getFilesDir().getParentFile().listFiles();
+        if (fs != null) for (File f : fs) {
+            String name = f.getName();
+            if (name.equals("cache") || name.equals("code_cache") || name.equals("no_backup") || name.equals("files")) continue;
+            n += sizeOf(f);
+        }
+        File[] in = getFilesDir().listFiles();
+        if (in != null) for (File f : in) {
+            String name = f.getName();
+            if (name.equals("photos") || name.equals("bkphotos") || name.endsWith(".tmp")) continue;
+            n += sizeOf(f);
+        }
+        return n;
+    }
+
+    /** srcs: the log's photo uris, newest first. Answers through __fnBkPhotos {n, total, bytes}. */
+    private void syncBackupPhotos(List<String> srcs) {
+        synchronized (bkLock) {
+            File photos = new File(getFilesDir(), "photos"), bk = new File(getFilesDir(), "bkphotos");
+            bk.mkdirs();
+            long budget = BACKUP_LIMIT - backupBaseline(), used = 0;
+            Set<String> keep = new HashSet<>();
+            int n = 0, total = 0;
+            boolean full = false;
+            for (String u : srcs) {
+                String name = Uri.parse(u).getLastPathSegment();
+                if (name == null || !name.toLowerCase(java.util.Locale.ROOT).endsWith(".jpg")) continue;
+                File src = new File(photos, name), copy = new File(bk, name);
+                if (!src.exists() && !copy.exists()) continue;
+                total++;
+                if (full) continue;
+                if (!copy.exists()) {
+                    try {
+                        BitmapFactory.Options o = new BitmapFactory.Options();
+                        o.inSampleSize = 1;
+                        BitmapFactory.Options b = new BitmapFactory.Options();
+                        b.inJustDecodeBounds = true;
+                        BitmapFactory.decodeFile(src.getPath(), b);
+                        while (Math.max(b.outWidth, b.outHeight) / (o.inSampleSize * 2) >= 1280) o.inSampleSize *= 2;
+                        Bitmap bmp = BitmapFactory.decodeFile(src.getPath(), o);
+                        if (bmp == null) continue;
+                        Bitmap small = fit(bmp, 1280, 0);
+                        if (small != bmp) bmp.recycle();
+                        File tmp = new File(bk, name + ".tmp");
+                        try (OutputStream os = new FileOutputStream(tmp)) { small.compress(Bitmap.CompressFormat.JPEG, 72, os); }
+                        small.recycle();
+                        if (used + tmp.length() > budget) { tmp.delete(); full = true; continue; }
+                        tmp.renameTo(copy);
+                    } catch (Throwable e) { continue; } // out of memory on one picture: skip it, try the rest
+                }
+                if (used + copy.length() > budget) { full = true; continue; }
+                used += copy.length();
+                keep.add(name);
+                n++;
+            }
+            File[] old = bk.listFiles();
+            if (old != null) for (File f : old) if (!keep.contains(f.getName())) f.delete();
+            try { js("__fnBkPhotos", new JSONObject().put("n", n).put("total", total).put("bytes", used)); } catch (Exception ignored) {}
+        }
+    }
+
+    /** After a restore onto a new phone: the backed-up copies stand in for the missing full photos. */
+    private void restoreBackupPhotos() {
+        File[] fs = new File(getFilesDir(), "bkphotos").listFiles();
+        if (fs == null) return;
+        File photos = new File(getFilesDir(), "photos");
+        photos.mkdirs();
+        for (File f : fs) {
+            File dst = new File(photos, f.getName());
+            if (f.getName().endsWith(".tmp") || dst.exists()) continue;
+            try (InputStream in = new FileInputStream(f); OutputStream out = new FileOutputStream(dst)) {
+                byte[] buf = new byte[65536];
+                int k;
+                while ((k = in.read(buf)) > 0) out.write(buf, 0, k);
+            } catch (Exception e) { dst.delete(); }
+        }
+    }
+
     private static Bitmap fit(Bitmap src, int max, int rot) {
         float r = Math.min(1f, (float) max / Math.max(src.getWidth(), src.getHeight()));
         Matrix m = new Matrix();
@@ -1339,6 +1438,17 @@ public class MainActivity extends Activity {
                 }
                 return "";
             }
+        }
+
+        /** srcsJson: the log's photo uris, newest first; small copies of as many as fit go into the Google backup. */
+        @JavascriptInterface
+        public void syncBackupPhotos(String srcsJson) {
+            final List<String> list = new ArrayList<>();
+            try {
+                JSONArray a = new JSONArray(srcsJson);
+                for (int i = 0; i < a.length(); i++) list.add(a.getString(i));
+            } catch (Exception e) { return; }
+            new Thread(() -> MainActivity.this.syncBackupPhotos(list)).start();
         }
 
         /** keepJson: array of every photo/thumb uri still in the log. */

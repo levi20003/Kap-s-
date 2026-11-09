@@ -116,6 +116,9 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   (atomikus, előző: `naplo.prev.json`; kilépéskor azonnal). Induláskor `ANDROID.readLog()`: ha a localStorage üres/sérült, vagy a fájl `rev`-je újabb,
   a fájl nyer (`rescued` → toast). Megtelt localStorage-nál azonnal a fájlba ment (`#saveWarn` ezt írja). Az Android felhőmentése (`backup_rules.xml`,
   `data_extraction_rules.xml`) a fájlt is viszi, a `photos/`-t nem.
+- **Fotók a Google-mentésben**: a `photos/` kimarad (25 MB felett a Google semmit nem ment), helyette `files/bkphotos/` 1280 px-es JPEG-másolatok
+  a legújabb fotókról, amennyi a 22 MB-os keretbe fér a többi adat mellett (`syncBackupPhotos`, JS: `syncBkPhotos`, mentés után 8 mp-cel és induláskor;
+  állapot: `__fnBkPhotos` → Beállítások `#gbkInfo`). Videó nem. Induláskor `restoreBackupPhotos` a hiányzó `photos/<név>`-t a másolatból pótolja.
 - **Mentés-emlékeztető** (Kezdőlap `#bkNudge`, `renderBkNudge`, `backupState`): 3+ fogásnál, ha nincs heti mappás mentés és 30 napja nem volt kézi
   (`fogasnaplo.lastbk`); „Később” 14 napra (`fogasnaplo.bknudge`). Üres naplónál a Kezdőlap „Visszaállítás mentésből” kártyát mutat.
 - Induláskor `sweepFiles` → `ANDROID.cleanup` törli a naplóban nem szereplő fotókat (1 óra türelmi idővel), üres naplónál nem fut.

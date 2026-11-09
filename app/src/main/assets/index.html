@@ -765,6 +765,7 @@ button{transition:transform .15s}
       <div class="panel">
         <p class="hint lead">A fogásaid csak ezen a telefonon vannak. Ha elveszik vagy cserélni kell, a mentésből vissza tudod állítani őket.</p>
         <div class="autobk" id="autoBk" hidden></div>
+        <p class="hint" id="gbkInfo" hidden></p>
         <div class="btnrow">
           <button class="btn-main" id="saveBtn" type="button">Mentés most</button>
           <button class="btn-ghost" id="restoreBtn" type="button">Visszaállítás</button>
@@ -775,7 +776,7 @@ button{transition:transform .15s}
         <details class="more"><summary>Hogyan működik?</summary>
           <p class="hint">A mentés egy fájl a naplóddal és a fotóiddal, amit te választasz ki, hová kerüljön (pl. Drive). Visszaállításkor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
           <p class="hint">Az app minden változásnál egy belső tartalék-másolatot is ír a naplóról. Ha a telefon tárhelye megtelik, vagy a napló valamiért üresen indul, ebből magától visszatölt.</p>
-          <p class="hint">Az Android emellett naponta egyszer a Google-fiókodba is menti a naplót (töltőn, wifin), de a teljes méretű fotókat nem; az app újratelepítésekor ebből visszajön. Bekapcsolása: telefon Beállítások → Google → Biztonsági mentés. A fotók miatt a heti mappás mentés a legbiztosabb.</p>
+          <p class="hint">Az Android emellett naponta egyszer a Google-fiókodba is menti a naplót és a legújabb fotóidat kisebb méretben (töltőn, wifin); új telefonon vagy újratelepítéskor ebből visszajönnek. A Google appkénként 25 MB-ot enged, ezért a régebbi fotók és a videók csak a heti mappás mentésben vannak meg teljesen. Bekapcsolása: telefon Beállítások → Google → Biztonsági mentés.</p>
         </details>
       </div>
     </section>
@@ -963,9 +964,25 @@ button{transition:transform .15s}
   let mirrorT=null;
   function mirrorNow(){clearTimeout(mirrorT);mirrorT=null;if(!hasMirror())return false;try{return !!ANDROID.writeLog(JSON.stringify(data))}catch(e){return false}}
   const mirrorPending=()=>mirrorT!==null;
+  // Google-account backup (Android): small copies of the newest photos, as many as fit (MainActivity.syncBackupPhotos)
+  let bkPhotosT=null;
+  function syncBkPhotos(){clearTimeout(bkPhotosT);bkPhotosT=null;if(!ANDROID||!ANDROID.syncBackupPhotos)return;
+    const seen=new Set(),list=[];const add=u=>{if(u&&u.startsWith("file:")&&!seen.has(u)){seen.add(u);list.push(u)}};
+    data.catches.slice().sort((a,b)=>a.at<b.at?1:-1).forEach(c=>{mediaOf(c).forEach(m=>{if(!m.video)add(m.src)});if(c.photo)add(c.photo.src)});
+    lureBox().forEach(l=>{if(l.photo)add(l.photo.src)});
+    try{ANDROID.syncBackupPhotos(JSON.stringify(list))}catch(e){}}
+  const syncBkPhotosSoon=()=>{if(!ANDROID||!ANDROID.syncBackupPhotos)return;clearTimeout(bkPhotosT);bkPhotosT=setTimeout(syncBkPhotos,8000)};
+  window.__fnBkPhotos=function(r){
+    const p=$("gbkInfo");if(!p||!r)return;p.hidden=false;
+    const mb=(r.bytes/1048576).toLocaleString("hu-HU",{maximumFractionDigits:1});
+    p.textContent=!r.total?"Google-fiókos mentés: a napló megy; fotó még nincs.":
+      r.n>=r.total?`Google-fiókos mentés: a napló és mind a ${r.total} fotó (kisebb méretben, ${mb} MB).`:
+      `Google-fiókos mentés: a napló és a legújabb ${r.n} fotó a ${r.total}-ból (kisebb méretben; a Google appkénként 25 MB-ot enged). A régebbiek és a videók a heti mappás mentésben vannak meg.`;
+  };
   function save(){data.rev=Date.now();let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
     let safe=ok;
     if(hasMirror()){if(ok){clearTimeout(mirrorT);mirrorT=setTimeout(mirrorNow,400)}else safe=mirrorNow()}
+    syncBkPhotosSoon();
     $("saveWarn").hidden=ok;
     if(!ok){$("saveWarn").textContent=safe?"A telefon tárhelye megtelt, ezért a naplót a belső tartalék-másolatba mentettem. Szabadíts fel helyet, és készíts mentést: Beállítások → Biztonsági mentés.":
       "A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést: Beállítások → Biztonsági mentés.";
@@ -3053,7 +3070,7 @@ button{transition:transform .15s}
   if(rescued)setTimeout(()=>toast(rescued.why==="empty"?"Visszatöltöttem a naplódat a telefon belső másolatából ("+rescued.n+" fogás).":
     "A napló legutóbbi változásait a belső másolatból töltöttem vissza."),600);
   if(hasMirror()&&(data.catches.length||data.species.length))setTimeout(mirrorNow,2000); // the first copy for logs from older versions
-  setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup()}),800);
+  setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup();setTimeout(syncBkPhotos,3000)}),800);
   setTimeout(retryPendingWx,1500);
   setTimeout(()=>{if(ANDROID&&ANDROID.checkUpdate)try{ANDROID.checkUpdate()}catch(e){}},2500);
   setTimeout(()=>loadToday(false),300);
