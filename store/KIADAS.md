@@ -29,6 +29,21 @@ A kiadási build a GitHubon fut, és a kulcsot a repó titkos változóiból (Se
    - `FOGASNAPLO_KEYSTORE_PASS` = a kulcs jelszava
 3. Töröld a `kulcs.txt`-t.
 
+## 1b. A tesztapp kulcsa (egyszer kell, a telefonos tesztapp frissüléséhez)
+
+A tesztapp (`hu.fogasnaplo.app.teszt`) egy csak CI-s kulccsal van aláírva. Ha ez a kulcs megváltozik, az Android nem engedi ráfrissíteni a
+telefonon lévő tesztappra (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Hogy mindig ugyanaz maradjon, egy jelmondatból készül:
+
+1. GitHub → a repó → **Settings → Secrets and variables → Actions → New repository secret**
+   - név: `FOGASNAPLO_TESZT_SEED`
+   - érték: egy általad kitalált, legalább 12 karakteres jelmondat (pl. négy-öt szó). Tedd el a jelszókezelődbe.
+2. Actions → **CI** → a legutóbbi futás → **Re-run all jobs** (vagy egy új push). Ettől kezdve a tesztapp kulcsa ebből jön, és soha nem változik.
+3. A telefonon **egyszer** újra kell telepíteni a tesztappot: tesztapp → Beállítások → **Mentés most** (ZIP), a tesztapp törlése,
+   az új `Fogasnaplo-TESZT.apk` telepítése a Releases oldalról, végül Beállítások → **Visszaállítás**.
+
+Secret nélkül a CI a kulcsot az Actions cache-ben tartja, amit a GitHub 7 nap tétlenség után töröl; ilyenkor a tesztapp sávja szól, hogy újratelepítés kell.
+A valódi app (`hu.fogasnaplo.app`) kulcsát ez nem érinti.
+
 ## 2. Adatvédelmi oldal (a Play kötelezően kéri)
 
 1. A `docs/adatvedelem.html` végén a `[ide jön a fejlesztői e-mail-cím]` helyére írd be azt az e-mail-címet, amit a Play Console-ban is

@@ -1,6 +1,7 @@
 # Every push: web tests (rules + browser) and a full APK build with build.sh.
 # The real build only proves it works. The phone-testable APK is a separate app (hu.fogasnaplo.app.teszt, "Kapás")
-# that installs next to the real one; its key is a CI-only key kept in the Actions cache so test builds update each other.
+# that installs next to the real one; its CI-only key comes from the FOGASNAPLO_TESZT_SEED passphrase (fallback: Actions cache),
+# and version.json carries its certificate digest so the app can tell a key change from a normal update.
 name: CI
 
 on:
@@ -34,13 +35,29 @@ jobs:
           java-version: 17
       - name: SDK (platform 36, build-tools 36.0.0)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      # The test app's key. Preferred: derived from the FOGASNAPLO_TESZT_SEED secret (a passphrase), so it is the same
+      # forever. Fallback without the secret: a random CI key in the Actions cache, which GitHub evicts after 7 idle days
+      # (then the test app on the phone cannot update and asks for a one-time reinstall).
+      - name: Is the test-key passphrase set?
+        id: seed
+        env:
+          SEED: ${{ secrets.FOGASNAPLO_TESZT_SEED }}
+        run: |
+          if [ -n "$SEED" ]; then echo "set=1" >> "$GITHUB_OUTPUT"
+          else echo "::warning::FOGASNAPLO_TESZT_SEED secret missing - the test key lives in the Actions cache and is lost after 7 idle days (store/KIADAS.md)"; fi
       - uses: actions/cache@v4
+        if: steps.seed.outputs.set != '1'
         with:
           path: ci-key
           key: ci-test-signing-key-v1
       - name: CI-only signing key (never the real one)
+        env:
+          FOGASNAPLO_TESZT_SEED: ${{ secrets.FOGASNAPLO_TESZT_SEED }}
         run: |
-          if [ ! -f ci-key/fogasnaplo.keystore ]; then
+          if [ -n "$FOGASNAPLO_TESZT_SEED" ]; then
+            python3 -c "import cryptography" 2>/dev/null || python3 -m pip install -q --user --break-system-packages cryptography
+            python3 tools/ci-teszt-kulcs.py ci-key
+          elif [ ! -f ci-key/fogasnaplo.keystore ]; then
             mkdir -p ci-key
             keytool -genkeypair -keystore ci-key/fogasnaplo.keystore -alias fogasnaplo -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass ci-only-123 -keypass ci-only-123 -dname "CN=Fogasnaplo CI teszt"
@@ -67,6 +84,9 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -E "^(package|application-label):"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging out/Fogasnaplo.apk | grep -q "name='hu.fogasnaplo.app.teszt'"
           mv out/Fogasnaplo.apk out/Fogasnaplo-TESZT.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs out/Fogasnaplo-TESZT.apk \
+            | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ' \n' > out/cert.txt
+          echo "signing cert: $(cat out/cert.txt)"; test -s out/cert.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Fogasnaplo-TESZT-telefonra
@@ -78,7 +98,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -c 'import json,os,subprocess; print(json.dumps({"versionCode":1000+int(os.environ["GITHUB_RUN_NUMBER"]),"versionName":os.environ["GITHUB_SHA"][:7],"notes":subprocess.check_output(["git","log","-1","--pretty=%s"],text=True).strip()[:120],"sha":os.environ["GITHUB_SHA"]},ensure_ascii=False))' > out/version.json
+          python3 -c 'import json,os,subprocess; print(json.dumps({"versionCode":1000+int(os.environ["GITHUB_RUN_NUMBER"]),"versionName":os.environ["GITHUB_SHA"][:7],"notes":subprocess.check_output(["git","log","-1","--pretty=%s"],text=True).strip()[:120],"sha":os.environ["GITHUB_SHA"],"cert":open("out/cert.txt").read().strip()},ensure_ascii=False))' > out/version.json
           cat out/version.json
           gh release view teszt > /dev/null 2>&1 || gh release create teszt --prerelease --target "$GITHUB_SHA" --title "Kapás – tesztbuild" \
             --notes "A legutóbbi tesztverzió. Telefonon: koppints a Fogasnaplo-TESZT.apk fájlra. A valódi app mellé települ, annak adataihoz nem nyúl."

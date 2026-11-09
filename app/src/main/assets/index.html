@@ -2618,7 +2618,18 @@ button{transition:transform .15s}
   }
   const updNote=()=>updInfo&&updInfo.notes?" ("+updInfo.notes+")":"";
   window.__fnUpdate=function(v){if(!v)return;updInfo=v;updBar("Új verzió letöltése"+updNote()+"…")};
+  const TESZT_APK="https://github.com/levi20003/Kap-s-/releases/download/teszt/Fogasnaplo-TESZT.apk";
+  // the published test build has another signing key: Android cannot update over it, one reinstall is needed
+  function resignBar(){
+    const b=$("updBar");b.replaceChildren();
+    b.append(el("span",null,"Az új tesztverzió új aláíró kulccsal készült, ezért nem tud erre ráfrissülni. Egyszer újra kell telepíteni: "+
+      "1. Mentés most (a naplód és a fotóid), 2. a tesztapp törlése, 3. a letöltött új verzió telepítése, 4. Beállítások → Visszaállítás."));
+    const save=el("button","btn-main","Mentés most");save.type="button";save.onclick=()=>$("saveBtn").click();
+    const dl=el("button","btn-ghost","Letöltés");dl.type="button";dl.onclick=()=>{location.href=TESZT_APK};
+    b.append(save,dl);b.hidden=false;
+  }
   window.__fnUpdateState=function(r){
+    if(r&&r.state==="resign"){updInfo=null;resignBar();return}
     if(r&&r.error){toast(r.error);if(updInfo)updBar("Új verzió kész"+updNote()+".","Frissítés most");return}
     if(r&&r.state==="downloaded")updBar("Új verzió kész"+updNote()+". Amikor kilépsz az appból, magától frissül.","Frissítés most");
     else if(r&&r.state==="installing")updBar("Frissítés telepítése… Utána nyisd meg újra az appot.");

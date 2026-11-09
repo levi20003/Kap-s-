@@ -618,6 +618,21 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok((await q.evaluate(() => window.__u.inst)) === 1 && (await q.locator('#updBar').innerText()).includes('telepítése'), '„Frissítés most”: azonnal telepít');
     await ctx.close();
   }
+  // test build: the new build has another signing key -> explain the one-time reinstall instead of a raw error
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); window.__u = { zip: 0 };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, backupFolder() { return ''; },
+        zipToFolder() {}, saveZip() { window.__u.zip++; }, checkUpdate() { setTimeout(() => window.__fnUpdateState({ state: 'resign', notes: 'x' })); } }; });
+    await q.goto(PAGE); await q.waitForTimeout(2800);
+    const t = await q.locator('#updBar').innerText();
+    ok(await q.locator('#updBar').isVisible() && t.includes('új aláíró kulccsal') && t.includes('Visszaállítás') && !t.includes('INSTALL_FAILED'),
+      'tesztverzió: kulcsváltásnál érthető újratelepítési lépések, nem nyers hibakód');
+    await q.locator('#updBar .btn-main').click(); await q.waitForTimeout(100);
+    ok((await q.evaluate(() => window.__u.zip)) === 1, 'kulcsváltás: a sáv „Mentés most” gombja ZIP-mentést indít');
+    ok(await q.locator('#updBar .btn-ghost').innerText() === 'Letöltés', 'kulcsváltás: „Letöltés” gomb az új tesztapphoz');
+    await ctx.close();
+  }
   // tabs: structure, home content, species management
   {
     const ctx = await b.newContext({ viewport: { width: 412, height: 915 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

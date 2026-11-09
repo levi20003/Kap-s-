@@ -24,6 +24,9 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   Telefonos tesztlista a kiadás előtt: `store/TELEFONOS-TESZT.md`.
 - Tesztapp a valódi mellé: `APP_ID=hu.fogasnaplo.app.teszt LABEL="Kapás" ./build.sh …` (külön csomagnév, külön adatok).
   A CI minden pushnál ezt is megépíti („Fogasnaplo-TESZT-telefonra” artifact), egy csak CI-s kulccsal. A kamera-provider authority a csomagnévből jön.
+  A CI-kulcs a `FOGASNAPLO_TESZT_SEED` secret jelmondatából determinisztikusan készül (`tools/ci-teszt-kulcs.py`: mindig ugyanaz a tanúsítvány);
+  secret nélkül az Actions cache-ből, amit a GitHub 7 tétlen nap után töröl. A `version.json` `cert` mezője a tanúsítvány SHA-256-ja: ha eltér a telepítettétől
+  (vagy a telepítés `INSTALL_FAILED_UPDATE_INCOMPATIBLE`), a tesztapp nem tölt le, hanem a sávon az egyszeri újratelepítés lépéseit mutatja (`resignBar`).
 - A `fejlesztesek` és `main` ágra pusholt tesztbuild a `teszt` GitHub Release-be kerül (`Fogasnaplo-TESZT.apk` + `version.json`,
   versionCode = 1000 + futásszám). A tesztapp **magától frissül**: induláskor és előtérbe jövéskor (legfeljebb 30 percenként) `checkUpdate` megnézi,
   újabb verziónál a háttérben letölti, és amikor kilépsz az appból (`onStop`, de nem kamera/fájlválasztó közben), `PackageInstaller`-munkamenettel telepíti.

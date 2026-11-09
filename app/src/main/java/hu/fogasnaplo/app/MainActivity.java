@@ -225,6 +225,32 @@ public class MainActivity extends Activity {
         } catch (Exception e) { return 0; }
     }
 
+    /** SHA-256 of this install's signing certificate (lowercase hex), as apksigner prints it; "" if unknown. */
+    @SuppressWarnings("deprecation")
+    private String ownCert() {
+        try {
+            android.content.pm.Signature[] sigs;
+            if (Build.VERSION.SDK_INT >= 28) {
+                android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+                sigs = pi.signingInfo.getApkContentsSigners();
+            } else {
+                sigs = getPackageManager().getPackageInfo(getPackageName(), android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+            }
+            byte[] h = java.security.MessageDigest.getInstance("SHA-256").digest(sigs[0].toByteArray());
+            StringBuilder b = new StringBuilder();
+            for (byte x : h) b.append(String.format("%02x", x));
+            return b.toString();
+        } catch (Exception e) { return ""; }
+    }
+
+    /** The new test build is signed with another key: Android will refuse it as an update, a reinstall is needed. */
+    private void needsReinstall(JSONObject v) {
+        resign = true;
+        updateApk().delete();
+        readyInfo = null;
+        try { js("__fnUpdateState", new JSONObject().put("state", "resign").put("notes", v != null ? v.optString("notes") : "")); } catch (Exception ignored) {}
+    }
+
     private static HttpURLConnection open(String url) throws Exception {
         HttpURLConnection c = (HttpURLConnection) java.net.URI.create(url).toURL().openConnection();
         c.setRequestProperty("User-Agent", UA);
@@ -242,6 +268,7 @@ public class MainActivity extends Activity {
     static boolean installing;
     private volatile JSONObject readyInfo; // version.json of the downloaded build
     private volatile boolean busy;
+    private volatile boolean resign; // the published build has another signing key (see needsReinstall)
     private boolean awaitingResult;
     private long lastCheck;
 
@@ -275,6 +302,8 @@ public class MainActivity extends Activity {
         long code = v.optLong("versionCode");
         File apk = updateApk();
         if (code <= ownVersion()) { apk.delete(); readyInfo = null; return false; }
+        String cert = v.optString("cert").toLowerCase(java.util.Locale.ROOT), mine = ownCert();
+        if (!cert.isEmpty() && !mine.isEmpty() && !cert.equals(mine)) { needsReinstall(v); return false; } // no 10 MB download that cannot install
         js("__fnUpdate", v);
         if (archiveVersion(apk) != code) {
             File tmp = new File(apk.getPath() + ".part");
@@ -308,7 +337,7 @@ public class MainActivity extends Activity {
         updPrefs().edit().remove("declined").apply();
         new Thread(() -> {
             try {
-                if (readyInfo == null && !fetchUpdate()) { js("__fnUpdateState", err("Nincs újabb verzió.")); return; }
+                if (readyInfo == null && !fetchUpdate()) { if (readyInfo == null && !resign) js("__fnUpdateState", err("Nincs újabb verzió.")); return; }
                 commitInstall();
             } catch (Exception e) {
                 js("__fnUpdateState", err("A letöltés nem sikerült. Próbáld újra wifin."));
@@ -348,6 +377,7 @@ public class MainActivity extends Activity {
     }
 
     void updateFailed(long versionCode, boolean declined, String msg) {
+        if (msg != null && msg.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) { needsReinstall(readyInfo); return; }
         if (declined) updPrefs().edit().putLong("declined", versionCode).apply(); // no auto-install of this one; the button still works
         js("__fnUpdateState", err(declined ? "A frissítést elhalasztottad. A sávon bármikor elindíthatod." : "A frissítés nem sikerült" + (msg != null ? ": " + msg : ".")));
     }
