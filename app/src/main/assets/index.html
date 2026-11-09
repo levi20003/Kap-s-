@@ -8,7 +8,9 @@
 // theme before the first paint: the user's choice, else the phone's dark/light mode
 (function(){var t="auto",n=true;try{t=localStorage.getItem("fogasnaplo.theme")||"auto"}catch(e){}
   try{var A=window.FogasnaploAndroid;n=A&&A.isNight?A.isNight():matchMedia("(prefers-color-scheme: dark)").matches}catch(e){}
-  document.documentElement.dataset.theme=t==="auto"?(n?"dark":"light"):t})();
+  document.documentElement.dataset.theme=t==="auto"?(n?"dark":"light"):t;
+  var z="auto";try{z=localStorage.getItem("fogasnaplo.season")||"auto"}catch(e){}var m=new Date().getMonth();
+  document.documentElement.dataset.season=z!=="auto"?z:m>=2&&m<=4?"tavasz":m>=5&&m<=7?"nyar":m>=8&&m<=10?"osz":"tel"})();
 </script>
 <title>Kapás</title>
 <link rel="stylesheet" href="lib/leaflet.css">
@@ -69,6 +71,77 @@
   --edge:rgba(70,60,40,.08); --glow-water:rgba(47,74,58,.06); --glow-accent:rgba(196,80,31,.12);
   --shadow-card:0 1px 2px rgba(70,55,30,.05),0 14px 30px -18px rgba(70,55,30,.3);
   --shadow-pop:0 24px 44px -20px rgba(34,56,43,.55);
+}
+/* seasonal colourways (data-season on <html>): autumn is the default palette above; each season has a dark and a light set.
+   The --em/--ol/--sd triplets feed the Tailwind emerald/olive/sand colours (tailwind.config.js), so the Tailwind layer follows the season too. */
+:root{--em-200:167 243 208; --em-300:110 231 183; --em-500:16 185 129; --em-700:4 120 87; --em-800:6 95 70; --em-900:6 78 59; --ol-300:201 208 143; --ol-400:173 184 107; --ol-500:141 152 81; --ol-600:111 120 64; --ol-700:84 91 49; --sd-100:244 238 223; --sd-200:232 220 189; --sd-300:214 197 151; --sd-400:192 170 112;}
+/* tavasz: friss levélzöld, virágrózsaszín */
+:root[data-season="tavasz"]{--em-200:200 242 196; --em-300:158 230 154; --em-500:63 191 90; --em-700:35 122 57; --em-800:28 100 48; --em-900:21 77 38; --ol-300:207 227 160; --ol-400:180 210 119; --ol-500:143 178 79; --ol-600:108 143 57; --ol-700:79 107 42; --sd-100:253 238 241; --sd-200:248 211 220; --sd-300:240 174 191; --sd-400:228 138 161;}
+:root[data-season="tavasz"]:not([data-theme="light"]){
+  --bg:#111912; --bg-2:#162018; --surface:#1b271e; --surface-2:#213025; --line:#33463a; --line-soft:rgba(200,232,196,.11);
+  --fg:#eef5ea; --muted:#b2c2ad; --faint:#93a58f;
+  --accent:#ff8fab; --accent-2:#ffb1c4; --accent-ink:#2a0912; --accent-txt:#ffb1c4;
+  --water:#b9e8b2; --water-deep:#69a86b; --water-soft:#203a26;
+  --bg-glow:#1f3324; --bg-top:#141e17; --on-water:#132016;
+  --hero-a:#356b45; --hero-b:#2b5a3c; --hero-c:#1c412b; --hero-lbl:#d9ecd4; --hero-side:#f1f8ee; --hero-sun:#ffc6d4;
+  --card-a:#1d2a20; --card-b:#18231b; --thumb-a:#69a86b; --thumb-b:#2d6040; --tabbar-bg:rgba(22,32,24,.94); --map-bg:#18231b;
+  --edge:rgba(200,232,196,.09); --glow-water:rgba(185,232,178,.08); --glow-accent:rgba(255,143,171,.16);
+}
+:root[data-season="tavasz"][data-theme="light"]{
+  --bg:#f1f6ec; --bg-2:#e6eedf; --surface:#fcfef9; --surface-2:#ffffff; --line:#d3dfca; --line-soft:rgba(40,80,40,.1);
+  --fg:#1a2a1d; --muted:#4f6352; --faint:#5f7262;
+  --accent:#c2385a; --accent-2:#d04a6b; --accent-ink:#ffffff; --accent-txt:#a82d4c;
+  --water:#2b6a3c; --water-deep:#86b98a; --water-soft:#dcefd8;
+  --bg-glow:#e3f0da; --bg-top:#ecf4e6; --on-water:#ffffff;
+  --hero-a:#3a6f46; --hero-b:#2f6340; --hero-c:#224b31; --hero-lbl:#e3f2df; --hero-side:#f4faf1; --hero-sun:#ffc6d4;
+  --card-a:#fcfef9; --card-b:#fcfef9; --thumb-a:#9cc89c; --thumb-b:#2b6a3c; --tabbar-bg:rgba(252,254,249,.95); --map-bg:#e6eedf;
+  --edge:rgba(40,80,40,.08); --glow-water:rgba(43,106,60,.06); --glow-accent:rgba(194,56,90,.12);
+}
+/* nyár: türkiz folyó, napsárga */
+:root[data-season="nyar"]{--em-200:179 240 234; --em-300:127 224 214; --em-500:31 181 168; --em-700:19 120 111; --em-800:15 98 91; --em-900:12 78 73; --ol-300:169 216 201; --ol-400:128 194 174; --ol-500:79 164 140; --ol-600:58 128 109; --ol-700:43 96 82; --sd-100:255 244 217; --sd-200:253 227 167; --sd-300:249 204 110; --sd-400:240 178 61;}
+:root[data-season="nyar"]:not([data-theme="light"]){
+  --bg:#0e1819; --bg-2:#13201f; --surface:#182627; --surface-2:#1e2f30; --line:#2f4547; --line-soft:rgba(190,228,224,.1);
+  --fg:#eef5f3; --muted:#acc0bf; --faint:#8fa5a4;
+  --accent:#ffb84d; --accent-2:#ffcb75; --accent-ink:#241400; --accent-txt:#ffcb75;
+  --water:#9fdcd6; --water-deep:#4f9c97; --water-soft:#1c3638;
+  --bg-glow:#183234; --bg-top:#11201f; --on-water:#0f1f20;
+  --hero-a:#2a6669; --hero-b:#21585b; --hero-c:#143d40; --hero-lbl:#d5ecea; --hero-side:#f0f8f7; --hero-sun:#ffcf5a;
+  --card-a:#1a2a2b; --card-b:#152223; --thumb-a:#4f9c97; --thumb-b:#21585b; --tabbar-bg:rgba(19,32,31,.94); --map-bg:#152223;
+  --edge:rgba(190,228,224,.09); --glow-water:rgba(159,220,214,.08); --glow-accent:rgba(255,184,77,.16);
+}
+:root[data-season="nyar"][data-theme="light"]{
+  --bg:#f6f2e7; --bg-2:#ede7d8; --surface:#fffdf6; --surface-2:#ffffff; --line:#ddd3bd; --line-soft:rgba(70,60,30,.1);
+  --fg:#15282a; --muted:#4c6062; --faint:#5d7072;
+  --accent:#b8620f; --accent-2:#c97418; --accent-ink:#ffffff; --accent-txt:#94500b;
+  --water:#1d5d61; --water-deep:#83b9b4; --water-soft:#d6ecea;
+  --bg-glow:#efe4c8; --bg-top:#f3ecdc; --on-water:#ffffff;
+  --hero-a:#2b6a6d; --hero-b:#235b5e; --hero-c:#184548; --hero-lbl:#dff0ee; --hero-side:#f2faf9; --hero-sun:#ffcf5a;
+  --card-a:#fffdf6; --card-b:#fffdf6; --thumb-a:#8cc3be; --thumb-b:#1d5d61; --tabbar-bg:rgba(255,253,246,.95); --map-bg:#ede7d8;
+  --edge:rgba(70,60,30,.08); --glow-water:rgba(29,93,97,.06); --glow-accent:rgba(184,98,15,.12);
+}
+/* tél: jeges kékesszürke, áfonyapiros */
+:root[data-season="tel"]{--em-200:207 226 246; --em-300:168 201 236; --em-500:91 143 199; --em-700:47 95 143; --em-800:38 77 116; --em-900:29 59 90; --ol-300:195 207 220; --ol-400:162 179 198; --ol-500:125 146 170; --ol-600:95 117 144; --ol-700:71 90 113; --sd-100:242 246 250; --sd-200:225 234 243; --sd-300:201 216 231; --sd-400:169 191 213;}
+:root[data-season="tel"]:not([data-theme="light"]){
+  --bg:#0f141a; --bg-2:#141b22; --surface:#19212a; --surface-2:#1f2934; --line:#33404d; --line-soft:rgba(205,222,240,.1);
+  --fg:#eef3f8; --muted:#adbac8; --faint:#909eae;
+  --accent:#ff6f87; --accent-2:#ff93a5; --accent-ink:#22050b; --accent-txt:#ff9aab;
+  --water:#bfd8f0; --water-deep:#6e8fb0; --water-soft:#203041;
+  --bg-glow:#1b2a3a; --bg-top:#121a22; --on-water:#111a24;
+  --hero-a:#3e5a77; --hero-b:#2c4560; --hero-c:#1b2c40; --hero-lbl:#dbe6f1; --hero-side:#f2f6fa; --hero-sun:#ffe3b0;
+  --hero-hill1:rgba(235,242,250,.2); --hero-hill2:rgba(235,242,250,.3); --hero-hill3:rgba(10,18,28,.45); --hero-river:rgba(214,232,250,.32);
+  --card-a:#1b242e; --card-b:#161e27; --thumb-a:#6e8fb0; --thumb-b:#2c4560; --tabbar-bg:rgba(20,27,34,.94); --map-bg:#161e27;
+  --edge:rgba(205,222,240,.09); --glow-water:rgba(191,216,240,.08); --glow-accent:rgba(255,111,135,.16);
+}
+:root[data-season="tel"][data-theme="light"]{
+  --bg:#eef2f6; --bg-2:#e3e9ef; --surface:#fbfcfe; --surface-2:#ffffff; --line:#cfd8e2; --line-soft:rgba(30,50,80,.1);
+  --fg:#17212b; --muted:#4d5b6a; --faint:#5d6b7a;
+  --accent:#b3243f; --accent-2:#c6354f; --accent-ink:#ffffff; --accent-txt:#9c1f37;
+  --water:#2a4a6b; --water-deep:#8aa4be; --water-soft:#dde7f1;
+  --bg-glow:#dfe8f1; --bg-top:#e8eef4; --on-water:#ffffff;
+  --hero-a:#46647f; --hero-b:#3a5876; --hero-c:#283f58; --hero-lbl:#e3ecf5; --hero-side:#f4f8fb; --hero-sun:#ffe3b0;
+  --hero-hill1:rgba(240,246,252,.24); --hero-hill2:rgba(240,246,252,.34); --hero-hill3:rgba(14,26,40,.38); --hero-river:rgba(230,240,252,.36);
+  --card-a:#fbfcfe; --card-b:#fbfcfe; --thumb-a:#9fb6cd; --thumb-b:#2a4a6b; --tabbar-bg:rgba(251,252,254,.95); --map-bg:#e3e9ef;
+  --edge:rgba(30,50,80,.08); --glow-water:rgba(42,74,107,.06); --glow-accent:rgba(179,36,63,.12);
 }
 *{box-sizing:border-box}
 html{background:var(--bg)}
@@ -696,6 +769,15 @@ button{transition:transform .15s}
       </div>
     </section>
 
+    <section id="lookSec">
+      <div class="sechead"><h2><span class="ic" data-ic="sunny"></span>Megjelenés</h2></div>
+      <div class="panel">
+        <div class="flabel">Évszak-színvilág</div>
+        <div class="chips quick-pills season-pills" id="seasonPills" role="group" aria-label="Évszak-színvilág"></div>
+        <p class="hint">Automatikusan a naptárt követi. A világos és a sötét mód ettől függetlenül a fejléc nap/hold gombjával vált (vagy a telefont követi).</p>
+      </div>
+    </section>
+
     <section>
       <div class="sechead"><h2><span class="ic" data-ic="info"></span>Az appról</h2></div>
       <div class="panel">
@@ -1222,7 +1304,7 @@ button{transition:transform .15s}
     const have=new Set(state.species.map(s=>norm(s.name)));
     const chips=$("chips");chips.replaceChildren();
     COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
-    renderNotify();renderAutoBk();renderLureBox();
+    renderNotify();renderAutoBk();renderLureBox();renderSeasonPills();
     $("verLine").textContent=appVersionText();
   }
 
@@ -2484,12 +2566,27 @@ button{transition:transform .15s}
   const themePref=()=>{try{return localStorage.getItem(THEME_KEY)||"auto"}catch(e){return"auto"}};
   let sysNight=null;
   function systemNight(){if(sysNight!=null)return sysNight;try{return ANDROID&&ANDROID.isNight?ANDROID.isNight():matchMedia("(prefers-color-scheme: dark)").matches}catch(e){return true}}
+  /* ---------- seasons: four colourways (spring, summer, autumn, winter), each with a light and a dark set ---------- */
+  const SEASON_KEY="fogasnaplo.season",SEASONS=[["tavasz","Tavasz"],["nyar","Nyár"],["osz","Ősz"],["tel","Tél"]];
+  const seasonOf=d=>{const m=d.getMonth();return m>=2&&m<=4?"tavasz":m>=5&&m<=7?"nyar":m>=8&&m<=10?"osz":"tel"};
+  const seasonPref=()=>{try{const v=localStorage.getItem(SEASON_KEY);return SEASONS.some(s=>s[0]===v)?v:"auto"}catch(e){return"auto"}};
+  function applySeason(){document.documentElement.dataset.season=seasonPref()==="auto"?seasonOf(new Date()):seasonPref()}
+  function setSeason(v){try{if(v==="auto")localStorage.removeItem(SEASON_KEY);else localStorage.setItem(SEASON_KEY,v)}catch(e){}
+    swapTheme(()=>{applySeason();applyTheme();renderSeasonPills()},innerWidth/2,innerHeight/2)}
+  function renderSeasonPills(){
+    const box=$("seasonPills");if(!box)return;box.replaceChildren();const pref=seasonPref(),now=SEASONS.find(s=>s[0]===seasonOf(new Date()))[1];
+    [["auto","Automatikus ("+now.toLowerCase()+")"]].concat(SEASONS).forEach(([k,l])=>{const b=el("button","pill season-pill"+(pref===k?" on":""),l);b.type="button";
+      b.dataset.season=k;b.setAttribute("aria-pressed",pref===k?"true":"false");b.onclick=()=>setSeason(k);box.append(b)});
+  }
   function applyTheme(){
     const t=themePref(),light=(t==="auto"?(systemNight()?"dark":"light"):t)==="light";
     document.documentElement.dataset.theme=light?"light":"dark";
-    document.querySelector('meta[name="theme-color"]').content=light?"#f4f0e8":"#121915";
+    const cs=getComputedStyle(document.documentElement),tok=n=>cs.getPropertyValue(n).trim();
+    document.querySelector('meta[name="theme-color"]').content=tok("--bg")||(light?"#f4f0e8":"#121915");
     $("themeBtn").setAttribute("aria-label",light?"Váltás sötét módra":"Váltás világos módra");
-    if(ANDROID&&ANDROID.setTheme){try{ANDROID.setTheme(light)}catch(e){}} // status bar icons and window colour
+    if(ANDROID&&ANDROID.setTheme){try{ANDROID.setTheme(light)}catch(e){}} // status bar icons
+    // window and system-bar colours follow the season's palette
+    if(ANDROID&&ANDROID.setWindowColors){try{ANDROID.setWindowColors(tok("--bg"),tok("--bg-top"),tok("--surface"))}catch(e){}}
   }
   // a circular reveal from the button where the browser supports view transitions
   function swapTheme(apply,x,y){
@@ -2504,7 +2601,9 @@ button{transition:transform .15s}
     const toLight=document.documentElement.dataset.theme!=="light",sysLight=!systemNight();
     const pref=toLight===sysLight?"auto":(toLight?"light":"dark");
     const r=e.currentTarget.getBoundingClientRect();
-    swapTheme(()=>{try{if(pref==="auto")localStorage.removeItem(THEME_KEY);else localStorage.setItem(THEME_KEY,pref)}catch(_){}applyTheme()},r.left+r.width/2,r.top+r.height/2);
+    // the choice is saved at once; only the repaint waits for the transition
+    try{if(pref==="auto")localStorage.removeItem(THEME_KEY);else localStorage.setItem(THEME_KEY,pref)}catch(_){}
+    swapTheme(applyTheme,r.left+r.width/2,r.top+r.height/2);
   };
   window.__fnSysTheme=function(r){sysNight=!!(r&&r.night);if(themePref()==="auto")applyTheme()};
   if(!ANDROID)try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",e=>{sysNight=e.matches;if(themePref()==="auto")applyTheme()})}catch(e){}
@@ -2688,7 +2787,7 @@ button{transition:transform .15s}
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 
   sync();
-  renderAutoBk();applyTheme();
+  renderAutoBk();applySeason();applyTheme();
   setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup()}),800);
   setTimeout(retryPendingWx,1500);
   setTimeout(()=>{if(ANDROID&&ANDROID.checkUpdate)try{ANDROID.checkUpdate()}catch(e){}},2500);

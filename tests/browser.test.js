@@ -567,6 +567,40 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(nl && nl.photo && nl.photo.thumb.startsWith('file:') && !JSON.stringify(st).includes('base64'), 'mentésből: a csalifotó fájlba kerül, nem base64-ként a naplóba');
     await ctx.close();
   }
+  // seasons: four colourways, each light and dark
+  {
+    const open = async (opts, init) => { const ctx = await b.newContext({ viewport: { width: 360, height: 800 }, reducedMotion: 'reduce', ...opts }); const q = await ctx.newPage();
+      q.on('pageerror', e => errs.push(e.message)); if (init.clock) await q.clock.setFixedTime(new Date(init.clock));
+      await q.addInitScript(i => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [] }));
+        if (i.season) localStorage.setItem('fogasnaplo.season', i.season); if (i.theme) localStorage.setItem('fogasnaplo.theme', i.theme); }, init);
+      await q.route('https://**', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
+    const bgOf = q => q.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+    let { ctx, q } = await open({}, { clock: '2026-01-15T12:00:00' });
+    ok(await q.evaluate(() => document.documentElement.dataset.season) === 'tel', 'évszak: januárban magától tél');
+    await ctx.close(); ({ ctx, q } = await open({}, { clock: '2026-07-01T12:00:00' }));
+    ok(await q.evaluate(() => document.documentElement.dataset.season) === 'nyar', 'évszak: júliusban magától nyár');
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
+    ok((await q.locator('#seasonPills .pill.on').innerText()).includes('Automatikus (nyár)'), 'évszak: a Beállításokban automatikus, a mostani évszakkal');
+    const before = await bgOf(q), fab = () => q.evaluate(() => getComputedStyle(document.querySelector('#fab')).backgroundColor);
+    const fabSummer = await fab();
+    await q.locator('#seasonPills .pill', { hasText: 'Tél' }).click(); await q.waitForTimeout(150);
+    ok(await q.evaluate(() => document.documentElement.dataset.season + '|' + localStorage.getItem('fogasnaplo.season')) === 'tel|tel' && await bgOf(q) !== before, 'évszak: kézzel télre váltva megmarad, a színek változnak');
+    ok(await fab() !== fabSummer, 'évszak: a Tailwind-réteg (lebegő gomb) is az évszak színét kapja');
+    await q.reload(); await q.waitForTimeout(250);
+    ok(await q.evaluate(() => document.documentElement.dataset.season) === 'tel', 'évszak: újraindítás után is tél (a választás felülírja a naptárt)');
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#seasonPills .pill', { hasText: 'Automatikus' }).click(); await q.waitForTimeout(150);
+    ok(await q.evaluate(() => document.documentElement.dataset.season + '|' + localStorage.getItem('fogasnaplo.season')) === 'nyar|null', 'évszak: az Automatikus visszaállítja a naptár szerintit');
+    await ctx.close();
+    const seen = new Set();
+    for (const season of ['tavasz', 'nyar', 'osz', 'tel']) for (const theme of ['dark', 'light']) {
+      ({ ctx, q } = await open({}, { season, theme }));
+      seen.add(await bgOf(q));
+      const okLayout = await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.dataset.theme);
+      if (okLayout !== theme) ok(false, 'évszak ' + season + ' / ' + theme + ': elrendezés vagy téma hibás');
+      await ctx.close();
+    }
+    ok(seen.size === 8, 'évszak: 4 évszak × világos/sötét = 8 különböző színvilág (' + seen.size + ')');
+  }
   // test build: update banner
   {
     const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

@@ -17,6 +17,11 @@
     @apply text-zinc-400 light:text-zinc-500;
   }
 
+  /* ...but on the green "fishing time" panel the secondary text stays light, in both modes */
+  .today-top .score .sub, .today-top .now-t span, [data-theme="light"] .today-top .score .sub, [data-theme="light"] .today-top .now-t span {
+    color: var(--hero-lbl);
+  }
+
   /* Specs as pills: lure, place, size */
   .spec {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap;
@@ -153,6 +158,12 @@
     @apply rounded-xl border border-dashed p-3 text-sm leading-snug;
     @apply border-sand-300/40 text-sand-200 light:border-olive-600/40 light:text-olive-700;
   }
+  .season-pills .pill::before { content: ""; @apply mr-2 inline-block h-3 w-3 rounded-full; background: var(--sw, currentColor); }
+  .season-pill[data-season="auto"] { --sw: conic-gradient(#8fb24f 0 25%, #1fb5a8 0 50%, #c4501f 0 75%, #5b8fc7 0); }
+  .season-pill[data-season="tavasz"] { --sw: linear-gradient(135deg, #3fbf5a 50%, #ff8fab 50%); }
+  .season-pill[data-season="nyar"] { --sw: linear-gradient(135deg, #1fb5a8 50%, #ffb84d 50%); }
+  .season-pill[data-season="osz"] { --sw: linear-gradient(135deg, #2f4a3a 50%, #ff8350 50%); }
+  .season-pill[data-season="tel"] { --sw: linear-gradient(135deg, #5b8fc7 50%, #ff6f87 50%); }
   .lthumb-btn { @apply flex-none border-0 bg-transparent p-0; }
   .lthumb {
     @apply flex h-12 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border;

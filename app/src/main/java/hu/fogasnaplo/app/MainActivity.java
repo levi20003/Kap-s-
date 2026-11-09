@@ -1075,6 +1075,20 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> applyWindowTheme(light));
         }
 
+        /** The season's palette for the window background and, before edge to edge (Android 15), the system bars. "#rrggbb" values. */
+        @JavascriptInterface
+        public void setWindowColors(String bg, String top, String nav) {
+            runOnUiThread(() -> {
+                try {
+                    root.setBackgroundColor(android.graphics.Color.parseColor(bg.trim()));
+                    if (Build.VERSION.SDK_INT < 35) {
+                        getWindow().setStatusBarColor(android.graphics.Color.parseColor(top.trim()));
+                        getWindow().setNavigationBarColor(android.graphics.Color.parseColor(nav.trim()));
+                    }
+                } catch (Exception ignored) {} // a colour the page could not resolve: keep the theme's own
+            });
+        }
+
         /** Asks for the notification permission where needed (Android 13+); answers through __fnNotify. */
         @JavascriptInterface
         public void enableNotifications() {

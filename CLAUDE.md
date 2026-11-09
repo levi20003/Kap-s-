@@ -154,7 +154,14 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 - Alsó fülsáv: az aktív ikon mögött csúszó pirula (`.tabind`).
 - Halfaj-kártya: kerek jelvény (talpas kezdőbetű), számláló, zöld + gomb; bal csík csak tilalomnál / közelgő tilalomnál. Rekord: vízszintes trófea-sor, az első arany.
 - Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
-  ha új szín kell, vegyél fel tokent mindkét blokkba.
+  ha új szín kell, vegyél fel tokent mindkét blokkba – és a három évszak-blokkba is (lent).
+- **Évszak-színvilágok** (`<html data-season>`: `tavasz` / `nyar` / `osz` / `tel`), mindegyik világos és sötét változattal (8 kombináció).
+  Az ősz a fenti alap (Erdei csend); a tavasz (levélzöld + virágrózsaszín), nyár (türkiz folyó + napsárga) és tél (jeges kékesszürke + áfonyapiros)
+  a `:root[data-season="…"]:not([data-theme="light"])` és `:root[data-season="…"][data-theme="light"]` blokkokban felülírja a tokeneket.
+  A Tailwind `emerald` / `olive` / `sand` színei a `--em-*` / `--ol-*` / `--sd-*` RGB-hármasokból jönnek (`tailwind.config.js`), így ezek is évszakot váltanak.
+  Alapból a naptár szerint (márc–máj, jún–aug, szept–nov, dec–feb), a `<head>` szkript az első rajzolás előtt beállítja; kézzel: Beállítások → Megjelenés
+  (`fogasnaplo.season`, `setSeason`, „Automatikus” törli a kulcsot). A világos/sötét mód ettől független. Az ablak- és rendszersáv-színeket
+  `ANDROID.setWindowColors(--bg, --bg-top, --surface)` állítja. Mind a 8 kombináció kontrasztját ellenőrizd (szöveg 4,5:1, nagy szöveg és ikon 3:1).
 - A kontrasztot (WCAG) mindkét témában ellenőrizd: a szöveg legalább 4,5:1, a nagy szöveg és ikon legalább 3:1.
 - **Tailwind + Lucide réteg** (`tailwind/`): a stílus forrása `tailwind/input.css` (a meglévő osztályokra `@apply`-jal), a fordított
   `app/src/main/assets/tw.css` a repóban van, így offline is működik. Újraépítés: `tailwind/build.sh` (a `tailwind/node_modules` ki van zárva a gitből).
