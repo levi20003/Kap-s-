@@ -679,6 +679,11 @@ button{transition:transform .15s}
     <section id="gameSec" aria-label="Kap-ás Kihívások"></section>
     <div class="kpis" id="kpis"></div>
     <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
+    <section id="patSec" hidden>
+      <div class="sechead"><h2><span class="ic acc" data-ic="sparkles"></span>Mintázataid</h2></div>
+      <div class="panel"><div class="pats" id="patStats"></div>
+        <p class="hint" id="patNote">Minden évből számolja. Csak azt látja, mikor fogtál: ha valamikor többet horgászol, ott több fogás is lesz. Minél több fogásod van időponttal és hellyel, annál pontosabb.</p></div>
+    </section>
     <section id="monthSec">
       <div class="sechead"><h2><span class="ic" data-ic="calendar"></span>Havonta</h2></div>
       <div class="panel" id="monthStats"></div>
@@ -1024,6 +1029,9 @@ button{transition:transform .15s}
 
   /* ---------- icons ---------- */
   const ICONS={
+    waves:'<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /> <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /> <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />',
+    notebook:'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4" /> <path d="M2 6h4" /> <path d="M2 10h4" /> <path d="M2 14h4" /> <path d="M2 18h4" /> <path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />',
+    sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" />',
     home:'<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /> <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />',
     list:'<path d="M3 12h.01" /> <path d="M3 18h.01" /> <path d="M3 6h.01" /> <path d="M8 12h13" /> <path d="M8 18h13" /> <path d="M8 6h13" />',
     stats:'<path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" />',
@@ -1287,6 +1295,7 @@ button{transition:transform .15s}
       ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±30 perc. Csak az időponttal rögzített fogások számítanak."));
     }
     renderMonths(yearCatches);
+    renderPatterns();
     renderBest(yearCatches);
     renderYearCard();
     renderGame();
@@ -1302,6 +1311,37 @@ button{transition:transform .15s}
       g.append(b)});
     box.append(g);
     box.append(el("div","hint",`Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra, és megnézheted a fogásait.`));
+  }
+  // "Mintázataid": for each species (5+ catches, every year), the conditions most of its catches came in.
+  // A line only shows when at least 3 catches and half of the known ones agree, with the counts, so it never overclaims.
+  const PAT_DIMS=[
+    ["Napszak",c=>{const k=daypart(c);return k==null?null:k},["hajnalban","nappal","alkonyatkor","éjszaka"]],
+    ["Légnyomás",c=>c.wx&&c.wx.dp!=null?trendOf(c.wx.dp):null,{down:"csökkenő légnyomásnál",flat:"stabil légnyomásnál",up:"emelkedő légnyomásnál"}],
+    ["Víz",c=>{const w=catchWater(c);return w?(w.k==="fastup"||w.k==="up"?"up":w.k==="flat"?"flat":"down"):null},{down:"apadó víznél",flat:"stagnáló víznél",up:"áradó víznél"}],
+    ["Hold",c=>moonBucket(moonPhase(new Date(c.at))),["újhold körül","növő holdnál","telihold körül","fogyó holdnál"]]
+  ];
+  function patternsOf(cs){
+    const out=[];
+    PAT_DIMS.forEach(([dim,key,labels])=>{
+      const cnt=new Map();let known=0;cs.forEach(c=>{const k=key(c);if(k==null)return;known++;cnt.set(k,(cnt.get(k)||0)+1)});
+      let best=null;cnt.forEach((n,k)=>{if(!best||n>best[1])best=[k,n]});
+      if(best&&best[1]>=3&&best[1]/known>=.5)out.push({dim,label:labels[best[0]],n:best[1],of:known,share:best[1]/known});
+    });
+    return out.sort((a,b)=>b.share-a.share);
+  }
+  function renderPatterns(){
+    const box=$("patStats");box.replaceChildren();
+    const all=state.catches.filter(c=>state.species.some(s=>s.id===c.sp));
+    const groups=state.species.map(s=>({name:s.name,cs:all.filter(c=>c.sp===s.id)})).filter(g=>g.cs.length>=5).sort((a,b)=>b.cs.length-a.cs.length);
+    if(groups.length!==1&&all.length>=5)groups.unshift({name:"Minden fogás",cs:all});
+    let shown=0;
+    groups.forEach(g=>{
+      const ps=patternsOf(g.cs);if(!ps.length)return;shown++;
+      const r=el("div","pat");r.append(el("b",null,g.name+" · "+g.cs.length+" fogás"));
+      const ul=el("ul");ps.forEach(p=>{const li=el("li");li.append(el("span","pat-n",p.n+"/"+p.of));li.append(" "+p.label);ul.append(li)});r.append(ul);
+      box.append(r);
+    });
+    $("patSec").hidden=!shown;
   }
   // per species: the lure, place and part of the day that brought most fish (needs 2+ catches)
   function renderBest(yc){
@@ -1477,6 +1517,7 @@ button{transition:transform .15s}
     const co=coordsOf(c);row("Hely",c.place&&c.place.name?c.place.name:co?(c.place&&c.place.lat!=null?"Térképen jelölve":"Rögzítéskori GPS-hely"):null);
     row("Csali",c.lure);
     if(c.wx)row("Időjárás",wxLine(c.wx)+([c.wx.noon?"déli adat":null,c.wx.near?c.wx.near.charAt(0).toLowerCase()+c.wx.near.slice(1):null].filter(Boolean).map(x=>" ("+x+")").join("")));
+    const cw=catchWater(c);if(cw)row("Víz",waterTxt(cw)+(c.wx&&c.wx.near?" (közelítő hely)":""));
     const mp=moonPhase(new Date(c.at));const mo=el("span","vmoon");mo.append(moonSvg(mp,16));mo.append(moonName(mp));row("Hold",mo);
     if(c.t){const cco=co||homeLoc()||{lat:HU_CENTER[0],lng:HU_CENTER[1]};const rel=sunRel(c.at,sunTimes(new Date(c.at),cco.lat,cco.lng));if(rel)row("Nap","Fogás "+rel)}
     row("Megjegyzés",c.note);
@@ -2199,9 +2240,57 @@ button{transition:transform .15s}
     // newest first; old catches without weather get it from the archive, a few dozen per start
     const todo=data.catches.filter(c=>c.wxPending||!c.wx||c.wx.key!==wxKey(c)).sort((a,b)=>a.at<b.at?1:-1);
     let done=0;for(const c of todo.slice(0,40)){await ensureWx(c.id);if(++done%8===0)render()}
+    const wtodo=data.catches.filter(c=>!c.water||c.water.key!==waterKey(c)).sort((a,b)=>a.at<b.at?1:-1);
+    for(const c of wtodo.slice(0,40)){await ensureWater(c.id);if(++done%8===0)render()}
     if(done)render();
   }
   window.addEventListener("online",()=>retryPendingWx());
+  /* ---------- river discharge (Open-Meteo Flood API, GloFAS model, m³/s): for anglers the trend matters, not the number ---------- */
+  const FLOOD="https://flood-api.open-meteo.com/v1/flood",WATER_MIN=20; // below ~20 m³/s the grid cell is no real river
+  const WATER_TXT={fastup:"gyorsan árad",up:"árad",flat:"stagnál",down:"apad",fastdown:"gyorsan apad"};
+  const WATER_ARROW={fastup:"⇈",up:"↑",flat:"→",down:"↓",fastdown:"⇊"};
+  // change over 3 days: ±10% is "stagnál", beyond ±30% "gyorsan"
+  function waterTrend(q,q3){if(q==null||q3==null||q3<=0)return null;const r=(q-q3)/q3;
+    return{pct:Math.round(r*100),k:r>=.3?"fastup":r>=.1?"up":r<=-.3?"fastdown":r<=-.1?"down":"flat"}}
+  const waterTxt=w=>w?Math.round(w.q)+" m³/s, "+WATER_TXT[w.k]+" ("+(w.pct>0?"+":"")+w.pct+"% / 3 nap)":"";
+  let water=null;try{const c=JSON.parse(localStorage.getItem("fogasnaplo.water")||"null");if(c&&c.time&&c.q)water=c}catch(e){}
+  const waterHere=loc=>water&&Math.abs(water.lat-loc.lat)<0.05&&Math.abs(water.lng-loc.lng)<0.05;
+  let waterBusy=false;
+  async function loadWater(force){
+    const loc=wxPlace();if(waterBusy)return;
+    if(!force&&waterHere(loc)&&Date.now()-water.fetched<3*36e5)return;
+    waterBusy=true;
+    try{const r=await fetchT(FLOOD+"?latitude="+loc.lat.toFixed(3)+"&longitude="+loc.lng.toFixed(3)+"&daily=river_discharge&past_days=7&forecast_days=7");
+      if(!r.ok)throw new Error("http");const j=await r.json();if(!j.daily||!j.daily.time||!j.daily.river_discharge)throw new Error("shape");
+      water={fetched:Date.now(),lat:loc.lat,lng:loc.lng,time:j.daily.time,q:j.daily.river_discharge};
+      try{localStorage.setItem("fogasnaplo.water",JSON.stringify(water))}catch(e){}
+      renderToday();
+    }catch(e){}finally{waterBusy=false}
+  }
+  // the weather card place's river on a given day: {q, pct, k}, or null (no data, or no real river there)
+  function waterOn(date){
+    if(!water||!waterHere(wxPlace()))return null;
+    const k=water.time.indexOf(ymd(date));if(k<3)return null;
+    const q=water.q[k];if(q==null||q<WATER_MIN)return null;
+    const t=waterTrend(q,water.q[k-3]);return t?{q,...t}:null;
+  }
+  // a catch's river: stored as c.water = {key, q, pct, k} (or {key, none:true} where there is no river)
+  function waterKey(c){const co=wxCoords(c);return co?co.lat.toFixed(2)+","+co.lng.toFixed(2)+"@"+ymd(new Date(c.at)):null}
+  const waterBusyIds=new Set();
+  async function ensureWater(id){
+    const c=data.catches.find(x=>x.id===id);if(!c)return;const key=waterKey(c);if(!key||(c.water&&c.water.key===key)||waterBusyIds.has(id))return;
+    const day=new Date(c.at);if(day>Date.now()+864e5)return;
+    waterBusyIds.add(id);
+    try{const co=wxCoords(c),from=new Date(day);from.setDate(from.getDate()-3);
+      const r=await fetchT(FLOOD+"?latitude="+co.lat.toFixed(3)+"&longitude="+co.lng.toFixed(3)+"&daily=river_discharge&start_date="+ymd(from)+"&end_date="+ymd(day));
+      if(!r.ok)throw new Error("http");const j=await r.json();const Q=j.daily&&j.daily.river_discharge;if(!Q||Q.length<4)throw new Error("shape");
+      const q=Q[Q.length-1],t=waterTrend(q,Q[0]);
+      const w=q==null||q<WATER_MIN||!t?{key,none:true}:{key,q:Math.round(q),pct:t.pct,k:t.k};
+      const cur=data.catches.find(x=>x.id===id);if(cur&&waterKey(cur)===key)store.updateCatch(id,{water:w});
+    }catch(e){}finally{waterBusyIds.delete(id)}
+  }
+  const catchWater=c=>c.water&&!c.water.none&&c.water.key===waterKey(c)?c.water:null;
+
   function wxLine(w){
     if(!w)return"";const t=trendOf(w.dp);
     return Math.round(w.temp)+" °C · "+w.p+" hPa"+(t==="up"?" ↑":t==="down"?" ↓":"")+" · "+dirName(w.wd)+" "+w.ws+" km/h";
@@ -2246,7 +2335,7 @@ button{transition:transform .15s}
   async function loadToday(force){
     const loc=wxPlace();
     const fresh=today.data&&Math.abs(today.data.lat-loc.lat)<0.05&&Math.abs(today.data.lng-loc.lng)<0.05&&Date.now()-today.data.fetched<45*6e4;
-    if(fresh&&!force){renderToday();return}
+    if(fresh&&!force){renderToday();loadWater(false);return}
     today.loading=true;today.err=null;renderToday();
     try{
       const url="https://api.open-meteo.com/v1/forecast?latitude="+loc.lat.toFixed(3)+"&longitude="+loc.lng.toFixed(3)+
@@ -2257,7 +2346,7 @@ button{transition:transform .15s}
       today.data={fetched:Date.now(),lat:loc.lat,lng:loc.lng,h:j.hourly,d:j.daily};
       try{localStorage.setItem("fogasnaplo.today",JSON.stringify(today.data))}catch(e){}
     }catch(e){today.err=today.data?"Nincs internet, a legutóbbi adatot látod.":"Nincs internet. Ha lesz kapcsolat, magától betöltöm."}
-    today.loading=false;renderToday();
+    today.loading=false;renderToday();loadWater(force);
   }
   function scoreToday(H,i,now){
     const reasons=[];let sc=0;
@@ -2277,12 +2366,22 @@ button{transition:transform .15s}
     const t=H.temperature_2m[i];if(t<2||t>30){sc-=.5;reasons.push(["neg",(t<2?"Hideg":"Kánikula")+" ("+Math.round(t)+" °C)."])}
     if(H.weather_code[i]>=95){sc-=1;reasons.push(["neg","Zivatar: nyílt vízen, pergetőbottal veszélyes."])}
     const mp=moonPhase(now),mb=moonBucket(mp);if(mb===0||mb===2){sc+=.5;reasons.push(["",moonName(mp)+" közelében."])}
+    // the river (daily): steady or slowly falling water clears, a fast rise brings murky water and debris
+    const wt=waterOn(now);
+    if(wt){const w=" ("+waterTxt(wt)+")";
+      if(wt.k==="flat"||wt.k==="down"){sc+=.5;reasons.push(["",(wt.k==="flat"?"Stagnáló":"Lassan apadó")+" víz"+w+": tisztul, a ragadozó a megszokott helyén."])}
+      else if(wt.k==="up"){sc-=.5;reasons.push(["neg","Áradó víz"+w+": zavarosodik, a hal áthelyeződik."])}
+      else if(wt.k==="fastup"){sc-=1;reasons.push(["neg","Gyorsan áradó víz"+w+": zavaros, uszadékos, nehéz pergetni."])}
+      else reasons.push(["","Gyorsan apadó víz"+w+": a hal a mélyebb részekre húzódik."])}
     // personal pattern
     const mine=state.catches.filter(c=>c.wx&&c.wx.dp!=null);
     if(mine.length>=8){const cnt={up:0,flat:0,down:0};mine.forEach(c=>cnt[trendOf(c.wx.dp)]++);const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
       const nowT=trendOf(dp);const share=Math.round(best[1]/mine.length*100);
       if(nowT===best[0]){sc+=.5;reasons.unshift(["me","A fogásaid "+share+"%-a "+TREND_TXT[best[0]]+" légnyomásnál volt, és ma is ilyen."])}
       else reasons.push(["me","A fogásaid többsége "+TREND_TXT[best[0]]+" légnyomásnál volt, ma "+TREND_TXT[nowT]+"."])}
+    const mineW=wt?state.catches.map(catchWater).filter(Boolean):[];
+    if(mineW.length>=8){const cnt={};mineW.forEach(w=>cnt[w.k]=(cnt[w.k]||0)+1);const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+      if(best[0]===wt.k){sc+=.5;reasons.unshift(["me","A fogásaid "+Math.round(best[1]/mineW.length*100)+"%-a akkor volt, amikor a víz "+WATER_TXT[best[0]]+", és ma is ilyen."])}}
     const level=Math.max(1,Math.min(5,Math.round(sc+1)));
     return{level,sc,reasons:reasons.slice(0,4),p,dp};
   }
@@ -2390,6 +2489,7 @@ button{transition:transform .15s}
     const b=el("div","wx-ex");
     b.append(el("p",null,"A hPa (hektopascal) a légnyomás mértékegysége. Az átlag kb. 1013 hPa: 1020 fölött általában száraz, nyugodt idő van, 1005 alatt csapadékos, szeles. "+
       "A halaknak nem maga a szám számít, hanem a változás: a nyíl és a görbe azt mutatja, nő, csökken vagy stabil. Lassan csökkenő nyomásnál (front előtt) a ragadozók gyakran aktívabbak, gyorsan emelkedőnél (front után) passzívabbak."));
+    b.append(el("p",null,"A vízhozam (m³/s) a folyón másodpercenként lefolyó víz, modellből (GloFAS, Open-Meteo). Nem a vízmérce centije, de együtt mozog vele: ha a vízhozam nő, a víz árad. Itt is az irány számít, nem a szám."));
     b.append(el("p",null,"Az értékelés pontokból áll össze, az adott óra előrejelzéséből:"));
     const ul=el("ul","reasons");[
       "Légnyomás az elmúlt 3 órában: lassan csökken +2, stabil +1,5, enyhén nő +0,5, gyorsan nő −0,5, gyorsan esik 0.",
@@ -2397,7 +2497,8 @@ button{transition:transform .15s}
       "Felhős ég (50% fölött) +0,5: tompább fényben bátrabb a hal.",
       "Hideg (2 °C alatt) vagy kánikula (30 °C fölött) −0,5, zivatar −1.",
       "Újhold vagy telihold közelében +0,5.",
-      "Ha legalább 8 fogásodnál van időjárás, és ma a kedvenc légnyomás-helyzeted van: +0,5."
+      "A folyó vízhozama 3 nap alatt (ha a hely folyó mellett van): stagnál vagy lassan apad +0,5, árad −0,5, gyorsan árad (30% fölött) −1.",
+      "Ha legalább 8 fogásodnál van időjárás, és ma a kedvenc légnyomás-helyzeted van: +0,5. Ugyanígy a vízállás-helyzettel (8 fogás vízhozammal): +0,5."
     ].forEach(t=>ul.append(el("li",null,t)));b.append(ul);
     b.append(el("p",null,"Az összegből lesz az 1–5 fokozat (Gyenge, Közepes, Jó, Nagyon jó, Kiváló). A fenti értékelés és a napok sorai is a nappali órák (6–20 óra) átlagát mutatják, így a „Ma” sor mindig ugyanazt írja, mint a fejléc. Ez tájékoztató becslés, nem garancia."));
     d.append(b);return d;
@@ -2465,6 +2566,8 @@ button{transition:transform .15s}
     if(dk>=0){const rs=D.precipitation_sum[dk]||0,rp=D.precipitation_probability_max?D.precipitation_probability_max[dk]:null;
       fact("drop",(rs>=0.1?"Eső "+mm(rs)+" mm":"Nem esik")+(rp!=null?" ("+rp+"%)":""),rs>=1?"wet":"");
       fact("wind","Szél max "+Math.round(D.wind_speed_10m_max[dk])+" km/h"+(D.wind_gusts_10m_max?", lökés "+Math.round(D.wind_gusts_10m_max[dk]):""))}
+    const wd=waterOn(selDate);
+    if(wd)fact("waves","Víz "+Math.round(wd.q)+" m³/s "+WATER_ARROW[wd.k]+" "+WATER_TXT[wd.k],wd.k==="fastup"||wd.k==="up"?"wet":"");
     card.append(facts);
     let from,to;
     if(di===0){from=i;to=i+24}else{const k0=H.time.indexOf(ymd(selDate)+"T04:00");from=k0;to=k0+19}

@@ -15,7 +15,9 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
   const b = await chromium.launch();
   // reduced motion makes the checks deterministic; the motion tests ask for 'no-preference' themselves
   const rawNew = b.newContext.bind(b);
-  b.newContext = async (o = {}) => { const c = await rawNew({ reducedMotion: 'reduce', ...o }); c.setDefaultTimeout(6000); return c; };
+  // the river discharge API is never reached for real (page routes in a test override this)
+  b.newContext = async (o = {}) => { const c = await rawNew({ reducedMotion: 'reduce', ...o }); c.setDefaultTimeout(6000);
+    await c.route('https://flood-api.open-meteo.com/**', r => r.abort()); return c; };
   const ctx = await b.newContext(); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.addInitScript(({seed}) => {
@@ -691,6 +693,61 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
     await q.goto(PAGE); await q.waitForTimeout(300);
     ok(await q.locator('.restore-offer').isVisible(), 'üres napló: a Kezdőlap felajánlja a visszaállítást mentésből');
+    await ctx.close();
+  }
+  // river discharge: today's trend on the weather card and in the score, each catch's river, and "Mintázataid"
+  {
+    const now = new Date(), Y = now.getFullYear(), fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const hours = Array.from({ length: 24 * 8 }, (_, k) => { const d = new Date(now); d.setMinutes(0, 0, 0); d.setHours(d.getHours() - 24 + k); return fmt(d) + 'T' + String(d.getHours()).padStart(2, '0') + ':00'; });
+    const H = { time: hours, temperature_2m: hours.map(() => 18), pressure_msl: hours.map(() => 1015), wind_speed_10m: hours.map(() => 8), wind_direction_10m: hours.map(() => 0),
+      wind_gusts_10m: hours.map(() => 15), cloud_cover: hours.map(() => 20), weather_code: hours.map(() => 1), precipitation: hours.map(() => 0), precipitation_probability: hours.map(() => 0) };
+    const days = Array.from({ length: 8 }, (_, k) => { const d = new Date(now); d.setDate(d.getDate() - 1 + k); return fmt(d); });
+    const D = { time: days, weather_code: days.map(() => 1), temperature_2m_max: days.map(() => 18), temperature_2m_min: days.map(() => 8), precipitation_sum: days.map(() => 0),
+      precipitation_probability_max: days.map(() => 0), wind_speed_10m_max: days.map(() => 10), wind_gusts_10m_max: days.map(() => 20), wind_direction_10m_dominant: days.map(() => 0),
+      sunrise: days.map(d => d + 'T06:58'), sunset: days.map(d => d + 'T16:20') };
+    const wdays = Array.from({ length: 15 }, (_, k) => { const d = new Date(now); d.setDate(d.getDate() - 7 + k); return fmt(d); });
+    const run = async (q7) => {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(({ H, D, W }) => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] }));
+        localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
+        localStorage.setItem('fogasnaplo.water', JSON.stringify(W)); localStorage.setItem('fogasnaplo.todayOpen', '1'); },
+        { H, D, W: { fetched: Date.now(), lat: 46.253, lng: 20.148, time: wdays, q: q7 } });
+      await q.route('https://api.open-meteo.com/**', r => r.abort());
+      await q.goto(PAGE); await q.waitForTimeout(500);
+      const r = { facts: await q.locator('#today .facts').first().innerText(), reasons: await q.locator('#today .reasons').first().innerText(),
+        lv: await q.locator('#today .score .dots i.on').count(), ex: await q.locator('#today .wx-explain').textContent() };
+      await ctx.close(); return r;
+    };
+    const flat = await run(wdays.map(() => 130)), rising = await run(wdays.map((_, k) => k < 4 ? 100 : k < 7 ? 100 + (k - 3) * 40 : 260));
+    ok(flat.facts.includes('Víz 130 m³/s') && flat.facts.includes('stagnál'), 'vízhozam: a mai nap kártyáján a folyó vízhozama és iránya (' + flat.facts.replace(/\n/g, ' ') + ')');
+    ok(flat.reasons.includes('Stagnáló víz') && rising.reasons.includes('Gyorsan áradó víz'), 'vízhozam: az értékelés indoklásában szerepel');
+    ok(flat.lv > rising.lv, `vízhozam: gyorsan áradó víznél gyengébb a horgászidő (${flat.lv} > ${rising.lv})`);
+    ok(flat.ex.includes('vízhozam') && flat.ex.includes('gyorsan árad'), 'vízhozam: a magyarázat leírja, mit jelent és hogyan pontoz');
+    const small = await run(wdays.map(() => 4));
+    ok(!small.facts.includes('m³/s') && !small.reasons.includes('m³/s'), 'vízhozam: ahol nincs igazi folyó (kis érték), nem mutat és nem pontoz');
+
+    // a catch gets its river from the archive; viewer shows it; patterns appear with 5+ catches
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const at = i => new Date(Y, 4, 10 + i, 17, 30).toISOString();
+    const cs = Array.from({ length: 6 }, (_, i) => ({ id: 'w' + i, sp: 's1', at: at(i), y: Y, t: true, place: { name: 'Bertalan híd', lat: 46.25, lng: 20.15 },
+      wx: { key: 'x', temp: 20, p: 1015, dp: 0.2, ws: 8, wd: 0, cc: 20, code: 1, rain: 0 } }));
+    await q.addInitScript(cs => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: cs })), cs);
+    const asked = [];
+    await q.route('https://flood-api.open-meteo.com/**', r => { const u = new URL(r.request().url()); asked.push(u);
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify({ daily: { time: ['a', 'b', 'c', 'd'], river_discharge: [400, 360, 330, 300] } }) }); });
+    await q.route('https://api.open-meteo.com/**', r => r.abort()); await q.route('https://archive-api.open-meteo.com/**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(2600);
+    const d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    const w0 = d.catches.find(c => c.id === 'w0').water;
+    ok(w0 && w0.q === 300 && w0.k === 'down' && w0.pct === -25 && asked.some(u => u.searchParams.get('end_date') && u.searchParams.get('start_date')), 'vízhozam: a fogás napjára az archívumból (3 napos irány)');
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
+    ok((await q.locator('#sheet').innerText()).includes('300 m³/s, apad (-25% / 3 nap)'), 'vízhozam: a fogás kártyáján látszik');
+    await q.evaluate(() => window.__fnBack());
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
+    const pt = (await q.locator('#patSec').innerText()).replace(/\s+/g, ' ');
+    ok(await q.locator('#patSec').isVisible() && pt.includes('Balin · 6 fogás') && pt.includes('6/6 stabil légnyomásnál') && pt.includes('6/6 apadó víznél') && pt.includes('nappal'),
+      'mintázataid: fajonként a közös körülmények, darabszámmal (' + pt.replace(/\n/g, ' | ') + ')');
+    ok(!pt.includes('Minden fogás'), 'mintázataid: egy fajnál nincs külön „Minden fogás” sor');
     await ctx.close();
   }
   // tabs: structure, home content, species management

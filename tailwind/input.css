@@ -189,6 +189,13 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Statisztika: Mintázataid */
+  .pats { @apply flex flex-col gap-3; }
+  .pat b { @apply block text-sm; }
+  .pat ul { @apply m-0 mt-1 list-none p-0; }
+  .pat li { @apply flex items-baseline gap-2 py-0.5 text-sm text-zinc-300 light:text-zinc-700; }
+  .pat-n { @apply min-w-[3.2rem] rounded-full px-2 py-0.5 text-center text-xs font-bold bg-emerald-500/20; color: var(--water); }
+
   /* Bottom nav: rounded pill behind the active tab */
   .tabind::after {
     @apply rounded-full bg-emerald-500/20;

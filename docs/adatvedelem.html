@@ -30,7 +30,10 @@ a{color:var(--water)}
 <section>
 <h2>Milyen adatot kezel az app?</h2>
 <ul>
-<li><b>Fogások</b> (halfaj, időpont, méret, csali, hely, megjegyzés), <b>fotók és videók</b>: a telefon saját tárhelyén, az alkalmazás mappájában.</li>
+<li><b>Fogások</b> (halfaj, időpont, méret, csali, hely, megjegyzés), <b>fotók és videók</b>: a telefon saját tárhelyén, az alkalmazás mappájában.
+A naplóról az app egy belső tartalék-másolatot is tart ugyanitt.</li>
+<li><b>Android biztonsági mentés</b>: ha a telefonodon be van kapcsolva a Google biztonsági mentés, az Android a naplót (a teljes méretű fotók nélkül)
+a <b>saját Google-fiókodba</b> menti, és az app újratelepítésekor visszaállítja. Ezt a telefon kezeli, a fejlesztő nem fér hozzá.</li>
 <li><b>Hely</b>: ha engedélyezed, a fogás rögzítésekor az app lekéri a telefon helyét, hogy a fogáshoz elmentse. Az időjárás-kártyához az app
 soha nem kér helyet magától; ott te választod a települést (vagy egyszer, kérésre a jelenlegi helyed).</li>
 </ul>
@@ -39,7 +42,7 @@ soha nem kér helyet magától; ott te választod a települést (vagy egyszer, 
 <section>
 <h2>Mi megy ki a telefonról?</h2>
 <ul>
-<li><b>Open-Meteo</b> (<a href="https://open-meteo.com/">open-meteo.com</a>): az időjárás lekéréséhez a választott település vagy a fogás helyének
+<li><b>Open-Meteo</b> (<a href="https://open-meteo.com/">open-meteo.com</a>): az időjárás és a folyó vízhozamának lekéréséhez a választott település vagy a fogás helyének
 koordinátái és dátuma, valamint a településkereső szövege. Titkosított (HTTPS) kapcsolaton, azonosító nélkül.</li>
 <li><b>OpenStreetMap</b> (<a href="https://www.openstreetmap.org/">openstreetmap.org</a>): a térkép megjelenítéséhez a megnézett térképrészlet csempéi.</li>
 </ul>
