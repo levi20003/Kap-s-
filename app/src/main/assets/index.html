@@ -679,6 +679,10 @@ button{transition:transform .15s}
     <section id="gameSec" aria-label="Kap-ás Kihívások"></section>
     <div class="kpis" id="kpis"></div>
     <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
+    <section id="offSec" hidden>
+      <div class="sechead"><h2><span class="ic" data-ic="notebook"></span>Hivatalos fogási napló</h2></div>
+      <div class="panel" id="offBox"></div>
+    </section>
     <section id="patSec" hidden>
       <div class="sechead"><h2><span class="ic acc" data-ic="sparkles"></span>Mintázataid</h2></div>
       <div class="panel"><div class="pats" id="patStats"></div>
@@ -1295,6 +1299,7 @@ button{transition:transform .15s}
       ds.append(wrap);ds.append(el("div","hint","Hajnal és alkony: napkelte és napnyugta ±30 perc. Csak az időponttal rögzített fogások számítanak."));
     }
     renderMonths(yearCatches);
+    renderOfficial(y,yearCatches);
     renderPatterns();
     renderBest(yearCatches);
     renderYearCard();
@@ -1312,6 +1317,77 @@ button{transition:transform .15s}
     box.append(g);
     box.append(el("div","hint",`Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra, és megnézheted a fogásait.`));
   }
+  /* ---------- the official catch log (állami horgászjegy fogási naplója): what to copy into it ----------
+     Every kept fish goes into the official log: day, water code (víztérkód), species, pieces, kg. The app cannot know the
+     water codes, so the angler types each place's code once (fogasnaplo.vtk: {place name: code}). Paper logs go back by
+     28 February of the next year (rule of 2025); an electronic log can be asked for since 2025. */
+  const VTK_KEY="fogasnaplo.vtk",NO_PLACE="Hely nélkül";
+  function vtkMap(){try{return JSON.parse(localStorage.getItem(VTK_KEY)||"{}")||{}}catch(e){return{}}}
+  function setVtk(place,code){const m=vtkMap();code=code.trim().slice(0,12);if(code)m[place]=code;else delete m[place];try{localStorage.setItem(VTK_KEY,JSON.stringify(m))}catch(e){}}
+  const placeOf=c=>c.place&&c.place.name?c.place.name.trim():NO_PLACE;
+  const kgTxt=v=>(Math.round(v*100)/100).toLocaleString("hu-HU",{maximumFractionDigits:2});
+  // rows of the log: one per day + place + species, oldest first
+  function officialRows(yc){
+    const vtk=vtkMap(),m=new Map();
+    yc.filter(c=>c.kept===true).sort((a,b)=>a.at<b.at?-1:1).forEach(c=>{
+      const d=new Date(c.at),pl=placeOf(c),key=ymd(d)+"|"+pl+"|"+c.sp;
+      const r=m.get(key)||{date:d,place:pl,code:vtk[pl]||"",sp:spName(c.sp),n:0,kg:0,noW:0};
+      r.n++;if(c.w)r.kg+=c.w;else r.noW++;m.set(key,r)});
+    return [...m.values()];
+  }
+  function officialText(y,rows){
+    const pad2=n=>String(n).padStart(2,"0"),lines=[y+". évi fogási napló – Kapás összesítő",""];
+    lines.push("Dátum | Víztérkód | Halfaj | db | kg");
+    rows.forEach(r=>lines.push(pad2(r.date.getMonth()+1)+"."+pad2(r.date.getDate())+". | "+(r.code||"? ("+r.place+")")+" | "+r.sp+" | "+r.n+" | "+(r.noW?(r.kg?kgTxt(r.kg)+" + "+r.noW+" db súly nélkül":"–"):kgTxt(r.kg))));
+    const bySp=new Map();rows.forEach(r=>{const o=bySp.get(r.sp)||{n:0,kg:0};o.n+=r.n;o.kg+=r.kg;bySp.set(r.sp,o)});
+    lines.push("","Összesen:");bySp.forEach((o,sp)=>lines.push(sp+": "+o.n+" db"+(o.kg?", "+kgTxt(o.kg)+" kg":"")));
+    lines.push("Horgásznap elvitt hallal: "+new Set(rows.map(r=>ymd(r.date))).size);
+    return lines.join("\n");
+  }
+  function copyOut(label,text){
+    if(ANDROID&&ANDROID.copyText){try{if(ANDROID.copyText(label,text)){toast("Kimásolva");return}}catch(e){}}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast("Kimásolva"),()=>toast("Nem sikerült kimásolni."));
+    else toast("Nem sikerült kimásolni.");
+  }
+  function renderOfficial(y,yc){
+    const box=$("offBox");box.replaceChildren();
+    const open=yc.filter(c=>c.kept==null),rows=officialRows(yc);
+    $("offSec").hidden=!yc.length;if(!yc.length)return;
+    box.append(el("p","hint lead","Az elvitt halakat a hivatalos fogási naplódba is be kell írnod. Itt sorrendben látod, mit kell átmásolnod: nap, víztérkód, halfaj, darab és súly."));
+    // catches nobody marked yet: only kept fish go into the log
+    if(open.length){
+      const q=el("div","off-open");q.append(el("b",null,open.length+" fogásnál nincs megadva, elvitted-e"),el("span","hint","Csak az elvitt halat kell beírni. Jelöld meg őket:"));
+      open.sort((a,b)=>a.at<b.at?-1:1).slice(0,30).forEach(c=>{
+        const r=el("div","off-q");r.append(el("span",null,fmtDM(new Date(c.at))+" · "+spName(c.sp)+(c.l?" "+c.l+" cm":"")+(c.w?" "+kg(c.w):"")));
+        const b1=el("button","no","Elvittem"),b2=el("button","no","Elengedtem");b1.type=b2.type="button";
+        b1.onclick=()=>store.updateCatch(c.id,{kept:true});b2.onclick=()=>store.updateCatch(c.id,{kept:false});
+        r.append(b1,b2);q.append(r)});
+      if(open.length>30)q.append(el("span","hint","…és még "+(open.length-30)+". A fogás szerkesztőjében is megadhatod."));
+      box.append(q);
+    }
+    if(!rows.length){box.append(el("p","hint",y+"-ben még nincs elvittnek jelölt hal, nincs mit beírni."));}
+    else{
+      // each place's water code, typed once
+      const places=[...new Set(rows.map(r=>r.place))];
+      const vt=el("div","off-vtk");vt.append(el("div","flabel","Víztérkódok (a horgászjegyeden vagy a vízterület szabályzatában találod)"));
+      places.forEach(pl=>{const lab=el("label","off-vrow");lab.append(el("span",null,pl));const inp=el("input");inp.value=vtkMap()[pl]||"";inp.maxLength=12;inp.placeholder="pl. 06-123";
+        inp.setAttribute("aria-label","Víztérkód: "+pl);inp.onchange=()=>{setVtk(pl,inp.value);setTimeout(render,0)}; /* after the blur that fired it, not inside it */lab.append(inp);vt.append(lab)});
+      box.append(vt);
+      const t=el("table","off-tab");const hd=el("tr");["Dátum","Víztérkód","Halfaj","db","kg"].forEach(h=>hd.append(el("th",null,h)));t.append(hd);
+      rows.forEach(r=>{const tr=el("tr");
+        tr.append(el("td",null,fmtDM(r.date)),el("td",r.code?null:"miss",r.code||"?"),el("td",null,r.sp),el("td","num",String(r.n)),
+          el("td","num"+(r.noW?" miss":""),r.noW?(r.kg?kgTxt(r.kg)+"+?":"?"):kgTxt(r.kg)));t.append(tr)});
+      const wrap=el("div","off-scroll");wrap.append(t);box.append(wrap);
+      const noW=rows.reduce((a,r)=>a+r.noW,0),noC=rows.filter(r=>!r.code).length;
+      if(noW||noC)box.append(el("p","note warn",[noC?"Hiányzó víztérkód: írd be fent.":null,noW?noW+" elvitt halnál nincs súly; ahol a naplód súlyt kér, add meg a fogásnál.":null].filter(Boolean).join(" ")));
+      const sum=new Map();rows.forEach(r=>{const o=sum.get(r.sp)||{n:0,kg:0};o.n+=r.n;o.kg+=r.kg;sum.set(r.sp,o)});
+      box.append(el("p","off-sum","Összesen: "+[...sum].map(([sp,o])=>sp+" "+o.n+" db"+(o.kg?" ("+kgTxt(o.kg)+" kg)":"")).join(", ")+
+        ". Horgásznap elvitt hallal: "+new Set(rows.map(r=>ymd(r.date))).size+"."));
+      const bt=el("button","btn-ghost","Összesítő másolása");bt.type="button";bt.onclick=()=>copyOut("Fogási napló "+y,officialText(y,rows));box.append(bt);
+    }
+    box.append(el("p","hint","A "+y+". évi papír fogási naplót "+(y+1)+". február 28-ig kell leadnod (a 2025-ös szabály szerint; ha változik, az egyesületed szól). 2025-től elektronikus fogási napló is kérhető. Ha be vannak kapcsolva az értesítések, a határidő előtt szólok."));
+  }
+
   // "Mintázataid": for each species (5+ catches, every year), the conditions most of its catches came in.
   // A line only shows when at least 3 catches and half of the known ones agree, with the counts, so it never overclaims.
   const PAT_DIMS=[
@@ -2253,6 +2329,17 @@ button{transition:transform .15s}
   function waterTrend(q,q3){if(q==null||q3==null||q3<=0)return null;const r=(q-q3)/q3;
     return{pct:Math.round(r*100),k:r>=.3?"fastup":r>=.1?"up":r<=-.3?"fastdown":r<=-.1?"down":"flat"}}
   const waterTxt=w=>w?Math.round(w.q)+" m³/s, "+WATER_TXT[w.k]+" ("+(w.pct>0?"+":"")+w.pct+"% / 3 nap)":"";
+  // the model's grid is ~5 km: a point on the bank can fall into a side channel's cell. Ask the 3×3 cells around it in one
+  // request and keep the biggest river (for a Tisza spot that is the Tisza, not a ditch next to it).
+  async function floodNear(lat,lng,query){
+    const la=[],lo=[];[-.05,0,.05].forEach(dy=>[-.05,0,.05].forEach(dx=>{la.push((lat+dy).toFixed(3));lo.push((lng+dx).toFixed(3))}));
+    const r=await fetchT(FLOOD+"?latitude="+la.join(",")+"&longitude="+lo.join(",")+"&daily=river_discharge&"+query);
+    if(!r.ok)throw new Error("http");const j=await r.json();
+    const all=(Array.isArray(j)?j:[j]).map(x=>x&&x.daily).filter(d=>d&&d.time&&Array.isArray(d.river_discharge));
+    if(!all.length)throw new Error("shape");
+    const size=d=>d.river_discharge.reduce((a,v)=>a+(v||0),0);
+    return all.reduce((a,b)=>size(b)>size(a)?b:a);
+  }
   let water=null;try{const c=JSON.parse(localStorage.getItem("fogasnaplo.water")||"null");if(c&&c.time&&c.q)water=c}catch(e){}
   const waterHere=loc=>water&&Math.abs(water.lat-loc.lat)<0.05&&Math.abs(water.lng-loc.lng)<0.05;
   let waterBusy=false;
@@ -2260,9 +2347,8 @@ button{transition:transform .15s}
     const loc=wxPlace();if(waterBusy)return;
     if(!force&&waterHere(loc)&&Date.now()-water.fetched<3*36e5)return;
     waterBusy=true;
-    try{const r=await fetchT(FLOOD+"?latitude="+loc.lat.toFixed(3)+"&longitude="+loc.lng.toFixed(3)+"&daily=river_discharge&past_days=7&forecast_days=7");
-      if(!r.ok)throw new Error("http");const j=await r.json();if(!j.daily||!j.daily.time||!j.daily.river_discharge)throw new Error("shape");
-      water={fetched:Date.now(),lat:loc.lat,lng:loc.lng,time:j.daily.time,q:j.daily.river_discharge};
+    try{const d=await floodNear(loc.lat,loc.lng,"past_days=7&forecast_days=7");
+      water={fetched:Date.now(),lat:loc.lat,lng:loc.lng,time:d.time,q:d.river_discharge};
       try{localStorage.setItem("fogasnaplo.water",JSON.stringify(water))}catch(e){}
       renderToday();
     }catch(e){}finally{waterBusy=false}
@@ -2282,8 +2368,7 @@ button{transition:transform .15s}
     const day=new Date(c.at);if(day>Date.now()+864e5)return;
     waterBusyIds.add(id);
     try{const co=wxCoords(c),from=new Date(day);from.setDate(from.getDate()-3);
-      const r=await fetchT(FLOOD+"?latitude="+co.lat.toFixed(3)+"&longitude="+co.lng.toFixed(3)+"&daily=river_discharge&start_date="+ymd(from)+"&end_date="+ymd(day));
-      if(!r.ok)throw new Error("http");const j=await r.json();const Q=j.daily&&j.daily.river_discharge;if(!Q||Q.length<4)throw new Error("shape");
+      const Q=(await floodNear(co.lat,co.lng,"start_date="+ymd(from)+"&end_date="+ymd(day))).river_discharge;if(Q.length<4)throw new Error("shape");
       const q=Q[Q.length-1],t=waterTrend(q,Q[0]);
       const w=q==null||q<WATER_MIN||!t?{key,none:true}:{key,q:Math.round(q),pct:t.pct,k:t.k};
       const cur=data.catches.find(x=>x.id===id);if(cur&&waterKey(cur)===key)store.updateCatch(id,{water:w});
@@ -2625,12 +2710,18 @@ button{transition:transform .15s}
           if(!groups.has(key))groups.set(key,{at,kind,items:[]});
           groups.get(key).items.push({name:s.name,until:endLabel(x,sp),min:rule.min,take:x.note!=="tilalmi idő"})});
       })))});
-    return [...groups.values()].sort((a,b)=>a.at-b.at).slice(0,60).map(g=>{
+    // the official log goes back by 28 February: a week before and the day before, if last year had kept fish
+    const log=[];[NOW_Y-1,NOW_Y].forEach(y=>{
+      if(!data.catches.some(c=>c.kept===true&&new Date(c.at).getFullYear()===y))return;
+      [[21,"egy hét múlva"],[27,"holnap"]].forEach(([d,when])=>{const at=new Date(y+1,1,d,18,0,0,0).getTime();
+        if(at>now&&at<=until)log.push({at,title:"Fogási napló leadása "+when,text:"A "+y+". évi fogási naplót február 28-ig kell leadni. A kész összesítőt a Statisztika fülön találod."})})});
+    const seasons=[...groups.values()].sort((a,b)=>a.at-b.at).slice(0,60).map(g=>{
       const names=g.items.map(i=>i.name).join(", ");
       if(g.kind==="start")return{at:g.at,title:"Holnaptól tilalom: "+names,
         text:g.items.map(i=>`${i.name}: ${i.take?"elviteli tilalom":"tilalmi idő"} ${i.until}`).join("; ")+". A helyi horgászrend szigorúbb lehet."};
       return{at:g.at,title:"Újra fogható: "+names,text:g.items.map(i=>`${i.name} (min. ${i.min} cm)`).join(", ")+": véget ért a tilalom, mától újra horgászhatod."};
     });
+    return seasons.concat(log).sort((a,b)=>a.at-b.at);
   }
   let lastReminders=null;
   function pushReminders(){

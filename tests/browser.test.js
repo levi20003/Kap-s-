@@ -33,6 +33,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     };
   }, { seed });
   await p.goto(PAGE); await p.waitForTimeout(1500);
+  // a syntax error anywhere stops the whole app script: say so first, plainly
+  ok(await p.evaluate(() => typeof window.__fnBack === 'function' && typeof window.__fnZipDone === 'function'), 'az app szkriptje hiba nélkül betöltődött');
   const stored = () => p.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
   let d = await stored();
   ok(d.catches.filter(c => c.photo).every(c => c.photo.thumb.startsWith('file:')), 'előnézetek fájlba költöztek');
@@ -557,7 +559,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#lureBoxList .lthumb img').count() === 1, 'csalifotó: a csalitárban látszik');
     await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(150);
     ok(await q.locator('#plan .plan-item .plan-img img').count() === 1, 'csalifotó: az ajánlásban is látszik');
-    await q.reload(); await q.waitForTimeout(1300);
+    await q.reload(); await q.waitForFunction(() => window.__lp && window.__lp.cleanup, null, { timeout: 5000 }).catch(() => {});
     const keep = await q.evaluate(() => window.__lp.cleanup);
     ok(keep && keep.includes('file:///data/photos/lure1.jpg') && keep.includes('file:///data/thumbs/lure1.jpg'), 'csalifotó: a fájltakarítás megtartja');
     const f = path.join(os.tmpdir(), 'kapas-csalifoto-teszt.json');
@@ -734,12 +736,14 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.addInitScript(cs => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: cs })), cs);
     const asked = [];
     await q.route('https://flood-api.open-meteo.com/**', r => { const u = new URL(r.request().url()); asked.push(u);
-      r.fulfill({ contentType: 'application/json', body: JSON.stringify({ daily: { time: ['a', 'b', 'c', 'd'], river_discharge: [400, 360, 330, 300] } }) }); });
+      const cells = Array.from({ length: 9 }, (_, k) => ({ daily: { time: ['a', 'b', 'c', 'd'], river_discharge: k === 7 ? [400, 360, 330, 300] : [5, 6, 7, 8] } }));
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify(cells) }); });
     await q.route('https://api.open-meteo.com/**', r => r.abort()); await q.route('https://archive-api.open-meteo.com/**', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(2600);
     const d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
     const w0 = d.catches.find(c => c.id === 'w0').water;
-    ok(w0 && w0.q === 300 && w0.k === 'down' && w0.pct === -25 && asked.some(u => u.searchParams.get('end_date') && u.searchParams.get('start_date')), 'vízhozam: a fogás napjára az archívumból (3 napos irány)');
+    ok(w0 && w0.q === 300 && w0.k === 'down' && w0.pct === -25 && asked.some(u => u.searchParams.get('end_date') && u.searchParams.get('latitude').split(',').length === 9),
+      'vízhozam: a fogás napjára az archívumból, a környék legnagyobb folyója (3 napos irány)');
     await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
     ok((await q.locator('#sheet').innerText()).includes('300 m³/s, apad (-25% / 3 nap)'), 'vízhozam: a fogás kártyáján látszik');
     await q.evaluate(() => window.__fnBack());
@@ -748,6 +752,45 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#patSec').isVisible() && pt.includes('Balin · 6 fogás') && pt.includes('6/6 stabil légnyomásnál') && pt.includes('6/6 apadó víznél') && pt.includes('nappal'),
       'mintázataid: fajonként a közös körülmények, darabszámmal (' + pt.replace(/\n/g, ' | ') + ')');
     ok(!pt.includes('Minden fogás'), 'mintázataid: egy fajnál nincs külön „Minden fogás” sor');
+    await ctx.close();
+  }
+  // the official catch log: kept fish by day, place (water code), species; unmarked catches; copy; hand-in reminder
+  {
+    const ctx = await b.newContext({ viewport: { width: 360, height: 800 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    const Y = new Date().getFullYear(), at = (m, d, h) => new Date(Y, m, d, h || 10).toISOString();
+    const pl = { name: 'Bertalan híd', lat: 46.25, lng: 20.15 };
+    const cs = [
+      { id: 'k1', sp: 's1', at: at(4, 21, 17), y: Y, t: true, l: 48, w: 1.2, kept: true, place: pl },
+      { id: 'k2', sp: 's1', at: at(4, 21, 18), y: Y, t: true, l: 45, kept: true, place: pl },
+      { id: 'k3', sp: 's2', at: at(5, 2, 19), y: Y, t: true, l: 50, w: 1.5, kept: true },
+      { id: 'r1', sp: 's1', at: at(5, 4), y: Y, kept: false, place: pl },
+      { id: 'u1', sp: 's1', at: at(6, 1), y: Y, l: 40 }, { id: 'u2', sp: 's2', at: at(6, 2), y: Y }];
+    await q.addInitScript(cs => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }], catches: cs }));
+      localStorage.setItem('fogasnaplo.notify', '1'); window.__x = { clip: null, rem: null };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, copyText(l, t) { window.__x.clip = t; return true; }, setReminders(j) { window.__x.rem = j; } }; }, cs);
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
+    const sec = q.locator('#offSec'), txt = async () => (await sec.innerText()).replace(/\s+/g, ' ');
+    let t = await txt();
+    ok(await sec.isVisible() && t.includes('2 fogásnál nincs megadva, elvitted-e'), 'fogási napló: a jelöletlen fogásokat külön kéri megjelölni');
+    const rows = q.locator('#offSec .off-tab tr');
+    ok(await rows.count() === 3, 'fogási napló: csak az elvitt halak, naponta, helyenként, fajonként egy sor (' + (await rows.count() - 1) + ')');
+    ok((await rows.nth(1).innerText()).replace(/\s+/g, ' ').includes('Balin 2 1,2+?') && t.includes('1 elvitt halnál nincs súly'), 'fogási napló: összevont darab és súly, a hiányzó súlyt jelzi');
+    ok(t.includes('Hiányzó víztérkód') && await q.locator('#offSec .off-vrow').count() === 2, 'fogási napló: helyenként egyszer kéri a víztérkódot (hely nélkül is)');
+    await q.locator('#offSec .off-vrow input').first().fill('06-123'); await q.locator('#offSec .off-vrow input').first().dispatchEvent('change'); await q.waitForTimeout(100);
+    ok((await rows.nth(1).innerText()).includes('06-123') && (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.vtk'))['Bertalan híd'])) === '06-123', 'fogási napló: a víztérkód megmarad, és a sorokban látszik');
+    await q.locator('#offSec .off-q').first().locator('button', { hasText: 'Elvittem' }).click(); await q.waitForTimeout(150);
+    t = await txt();
+    ok(t.includes('1 fogásnál nincs megadva') && await rows.count() === 4 && (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).catches.find(c => c.id === 'u1').kept)) === true, 'fogási napló: „Elvittem” után bekerül a naplóba');
+    ok(t.includes('Összesen: Balin 3 db (1,2 kg), Süllő 1 db (1,5 kg)') && t.includes('Horgásznap elvitt hallal: 3'), 'fogási napló: összesítő fajonként és a horgásznapok száma');
+    await q.locator('#offSec button', { hasText: 'Összesítő másolása' }).click(); await q.waitForTimeout(100);
+    const clip = await q.evaluate(() => window.__x.clip);
+    ok(clip && clip.includes(Y + '. évi fogási napló') && clip.includes('05.21. | 06-123 | Balin | 2 | 1,2 + 1 db súly nélkül') && clip.includes('? (Hely nélkül)'), 'fogási napló: az összesítő vágólapra kerül, soronként');
+    ok(t.includes((Y + 1) + '. február 28-ig'), 'fogási napló: kiírja a leadási határidőt');
+    const rem = JSON.parse(await q.evaluate(() => window.__x.rem) || '[]').filter(r => r.title.startsWith('Fogási napló'));
+    ok(rem.length === 2 && rem.every(r => new Date(r.at).getMonth() === 1 && new Date(r.at).getFullYear() === Y + 1) && rem[0].text.includes(Y + '. évi'), 'fogási napló: értesítés a leadás előtt egy héttel és előző nap');
+    ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'fogási napló: 360 px-en nincs vízszintes túlcsordulás');
     await ctx.close();
   }
   // tabs: structure, home content, species management

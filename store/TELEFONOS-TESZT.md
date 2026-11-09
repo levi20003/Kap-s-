@@ -112,6 +112,18 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 9.2 | Lépj ki az appból | Csendben telepíti (Android 12+), vagy egyszer rákérdez |
 | 9.3 | Nyisd meg újra | Az új verzió fut, a napló érintetlen |
 
+## 10a. Adatbiztonság, vízhozam, hivatalos napló
+
+| # | Lépés | Várt eredmény |
+|---|---|---|
+| 10a.1 | Rögzíts egy fogást, zárd be az appot a listából, nyisd újra | A fogás megvan (a belső tartalék-másolat is frissült) |
+| 10a.2 | 3+ fogás, heti mentés nélkül: Kezdőlap | Figyelmeztető kártya: „A N fogásod csak ezen a telefonon van”; „Heti mentés bekapcsolása” mappát kér |
+| 10a.3 | Heti mentés bekapcsolva | A figyelmeztetés eltűnik |
+| 10a.4 | Kezdőlap → Időjárás (Szeged) | „Víz … m³/s” és irány (árad / stagnál / apad); a „Részletek” magyarázata leírja |
+| 10a.5 | Régi fogás kártyája (néhány perc internet után) | „Víz” sor a fogás napjának vízhozamával |
+| 10a.6 | Statisztika → Hivatalos fogási napló | Az elvitt halak naponta; jelöletlen fogásoknál „Elvittem / Elengedtem”; víztérkód helyenként megmarad |
+| 10a.7 | „Összesítő másolása”, majd beillesztés egy jegyzetbe | Soronként: dátum, víztérkód, halfaj, db, kg, a végén összesítő |
+
 ## 10. Teljesítmény és stabilitás
 
 - [ ] 100+ fogással (importálva) a lista és a statisztika folyamatosan görgethető.

@@ -112,6 +112,12 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   előnézet az első képkockából. A teljes kép `files/photos/`, az előnézet `files/thumbs/` (Android), a naplóban csak `file://` uri van.
   1.4-ig az előnézet base64-ként a localStorage-ban volt; induláskor `migrateThumbs` átköltözteti (a localStorage ~5 MB-nál megtelik).
   Új adatot soha ne tegyél base64-ként a naplóba.
+- **Belső tartalék-másolat**: minden `save()` `data.rev`-et (időbélyeg) ír, és 400 ms-mal később `ANDROID.writeLog(json)` → `files/naplo.json`
+  (atomikus, előző: `naplo.prev.json`; kilépéskor azonnal). Induláskor `ANDROID.readLog()`: ha a localStorage üres/sérült, vagy a fájl `rev`-je újabb,
+  a fájl nyer (`rescued` → toast). Megtelt localStorage-nál azonnal a fájlba ment (`#saveWarn` ezt írja). Az Android felhőmentése (`backup_rules.xml`,
+  `data_extraction_rules.xml`) a fájlt is viszi, a `photos/`-t nem.
+- **Mentés-emlékeztető** (Kezdőlap `#bkNudge`, `renderBkNudge`, `backupState`): 3+ fogásnál, ha nincs heti mappás mentés és 30 napja nem volt kézi
+  (`fogasnaplo.lastbk`); „Később” 14 napra (`fogasnaplo.bknudge`). Üres naplónál a Kezdőlap „Visszaállítás mentésből” kártyát mutat.
 - Induláskor `sweepFiles` → `ANDROID.cleanup` törli a naplóban nem szereplő fotókat (1 óra türelmi idővel), üres naplónál nem fut.
 - Biztonsági mentés (Beállítások): két gomb. „Mentés most”: Androidon ZIP (napló + fotók; ha van kiválasztott mappa, oda, különben fájlválasztóval),
   böngészőben .json. „Visszaállítás”: Androidon a fájl első bájtjai döntik el, hogy ZIP vagy .json; böngészőben fájlválasztó. A heti automatikus mentés
@@ -128,6 +134,16 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   szerkeszteni a „Szerkesztés” gombbal lehet (`openEditor({fromView:true})`, mentés/mégse után vissza a kártyára). A gyors „+” rögzítés közvetlenül a szerkesztőt nyitja.
 - „Megosztás”: `catchCardImage` 1080×1350-es képet rajzol (fotó + zöld sáv: faj, méret, dátum, hely, csali, idő), Androidon `shareImage` → megosztás-menü.
   A helyi fotót a WebView nem engedi vászonra rajzolni, ezért `ANDROID.readPhoto` adja át data url-ként.
+- **Folyó vízhozama** (Open-Meteo Flood API, GloFAS, m³/s; `floodNear`: a 3×3 környező rácscellából a legnagyobb folyó, mert a part menti pont
+  mellékágba eshet). Időjárás-kártya: `loadWater` (`fogasnaplo.water`, 3 óránként), `waterOn(date)` 3 napos irány (`waterTrend`: ±10% stagnál, ±30% gyorsan),
+  20 m³/s alatt nincs folyó (nem mutat, nem pontoz). `scoreToday`: stagnál/lassan apad +0,5, árad −0,5, gyorsan árad −1; személyes víz-mintázat +0,5 (8+ fogás).
+  A pontozás változásakor az `explainEl`-t is igazítsd. Fogásonként `c.water = {key, q, pct, k}` vagy `{key, none:true}` (`ensureWater`, a `retryPendingWx` tölti).
+- **Mintázataid** (Statisztika `#patSec`, `renderPatterns`, `PAT_DIMS`): minden évből, fajonként 5+ fogástól: napszak, légnyomás, víz, hold;
+  csak ha legalább 3 fogás és a fele egyezik, darabszámmal.
+- **Hivatalos fogási napló** (Statisztika `#offSec`, `renderOfficial`): az év elvitt (`kept:true`) halai naponta + helyenként + fajonként (`officialRows`),
+  víztérkód helyenként egyszer (`fogasnaplo.vtk`), hiányzó súly/kód jelzése, jelöletlen fogások „Elvittem/Elengedtem” gombbal, összesítő vágólapra
+  (`ANDROID.copyText`). Halfajkódot nem talál ki (a hivatalos kódlistát nem tudtuk ellenőrizni). Leadás: következő év febr. 28. (2025-ös szabály);
+  értesítés febr. 21-én és 27-én 18:00-kor, ha abban az évben volt elvitt hal (`reminderEvents` → `log`).
 - Fogás időjárása (`ensureWx`, induláskor `retryPendingWx` a hiányzókat pótolja, 85 napnál régebbire az archív API-ból). Hely nélküli fogásnál
   `wxCoords`: a szokásos hely, ennek híján az időjárás helye (Szeged); ilyenkor `wx.near` jelzi, hogy közelítő adat.
 

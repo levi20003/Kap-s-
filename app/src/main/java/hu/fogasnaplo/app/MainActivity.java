@@ -1120,6 +1120,17 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Puts text on the clipboard (the official catch-log summary); true when it worked. */
+        @JavascriptInterface
+        public boolean copyText(String label, String text) {
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm == null) return false;
+                cm.setPrimaryClip(android.content.ClipData.newPlainText(label, text));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
         /** Asks for the notification permission where needed (Android 13+); answers through __fnNotify. */
         @JavascriptInterface
         public void enableNotifications() {
