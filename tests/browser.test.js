@@ -633,6 +633,66 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#updBar .btn-ghost').innerText() === 'Letöltés', 'kulcsváltás: „Letöltés” gomb az új tesztapphoz');
     await ctx.close();
   }
+  // data safety: the log mirrored to a file (Android), rescued from it, backup nudge
+  {
+    const sp = [{ id: 's1', name: 'Balin' }];
+    const mk = (n, rev) => ({ species: sp, catches: Array.from({ length: n }, (_, i) => ({ id: 'm' + i, sp: 's1', at: '2026-05-0' + (i + 1) + 'T10:00:00.000Z', y: 2026, t: true })), ...(rev ? { rev } : {}) });
+    const bridge = mirror => `window.__m = { writes: [] }; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
+      readLog() { return ${JSON.stringify(JSON.stringify(mirror))}; }, writeLog(j) { window.__m.writes.push(j); return true; } };`;
+    // 1) localStorage empty (reinstall restored only the file, or the WebView lost it) -> the file comes back
+    let ctx = await b.newContext(); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(bridge(mk(3, 500)));
+    await q.goto(PAGE); await q.waitForTimeout(900);
+    let d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(d && d.catches.length === 3, 'adatbiztonság: üres localStorage-nál a belső másolatból tölt vissza (3 fogás)');
+    ok((await q.locator('#toast').innerText()).includes('belső másolat'), 'adatbiztonság: szól, hogy a belső másolatból töltötte vissza');
+    await ctx.close();
+    // 2) the file is newer than localStorage (a save that did not fit) -> the file wins; older file -> localStorage wins
+    for (const [lr, mr, want] of [[100, 200, 2], [300, 200, 1]]) {
+      ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(([l, m]) => { if (!sessionStorage.getItem('x')) { sessionStorage.setItem('x', 1); localStorage.setItem('fogasnaplo.v1', l); } }, [JSON.stringify(mk(1, lr)), '']);
+      await q.addInitScript(bridge(mk(2, mr)));
+      await q.goto(PAGE); await q.waitForTimeout(600);
+      d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+      ok(d.catches.length === want, `adatbiztonság: ${lr < mr ? 'újabb belső másolat nyer' : 'régebbi belső másolatot nem tölt vissza'} (${d.catches.length})`);
+      await ctx.close();
+    }
+    // 3) every save stamps rev and writes the file (debounced); a full localStorage writes it at once and says so
+    ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(bridge({ species: [], catches: [] }));
+    await q.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [] })));
+    await q.goto(PAGE); await q.waitForTimeout(2300);
+    const w0 = await q.evaluate(() => window.__m.writes.length);
+    ok(w0 === 1, 'adatbiztonság: régi naplóról induláskor egyszer elkészül a belső másolat');
+    await q.locator('.row .plus').first().click(); await q.waitForTimeout(700); await q.evaluate(() => window.__fnBack && window.__fnBack());
+    const last = await q.evaluate(() => JSON.parse(window.__m.writes[window.__m.writes.length - 1]));
+    ok(last.catches.length === 1 && last.rev > 0, 'adatbiztonság: fogásrögzítéskor a belső másolat is frissül (rev bélyeggel)');
+    await q.evaluate(() => { const o = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'fogasnaplo.v1') throw new Error('QuotaExceededError'); return o.call(this, k, v); }; });
+    const before = await q.evaluate(() => window.__m.writes.length);
+    await q.locator('.tabbar button[data-tab="home"]').click(); await q.locator('.row .plus').first().click(); await q.waitForTimeout(150);
+    ok((await q.evaluate(() => window.__m.writes.length)) > before && (await q.locator('#saveWarn').innerText()).includes('tartalék'),
+      'adatbiztonság: megtelt tárhelynél azonnal a belső másolatba ment, és ezt írja ki');
+    await ctx.close();
+    // 4) the nudge: 3+ catches and no copy off the phone -> Kezdőlap card; "Később" hides it; a backup folder makes it go away
+    ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(l => localStorage.setItem('fogasnaplo.v1', l), JSON.stringify(mk(4)));
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    ok(await q.locator('#bkNudge').isVisible() && (await q.locator('#bkNudge').innerText()).includes('4 fogásod csak ezen a telefonon'), 'mentés-emlékeztető: 3+ fogásnál, mentés nélkül a Kezdőlapon');
+    await q.locator('#bkNudge .no').click(); await q.waitForTimeout(100);
+    ok(!(await q.locator('#bkNudge').isVisible()) && (await q.evaluate(() => +localStorage.getItem('fogasnaplo.bknudge') > Date.now())), 'mentés-emlékeztető: „Később” 14 napra elrejti');
+    await ctx.close();
+    ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(l => { localStorage.setItem('fogasnaplo.v1', l); localStorage.setItem('fogasnaplo.autobackup', JSON.stringify({ ts: Date.now() - 864e5, name: 'x.zip', photos: 0 }));
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, zipToFolder() {}, backupFolder() { return 'Drive/Kapás'; } }; }, JSON.stringify(mk(4)));
+    await q.goto(PAGE); await q.waitForTimeout(400);
+    ok(!(await q.locator('#bkNudge').isVisible()), 'mentés-emlékeztető: heti mentés mappába -> nincs figyelmeztetés');
+    await ctx.close();
+    // 5) a brand-new (empty) log offers the restore right on the Kezdőlap
+    ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    ok(await q.locator('.restore-offer').isVisible(), 'üres napló: a Kezdőlap felajánlja a visszaállítást mentésből');
+    await ctx.close();
+  }
   // tabs: structure, home content, species management
   {
     const ctx = await b.newContext({ viewport: { width: 412, height: 915 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

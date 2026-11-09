@@ -3,6 +3,7 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="photos/" />
+        <exclude domain="file" path="naplo.json.tmp" />
     </cloud-backup>
     <device-transfer />
 </data-extraction-rules>

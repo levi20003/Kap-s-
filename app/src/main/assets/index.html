@@ -614,6 +614,7 @@ button{transition:transform .15s}
   <!-- ===== Kezdőlap ===== -->
   <div id="tab-home" class="wrap" style="gap:22px">
     <div class="greet"><h1 id="greetT">Szép napot!</h1><p id="greetS"></p></div>
+    <section class="bknudge" id="bkNudge" role="status" hidden></section>
     <section class="total" aria-live="polite">
       <svg class="scene" viewBox="0 0 360 210" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
         <circle class="sun" cx="282" cy="86" r="24"/>
@@ -764,7 +765,8 @@ button{transition:transform .15s}
         <p class="hint" id="backupMsg"></p>
         <details class="more"><summary>Hogyan működik?</summary>
           <p class="hint">A mentés egy fájl a naplóddal és a fotóiddal, amit te választasz ki, hová kerüljön (pl. Drive). Visszaállításkor a meglévő fogásaid megmaradnak, csak az újak kerülnek be.</p>
-          <p class="hint">Az Android emellett naponta egyszer a Google-fiókodba is menti a naplót (töltőn, wifin), de a teljes méretű fotókat nem. Bekapcsolása: telefon Beállítások → Google → Biztonsági mentés.</p>
+          <p class="hint">Az app minden változásnál egy belső tartalék-másolatot is ír a naplóról. Ha a telefon tárhelye megtelik, vagy a napló valamiért üresen indul, ebből magától visszatölt.</p>
+          <p class="hint">Az Android emellett naponta egyszer a Google-fiókodba is menti a naplót (töltőn, wifin), de a teljes méretű fotókat nem; az app újratelepítésekor ebből visszajön. Bekapcsolása: telefon Beállítások → Google → Biztonsági mentés. A fotók miatt a heti mappás mentés a legbiztosabb.</p>
         </details>
       </div>
     </section>
@@ -933,11 +935,36 @@ button{transition:transform .15s}
 
   /* ---------- storage ---------- */
   const KEY="fogasnaplo.v1";
-  let data={species:[],catches:[]},loadedOk=false;
+  let data={species:[],catches:[]},loadedOk=false,rescued=null;
   try{const raw=localStorage.getItem(KEY);if(raw){data=JSON.parse(raw);loadedOk=true}}catch(e){}
+  // Android keeps a second copy of the log in a file (ANDROID.writeLog). Every save stamps data.rev; when localStorage
+  // is empty, unreadable or older than that file (it filled up, the WebView lost it), the file wins.
+  (function(){
+    if(!ANDROID||!ANDROID.readLog)return;let m=null;
+    try{const s=ANDROID.readLog();if(s)m=JSON.parse(s)}catch(e){return}
+    if(!m||!Array.isArray(m.species)||!Array.isArray(m.catches))return;
+    const localOk=loadedOk&&data&&Array.isArray(data.catches);
+    if(!localOk){if(!m.catches.length&&!m.species.length)return;rescued={n:m.catches.length,why:"empty"}}
+    else if((m.rev||0)>(data.rev||0))rescued={n:m.catches.length,why:"newer"};
+    else return;
+    data=m;loadedOk=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}
+  })();
   data.species=data.species||[];data.catches=data.catches||[];
-  function save(){let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
-    $("saveWarn").hidden=ok;if(!ok)toast("A mentés nem sikerült: megtelt a tárhely.");sync()}
+  const hasMirror=()=>!!(ANDROID&&ANDROID.writeLog);
+  let mirrorT=null;
+  function mirrorNow(){clearTimeout(mirrorT);mirrorT=null;if(!hasMirror())return false;try{return !!ANDROID.writeLog(JSON.stringify(data))}catch(e){return false}}
+  const mirrorPending=()=>mirrorT!==null;
+  function save(){data.rev=Date.now();let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
+    let safe=ok;
+    if(hasMirror()){if(ok){clearTimeout(mirrorT);mirrorT=setTimeout(mirrorNow,400)}else safe=mirrorNow()}
+    $("saveWarn").hidden=ok;
+    if(!ok){$("saveWarn").textContent=safe?"A telefon tárhelye megtelt, ezért a naplót a belső tartalék-másolatba mentettem. Szabadíts fel helyet, és készíts mentést: Beállítások → Biztonsági mentés.":
+      "A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést: Beállítások → Biztonsági mentés.";
+      toast(safe?"Megtelt a tárhely: a tartalék-másolatba mentettem.":"A mentés nem sikerült: megtelt a tárhely.")}
+    sync()}
+  // leaving the app (or the page) writes the pending copy right away
+  document.addEventListener("visibilitychange",()=>{if(document.hidden&&mirrorPending())mirrorNow()});
+  window.addEventListener("pagehide",()=>{if(mirrorPending())mirrorNow()});
   function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts();checkGame()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
@@ -1092,7 +1119,7 @@ button{transition:transform .15s}
     if(wxLv&&state.year===NOW_Y){p.append(" · Ma ");p.append(el("b",null,LEVELS[wxLv].toLowerCase()));p.append(" horgászidő")}
   }
   function renderHome(st){
-    const y=state.year;renderGreet();
+    const y=state.year;renderGreet();renderBkNudge();
     $("todaySec").hidden=y!==NOW_Y;if(y===NOW_Y)renderToday();
     $("planSec").hidden=y!==NOW_Y;if(y===NOW_Y)renderPlan();
     $("regionSel").value=state.region;
@@ -1127,6 +1154,10 @@ button{transition:transform .15s}
       if(bumpId===s.id){val.classList.add("bump");bumpId=null}
       list.append(row);
     });
+    if(!state.species.length&&!data.catches.length){
+      const r=el("div","empty-card restore-offer");r.append(el("b",null,"Volt már naplód?"),el("p","hint","Ha van mentésed (ZIP vagy .json, pl. a Drive-on), a fogásaid és a fotóid egy lépésben visszatölthetők."));
+      const b=el("button","btn-ghost","Visszaállítás mentésből");b.type="button";b.onclick=()=>{go("more");$("restoreBtn").click()};r.append(b);list.append(r);
+    }
     if(state.species.length){const m=el("button","addrow","+ Halfajok hozzáadása és törlése");m.type="button";m.onclick=()=>go("more");list.append(m)}
     renderRecords(st);
   }
@@ -2658,9 +2689,9 @@ button{transition:transform .15s}
     if(ANDROID&&ANDROID.saveBackup){ANDROID.saveBackup(json,name);return}
     const blob=new Blob([json],{type:"application/json"});
     try{const file=new File([blob],name,{type:"application/json"});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Kapás mentés"});return}}catch(e){if(e&&e.name==="AbortError")return}
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Kapás mentés"});lsSet(LASTBK_KEY,Date.now());renderBkNudge();return}}catch(e){if(e&&e.name==="AbortError")return}
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
-    $("backupMsg").textContent="Mentés letöltve: "+name;
+    $("backupMsg").textContent="Mentés letöltve: "+name;lsSet(LASTBK_KEY,Date.now());renderBkNudge();
   }
   // what a backup file would add: species matched by id or name, catches by id; nothing already here is overwritten
   function planImport(d){
@@ -2729,15 +2760,16 @@ button{transition:transform .15s}
   window.__fnZipDone=function(r){
     zipBusy=false;
     if(r&&r.ok){
+      lsSet(LASTBK_KEY,Date.now());
       if(r.name){setAutoInfo({ts:Date.now(),name:r.name,photos:r.photos});if(!r.auto)toast("Mentve a mappába")}
       else{$("backupMsg").textContent=`ZIP-mentés kész: a napló és ${r.photos} fotó.`;toast("Mentés elkészült")}
     }else{const msg=(r&&r.error)||"A mentés nem sikerült.";
       if(r&&r.auto){const i=autoInfo();i.err=msg;i.failTs=Date.now();setAutoInfo(i)}else toast(msg)}
-    renderAutoBk();
+    renderAutoBk();renderBkNudge();
   };
   window.__fnBackupFolder=function(r){
     if(r&&r.name){setAutoInfo({});backupNow(false)}else if(r&&r.error)toast(r.error);
-    renderAutoBk();
+    renderAutoBk();renderBkNudge();
   };
   window.__fnZipIn=function(r){
     if(!r||r.error){$("backupMsg").textContent=(r&&r.error)||"A visszatöltés nem sikerült.";return}
@@ -2763,6 +2795,31 @@ button{transition:transform .15s}
     box.append(el("span",i.err&&!zipBusy?"err":null,txt));
     btn("no","Másik mappa",()=>ANDROID.pickBackupFolder());
     btn("no","Kikapcsolás",()=>{ANDROID.clearBackupFolder();setAutoInfo({});renderAutoBk()});
+  }
+  /* how safe is the log? (a copy off this phone, recently) -> the Kezdőlap nudge */
+  const LASTBK_KEY="fogasnaplo.lastbk",NUDGE_KEY="fogasnaplo.bknudge";
+  const lsNum=k=>{try{return +localStorage.getItem(k)||0}catch(e){return 0}};
+  const lsSet=(k,v)=>{try{localStorage.setItem(k,String(v))}catch(e){}};
+  function backupState(){
+    const auto=hasZip()&&ANDROID.backupFolder()?autoInfo():null,last=Math.max(lsNum(LASTBK_KEY),auto&&auto.ts||0);
+    if(auto&&!auto.err)return{ok:true,folder:true,last};               // weekly copy into a folder off the app
+    const age=last?Date.now()-last:Infinity;
+    return{ok:age<30*864e5,folder:false,last,err:auto&&auto.err};
+  }
+  function renderBkNudge(){
+    const box=$("bkNudge");if(!box)return;box.replaceChildren();
+    const n=data.catches.length,b=backupState(),snooze=lsNum(NUDGE_KEY);
+    box.hidden=n<3||b.ok||(snooze&&Date.now()<snooze);if(box.hidden)return;
+    const t=el("div","bkn-t");t.append(mkIc("shield"));
+    t.append(el("span",null,b.err?"Az automatikus mentés nem sikerült: "+b.err:
+      "A "+n+" fogásod csak ezen a telefonon van"+(b.last?", az utolsó mentés "+fmtDate(new Date(b.last).toISOString())+" óta nem készült új.":". Ha a telefon elveszik vagy újratelepíted az appot, elvesznek.")));
+    box.append(t);
+    const row=el("div","btnrow");
+    const btn=(cls,label,fn)=>{const x=el("button",cls,label);x.type="button";x.onclick=fn;row.append(x)};
+    if(hasZip())btn("btn-main",b.err?"Másik mappa":"Heti mentés bekapcsolása",()=>ANDROID.pickBackupFolder());
+    else btn("btn-main","Mentés most",()=>$("saveBtn").click());
+    btn("no","Később",()=>{lsSet(NUDGE_KEY,Date.now()+14*864e5);renderBkNudge()});
+    box.append(row);
   }
   // "Mentés most": into the chosen folder, else a file you pick; the browser gets a .json download
   $("saveBtn").onclick=()=>{
@@ -2799,6 +2856,9 @@ button{transition:transform .15s}
 
   sync();
   renderAutoBk();applySeason();applyTheme();
+  if(rescued)setTimeout(()=>toast(rescued.why==="empty"?"Visszatöltöttem a naplódat a telefon belső másolatából ("+rescued.n+" fogás).":
+    "A napló legutóbbi változásait a belső másolatból töltöttem vissza."),600);
+  if(hasMirror()&&(data.catches.length||data.species.length))setTimeout(mirrorNow,2000); // the first copy for logs from older versions
   setTimeout(()=>migrateThumbs(()=>{sweepFiles();maybeAutoBackup()}),800);
   setTimeout(retryPendingWx,1500);
   setTimeout(()=>{if(ANDROID&&ANDROID.checkUpdate)try{ANDROID.checkUpdate()}catch(e){}},2500);

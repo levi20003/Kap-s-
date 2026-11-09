@@ -268,6 +268,7 @@ public class MainActivity extends Activity {
     static boolean installing;
     private volatile JSONObject readyInfo; // version.json of the downloaded build
     private volatile boolean busy;
+    private final Object logLock = new Object();
     private volatile boolean resign; // the published build has another signing key (see needsReinstall)
     private boolean awaitingResult;
     private long lastCheck;
@@ -1284,6 +1285,49 @@ public class MainActivity extends Activity {
                 try { startActivity(Intent.createChooser(i, "Fogás megosztása")); }
                 catch (Exception e) { Toast.makeText(MainActivity.this, "Nincs alkalmazás a megosztáshoz", Toast.LENGTH_SHORT).show(); }
             });
+        }
+
+        /* A second copy of the log as a plain file (files/naplo.json), next to the WebView's localStorage:
+           it survives a broken or full localStorage, and Android's cloud backup carries it to a new install.
+           Written atomically (temp file + rename); the copy before it stays as naplo.prev.json. */
+        @JavascriptInterface
+        public boolean writeLog(String json) {
+            if (json == null || json.length() < 2) return false;
+            synchronized (logLock) {
+                File dir = getFilesDir(), cur = new File(dir, "naplo.json"), tmp = new File(dir, "naplo.json.tmp");
+                try (FileOutputStream out = new FileOutputStream(tmp)) {
+                    out.write(json.getBytes(StandardCharsets.UTF_8));
+                    out.flush();
+                    out.getFD().sync();
+                } catch (Exception e) { tmp.delete(); return false; }
+                if (cur.exists()) {
+                    File prev = new File(dir, "naplo.prev.json");
+                    prev.delete();
+                    cur.renameTo(prev);
+                }
+                return tmp.renameTo(cur);
+            }
+        }
+
+        /** The mirrored log, or "" when there is none (the previous copy if the last one is unreadable). */
+        @JavascriptInterface
+        public String readLog() {
+            synchronized (logLock) {
+                for (String n : new String[]{"naplo.json", "naplo.prev.json"}) {
+                    File f = new File(getFilesDir(), n);
+                    if (!f.exists() || f.length() > 64L * 1024 * 1024) continue;
+                    try (InputStream in = new FileInputStream(f)) {
+                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                        byte[] buf = new byte[65536];
+                        int k;
+                        while ((k = in.read(buf)) > 0) bo.write(buf, 0, k);
+                        String s = new String(bo.toByteArray(), StandardCharsets.UTF_8);
+                        new JSONObject(s); // must parse, else try the older copy
+                        return s;
+                    } catch (Exception ignored) {}
+                }
+                return "";
+            }
         }
 
         /** keepJson: array of every photo/thumb uri still in the log. */

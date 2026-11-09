@@ -2,4 +2,5 @@
 <!-- Android 6-11: Google backup keeps the catch log, leaves out full-size photos to stay under the 25 MB limit -->
 <full-backup-content>
     <exclude domain="file" path="photos/" />
+    <exclude domain="file" path="naplo.json.tmp" />
 </full-backup-content>

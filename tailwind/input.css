@@ -178,6 +178,17 @@
   .lureform input#lureName { @apply col-span-2; }
   .lureform select, .lureform input { @apply min-w-0; }
 
+  /* Kezdőlap: the log has no copy off the phone */
+  .bknudge {
+    @apply flex flex-col gap-2 rounded-2xl border p-3 text-sm leading-snug shadow-sm;
+    @apply border-sand-300/40 bg-sand-300/10 text-zinc-100 light:border-olive-600/30 light:bg-sand-100 light:text-zinc-800;
+  }
+  .bknudge .bkn-t { @apply flex items-start gap-2; }
+  .bknudge .bkn-t svg { @apply mt-0.5 h-5 w-5 flex-none; color: var(--accent-txt); }
+  .bknudge .btnrow { @apply flex flex-wrap gap-2; }
+  .restore-offer { @apply mt-3; }
+  .restore-offer .btn-ghost { @apply mt-2; }
+
   /* Bottom nav: rounded pill behind the active tab */
   .tabind::after {
     @apply rounded-full bg-emerald-500/20;
