@@ -57,7 +57,7 @@ jobs:
           mv out/Fogasnaplo.aab "out/Kapas-$VN.aab"
           mv out/Fogasnaplo.apk "out/Kapas-$VN.apk"
       - name: SHA-1 of the upload key (Google Cloud OAuth client for the Google sign-in, package hu.fogasnaplo.app)
-        run: echo "::notice title=Valódi app SHA-1 (Google Cloud OAuth-kliens, hu.fogasnaplo.app)::$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "out/Kapas-$VN.apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | sed 's/../&:/g;s/:$//' | tr a-f A-F)"
+        run: echo "::notice title=Valódi app SHA-1 - Google Cloud OAuth-kliens - hu.fogasnaplo.app::$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "out/Kapas-$VN.apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | sed 's/../&:/g;s/:$//' | tr a-f A-F)"
       - name: Remove the key
         if: always()
         run: rm -f fogasnaplo.keystore keystore-jelszo.txt
