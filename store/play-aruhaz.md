@@ -101,7 +101,7 @@ Az első kiadás! Fogásnapló egy koppintással, tilalmi idők és méretkorlá
 
 ## Adatbiztonság (Data safety) – válaszok
 
-Az app szerver nélkül működik: a napló, a fotók és a videók a telefonon maradnak. Hálózatra csak ez megy:
+Az app szerver nélkül működik: a napló, a fotók és a videók a telefonon maradnak (és ha a felhasználó bejelentkezik, a saját Google Drive-jába mentődnek). Hálózatra csak ez megy:
 - **Open-Meteo** (időjárás és településkeresés): a fogás vagy a választott település koordinátái, HTTPS-en, regisztráció nélkül.
 - **OpenStreetMap** (térképcsempék): a megnézett térképrészlet csempéi.
 
@@ -115,7 +115,24 @@ Az app szerver nélkül működik: a napló, a fotók és a videók a telefonon 
 | Átmenetileg kezelt (ephemeral)? | **Igen** – az app nem tárolja szerveren, csak az időjárás lekéréséhez kerül ki |
 | Kötelező vagy választható? | **Választható** (hely nélkül is használható) |
 | Cél | **Alkalmazás funkciói** |
-| Fotók, videók, személyes adatok, pénzügyi adatok, névjegyek, alkalmazás-aktivitás | **Nem gyűjt** (a fotók a telefonon maradnak) |
+| Fotók, videók, személyes adatok, pénzügyi adatok, névjegyek, alkalmazás-aktivitás | Lásd lent: a Google-fiókos mentés miatt a fotók, videók és a napló **gyűjtöttnek** számítanak |
+
+### Google-fiókos mentés (Drive) – a Data safety kiegészítése
+
+Ha a felhasználó bejelentkezik a Google-fiókjával, az app a naplót (benne a fogások helyével), a fotókat és a videókat a **saját Google Drive-jába**
+tölti fel (`drive.file` hatókör: az app csak az általa létrehozott fájlokat látja). A fejlesztő ezekhez nem fér hozzá, de a Play meghatározása szerint
+ami az app révén elhagyja a telefont, az „gyűjtött”. Óvatos (ajánlott) válaszok:
+
+| Adattípus | Gyűjtött | Megosztott | Kötelező? | Cél |
+|---|---|---|---|---|
+| Fotók és videók → Fotók, Videók | Igen | Nem | Választható (csak bejelentkezéssel) | Alkalmazás funkciói (biztonsági mentés) |
+| Alkalmazás-aktivitás → Egyéb, felhasználó által létrehozott tartalom (a fogásnapló) | Igen | Nem | Választható | Alkalmazás funkciói |
+| Hely → Pontos hely (a fogások helye a naplóban) | Igen (már fent is) | Nem | Választható | Alkalmazás funkciói |
+| Személyes adatok → E-mail-cím | **Nem** (csak a telefonon jelenik meg, az app nem küldi tovább) | Nem | – | – |
+
+- Titkosítva továbbítódik: **Igen** (HTTPS). Törlés: a felhasználó a Drive „Kapás mentés” mappáját törölheti, a hozzáférést a
+  myaccount.google.com/permissions oldalon visszavonhatja; az appban: Beállítások → Kijelentkezés.
+- A pontos besorolást a Play Console aktuális kérdései alapján nézd át (a kérdőív szövege változhat).
 
 ## Tartalom-besorolás (IARC kérdőív)
 

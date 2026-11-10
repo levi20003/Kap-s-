@@ -764,6 +764,7 @@ button{transition:transform .15s}
       <div class="sechead"><h2><span class="ic" data-ic="shield"></span>Biztonsági mentés</h2></div>
       <div class="panel">
         <p class="hint lead">A fogásaid csak ezen a telefonon vannak. Ha elveszik vagy cserélni kell, a mentésből vissza tudod állítani őket.</p>
+        <div class="gacct" id="gAcct" hidden></div>
         <div class="autobk" id="autoBk" hidden></div>
         <p class="hint" id="gbkInfo" hidden></p>
         <div class="btnrow">
@@ -982,7 +983,7 @@ button{transition:transform .15s}
   function save(){data.rev=Date.now();let ok=true;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){ok=false}
     let safe=ok;
     if(hasMirror()){if(ok){clearTimeout(mirrorT);mirrorT=setTimeout(mirrorNow,400)}else safe=mirrorNow()}
-    syncBkPhotosSoon();
+    syncBkPhotosSoon();driveSyncSoon();
     $("saveWarn").hidden=ok;
     if(!ok){$("saveWarn").textContent=safe?"A telefon tárhelye megtelt, ezért a naplót a belső tartalék-másolatba mentettem. Szabadíts fel helyet, és készíts mentést: Beállítások → Biztonsági mentés.":
       "A telefon nem engedi menteni a naplót, megtelt a tárhely. A legutóbbi változások újraindításkor elveszhetnek. Készíts mentést: Beállítások → Biztonsági mentés.";
@@ -1184,8 +1185,10 @@ button{transition:transform .15s}
       list.append(row);
     });
     if(!state.species.length&&!data.catches.length){
-      const r=el("div","empty-card restore-offer");r.append(el("b",null,"Volt már naplód?"),el("p","hint","Ha van mentésed (ZIP vagy .json, pl. a Drive-on), a fogásaid és a fotóid egy lépésben visszatölthetők."));
-      const b=el("button","btn-ghost","Visszaállítás mentésből");b.type="button";b.onclick=()=>{go("more");$("restoreBtn").click()};r.append(b);list.append(r);
+      const r=el("div","empty-card restore-offer");r.append(el("b",null,"Volt már naplód?"),el("p","hint","Ha a Google-fiókodba mentettél, vagy van mentésfájlod (ZIP, .json), a fogásaid, fotóid és videóid egy lépésben visszatölthetők."));
+      if(hasGoogle()){const g=el("button","btn-main",gAcct().email?"Visszaállítás a Google Drive-ról":"Bejelentkezés Google-fiókkal");g.type="button";
+        g.onclick=()=>{go("more");if(gAcct().email)driveRestore();else ANDROID.googleSignIn()};r.append(g)}
+      const b=el("button","btn-ghost","Visszaállítás fájlból");b.type="button";b.onclick=()=>{go("more");$("restoreBtn").click()};r.append(b);list.append(r);
     }
     if(state.species.length){const m=el("button","addrow","+ Halfajok hozzáadása és törlése");m.type="button";m.onclick=()=>go("more");list.append(m)}
     renderRecords(st);
@@ -2710,7 +2713,7 @@ button{transition:transform .15s}
   window.addEventListener("online",()=>loadToday(false));
   document.addEventListener("visibilitychange",()=>{if(document.hidden)return;
     if(ymd(new Date())!==ymd(NOW)&&!ed&&$("picker").hidden){finishDelete();location.reload();return}
-    loadToday(false);maybeAutoBackup()});
+    loadToday(false);maybeAutoBackup();driveSyncSoon(3000)});
 
   /* ---------- closed-season reminders (Android): evening before a season starts, morning after it ends ---------- */
   const NOTIFY_KEY="fogasnaplo.notify";
@@ -2938,14 +2941,18 @@ button{transition:transform .15s}
     catch(err){$("backupMsg").textContent="Ez a fájl nem Kapás mentés.";return}
     askImport(d);
   };
+  // a Drive restore was merged (or had nothing new): the log is now newer than Drive's, so this phone may back up again
+  function afterDriveMerge(){const i=gInfo();if(i.state==="remote")setGInfo({...i,state:"merged"});renderGAcct();setTimeout(driveSyncNow,1500)}
+  let fromDrive=false;
   function askImport(d){
     const ask=$("importAsk");ask.hidden=true;ask.replaceChildren();
     const plan=planImport(d);
-    if(!plan.newC.length&&!plan.newSp.length&&!plan.newL.length){$("backupMsg").textContent="Ebben a fájlban nincs új fogás vagy csali, a naplód már mindent tartalmaz.";return}
+    if(!plan.newC.length&&!plan.newSp.length&&!plan.newL.length){$("backupMsg").textContent=(fromDrive?"A Drive-on":"Ebben a fájlban")+" nincs új fogás vagy csali, a naplód már mindent tartalmaz.";
+      if(fromDrive){save();afterDriveMerge()}return}
     const what=[plan.newC.length?plan.newC.length+" új fogás":"",plan.newSp.length?plan.newSp.length+" új halfaj":"",plan.newL.length?plan.newL.length+" új csali":""].filter(Boolean).join(", ");
     ask.append(el("span",null,`A fájlból ${what} kerül a naplóba. A meglévő fogásaid nem változnak.`));
     const yes=el("button","btn-main","Betöltés");yes.type="button";
-    yes.onclick=()=>{ask.hidden=true;applyImport(plan);$("backupMsg").textContent="Visszatöltve: "+what+".";toast("Visszatöltve")};
+    yes.onclick=()=>{ask.hidden=true;applyImport(plan);$("backupMsg").textContent="Visszatöltve: "+what+".";toast("Visszatöltve");if(fromDrive)afterDriveMerge()};
     const no=el("button","no","Mégse");no.type="button";no.onclick=()=>{ask.hidden=true};
     ask.append(yes,no);ask.hidden=false;
   }
@@ -2983,6 +2990,7 @@ button{transition:transform .15s}
     renderAutoBk();renderBkNudge();
   };
   window.__fnZipIn=function(r){
+    fromDrive=!!(r&&r.drive);if(fromDrive)go("more");
     if(!r||r.error){$("backupMsg").textContent=(r&&r.error)||"A visszatöltés nem sikerült.";return}
     let d;try{d=JSON.parse(r.json);if(!Array.isArray(d.species)||!Array.isArray(d.catches))throw new Error()}
     catch(e){$("backupMsg").textContent="Ez a fájl nem Kapás ZIP-mentés.";return}
@@ -3012,6 +3020,7 @@ button{transition:transform .15s}
   const lsNum=k=>{try{return +localStorage.getItem(k)||0}catch(e){return 0}};
   const lsSet=(k,v)=>{try{localStorage.setItem(k,String(v))}catch(e){}};
   function backupState(){
+    const g=gInfo();if(gAcct().email&&g.ts&&Date.now()-g.ts<14*864e5&&g.state!=="error")return{ok:true,google:true,last:g.ts};
     const auto=hasZip()&&ANDROID.backupFolder()?autoInfo():null,last=Math.max(lsNum(LASTBK_KEY),auto&&auto.ts||0);
     if(auto&&!auto.err)return{ok:true,folder:true,last};               // weekly copy into a folder off the app
     const age=last?Date.now()-last:Infinity;
@@ -3027,10 +3036,71 @@ button{transition:transform .15s}
     box.append(t);
     const row=el("div","btnrow");
     const btn=(cls,label,fn)=>{const x=el("button",cls,label);x.type="button";x.onclick=fn;row.append(x)};
-    if(hasZip())btn("btn-main",b.err?"Másik mappa":"Heti mentés bekapcsolása",()=>ANDROID.pickBackupFolder());
+    if(hasGoogle()&&!gAcct().email)btn("btn-main","Mentés a Google-fiókodba",()=>{go("more");ANDROID.googleSignIn()});
+    else if(hasZip())btn("btn-main",b.err?"Másik mappa":"Heti mentés bekapcsolása",()=>ANDROID.pickBackupFolder());
     else btn("btn-main","Mentés most",()=>$("saveBtn").click());
     btn("no","Később",()=>{lsSet(NUDGE_KEY,Date.now()+14*864e5);renderBkNudge()});
     box.append(row);
+  }
+  /* ---------- Google account + Drive backup (Android, MainActivity/DriveSync): every photo and video, full size ---------- */
+  const GINFO_KEY="fogasnaplo.gdrive",GVIDEO_KEY="fogasnaplo.gvideo";
+  const hasGoogle=()=>!!(ANDROID&&ANDROID.googleSignIn);
+  function gAcct(){if(!hasGoogle()||!ANDROID.googleAccount)return{};try{return JSON.parse(ANDROID.googleAccount()||"{}")}catch(e){return{}}}
+  function gInfo(){try{return JSON.parse(localStorage.getItem(GINFO_KEY)||"{}")||{}}catch(e){return{}}}
+  function setGInfo(o){try{localStorage.setItem(GINFO_KEY,JSON.stringify(o))}catch(e){}}
+  const videosOnMobile=()=>{try{return localStorage.getItem(GVIDEO_KEY)==="1"}catch(e){return false}};
+  let gLive=null,driveT=null; // the state of the running sync / restore (not kept)
+  function driveSyncNow(){clearTimeout(driveT);driveT=null;if(hasGoogle()&&gAcct().email)try{ANDROID.driveSync(videosOnMobile())}catch(e){}}
+  const driveSyncSoon=ms=>{if(!hasGoogle())return;clearTimeout(driveT);driveT=setTimeout(driveSyncNow,ms||20000)};
+  function driveRestore(){gLive={state:"restoring",done:0,total:0};renderGAcct();try{ANDROID.driveRestore()}catch(e){}}
+  window.__fnDrive=function(r){
+    if(!r)return;const i=gInfo();
+    if(r.state==="in"){setGInfo({});gLive=null;toast("Bejelentkezve: "+r.email);
+      if(!data.catches.length)driveRestore();else driveSyncNow()}            // a new phone restores first, an old one backs up
+    else if(r.state==="out"){setGInfo({});gLive=null}
+    else if(r.state==="syncing"||r.state==="restoring")gLive=r;
+    else if(r.state==="synced"){gLive=null;setGInfo({state:"synced",ts:r.ts||Date.now(),up:r.up,total:r.total,waiting:r.waiting||0})}
+    else if(r.state==="remote"){gLive=null;setGInfo({...i,state:"remote",catches:r.catches,newer:!!r.newer})}
+    else if(r.state==="empty"){gLive=null;toast("A Google Drive-odon még nincs Kapás-mentés.");driveSyncNow()}
+    else if(r.state==="restored"){gLive=null;setGInfo({...i,state:"restored",missing:r.missing||0})}
+    else if(r.state==="needsLogin"){gLive=null;setGInfo({...i,state:"needsLogin"})}
+    else if(r.state==="error"){gLive=null;if(r.error){setGInfo({...i,state:"error",err:r.error});toast(r.error)}}
+    renderGAcct();renderBkNudge();
+  };
+  function renderGAcct(){
+    const box=$("gAcct");if(!box)return;box.hidden=!hasGoogle();if(box.hidden)return;box.replaceChildren();
+    const a=gAcct(),i=gInfo();
+    const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;row.append(b);return b};
+    const head=el("div","g-head");head.append(mkIc("cloud"));
+    if(!a.email){
+      head.append(el("div",null,"Mentés a Google-fiókodba: a napló, az összes fotó és videó teljes méretben, a saját Google Drive-od „Kapás mentés” mappájába. Új telefonon bejelentkezel, és minden visszajön."));
+      box.append(head);var row=el("div","btnrow");btn("btn-main","Bejelentkezés Google-fiókkal",()=>ANDROID.googleSignIn());box.append(row);
+      if(i.state==="error"&&i.err)box.append(el("p","hint err",i.err));
+      return;
+    }
+    const who=el("div");who.append(el("b",null,a.name||a.email));if(a.name)who.append(el("span","hint"," "+a.email));head.append(who);box.append(head);
+    let msg,cls=null;
+    if(gLive&&gLive.state==="syncing")msg=`Feltöltés a Drive-ra… ${gLive.done}/${gLive.total} fájl`;
+    else if(gLive&&gLive.state==="restoring")msg=gLive.total?`Letöltés a Drive-ról… ${gLive.done}/${gLive.total} fájl`:"Letöltés a Drive-ról…";
+    else if(i.state==="remote"){msg=i.newer?`A Drive-on egy másik telefonról újabb mentés van (${i.catches} fogás). Töltsd le és fésüld össze, utána mentek tovább.`:
+      `A Drive-on ${i.catches} fogásos mentés van. Töltsd vissza, mielőtt ez a telefon mentene oda.`;cls="warn"}
+    else if(i.state==="needsLogin"){msg="A Google újra kéri a bejelentkezést.";cls="warn"}
+    else if(i.state==="error"){msg=i.err||"A Drive-mentés nem sikerült.";cls="warn"}
+    else if(i.ts){msg=`Minden fent van a Drive-on (${i.up}/${i.total} fájl), utoljára: ${fmtDate(new Date(i.ts).toISOString())}, ${fmtTime(new Date(i.ts).toISOString())}.`+
+      (i.waiting?` ${i.waiting} videó wifire vár.`:"")}
+    else msg="Az első mentés hamarosan indul.";
+    box.append(el("p",cls?"note "+cls:"hint",msg));
+    if(i.state==="restored"&&i.missing)box.append(el("p","note warn",i.missing+" fájl nem volt meg a Drive-on (régebbi mentésből hiányzott)."));
+    var row=el("div","btnrow");
+    if(i.state==="remote")btn("btn-main","Visszaállítás a Drive-ról",driveRestore);
+    else if(i.state==="needsLogin")btn("btn-main","Bejelentkezés",()=>ANDROID.googleSignIn());
+    else btn("btn-main","Mentés most",driveSyncNow).disabled=!!gLive;
+    if(i.state!=="remote")btn("btn-ghost","Visszaállítás a Drive-ról",driveRestore).disabled=!!gLive;
+    btn("no","Kijelentkezés",()=>{if(confirm("Kijelentkezel a Google-fiókból? A Drive-on lévő mentésed megmarad, de ez a telefon nem ment oda tovább."))ANDROID.googleSignOut()});
+    box.append(row);
+    const lab=el("label","g-opt"),cb=el("input");cb.type="checkbox";cb.checked=videosOnMobile();
+    cb.onchange=()=>{try{if(cb.checked)localStorage.setItem(GVIDEO_KEY,"1");else localStorage.removeItem(GVIDEO_KEY)}catch(e){}if(cb.checked)driveSyncNow()};
+    lab.append(cb,el("span",null,"Videók feltöltése mobilneten is (alapból csak wifin)"));box.append(lab);
   }
   // "Mentés most": into the chosen folder, else a file you pick; the browser gets a .json download
   $("saveBtn").onclick=()=>{
@@ -3066,7 +3136,8 @@ button{transition:transform .15s}
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 
   sync();
-  renderAutoBk();applySeason();applyTheme();
+  renderAutoBk();renderGAcct();applySeason();applyTheme();
+  if(data.catches.length)driveSyncSoon(5000);
   if(rescued)setTimeout(()=>toast(rescued.why==="empty"?"Visszatöltöttem a naplódat a telefon belső másolatából ("+rescued.n+" fogás).":
     "A napló legutóbbi változásait a belső másolatból töltöttem vissza."),600);
   if(hasMirror()&&(data.catches.length||data.species.length))setTimeout(mirrorNow,2000); // the first copy for logs from older versions

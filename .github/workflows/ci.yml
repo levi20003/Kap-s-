@@ -87,6 +87,8 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs out/Fogasnaplo-TESZT.apk \
             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ' \n' > out/cert.txt
           echo "signing cert: $(cat out/cert.txt)"; test -s out/cert.txt
+          # for the Google sign-in OAuth client (Google Cloud → Credentials → Android, package hu.fogasnaplo.app.teszt)
+          echo "::notice title=Tesztapp SHA-1 (Google Cloud OAuth-kliens, hu.fogasnaplo.app.teszt)::$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs out/Fogasnaplo-TESZT.apk | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | sed 's/../&:/g;s/:$//' | tr a-f A-F)"
       - uses: actions/upload-artifact@v4
         with:
           name: Fogasnaplo-TESZT-telefonra

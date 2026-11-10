@@ -15,11 +15,28 @@ sed -e 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|
 # test build: switch on the self-update parts (install permissions, update receiver)
 [ "$APP_ID" != hu.fogasnaplo.app ] && sed -i -e 's|<!--TESZT:\(.*\)-->|\1|' -e "s|android:authorities=\"hu.fogasnaplo.app.update\"|android:authorities=\"$APP_ID.update\"|" $O/AndroidManifest.xml
 RENAME=; [ "$APP_ID" != hu.fogasnaplo.app ] && RENAME="--rename-manifest-package $APP_ID" # code and R stay in hu.fogasnaplo.app
+# Google sign-in library (play-services-auth) and its dependencies, pinned with sha256 in tools/gms-deps.lock:
+# their classes go into the dex, their resources are linked as overlays with an R class for each library package
+GMS_CACHE=${GMS_CACHE:-$P/.gms-cache}
+python3 $P/tools/gms-deps.py fetch $P/tools/gms-deps.lock $GMS_CACHE > /dev/null
+LIBJARS=; LIBRES=; LIBPKGS=; mkdir -p $O/lib
+for f in $GMS_CACHE/*.jar; do LIBJARS="$LIBJARS $f"; done
+for f in $GMS_CACHE/*.aar; do
+  d=$O/lib/$(basename $f .aar); mkdir -p $d; unzip -q -o $f -d $d
+  [ -f $d/classes.jar ] && LIBJARS="$LIBJARS $d/classes.jar"
+  for j in $d/libs/*.jar; do [ -f "$j" ] && LIBJARS="$LIBJARS $j"; done
+  if [ -d $d/res ] && [ -n "$(ls -A $d/res)" ]; then
+    $BT/aapt2 compile --dir $d/res -o $d/res.zip; LIBRES="$LIBRES -R $d/res.zip"
+    LIBPKGS="$LIBPKGS:$(sed -n 's/.*package="\([^"]*\)".*/\1/p' $d/AndroidManifest.xml | head -1)"
+  fi
+done
+LIBPKGS=${LIBPKGS#:}; LIBCP=$(echo $LIBJARS | tr ' ' ':')
 $BT/aapt2 compile --dir res -o $O/res/res.zip
 $BT/aapt2 link -o $O/base.apk -I $JAR --manifest $O/AndroidManifest.xml -A assets \
-  --min-sdk-version 24 --target-sdk-version 36 --version-code $VC --version-name $VN --java $O/gen $RENAME $O/res/res.zip
-javac -nowarn -source 17 -target 17 -classpath $JAR -d $O/classes java/hu/fogasnaplo/app/*.java $(find $O/gen -name "*.java")
-$BT/d8 --min-api 24 --lib $JAR --release --output $O/dex $(find $O/classes -name "*.class")
+  --min-sdk-version 24 --target-sdk-version 36 --version-code $VC --version-name $VN --java $O/gen $RENAME \
+  $O/res/res.zip --auto-add-overlay $LIBRES --extra-packages $LIBPKGS
+javac -nowarn -source 17 -target 17 -classpath $JAR:$LIBCP -d $O/classes java/hu/fogasnaplo/app/*.java $(find $O/gen -name "*.java")
+$BT/d8 --min-api 24 --lib $JAR --release --output $O/dex $(find $O/classes -name "*.class") $LIBJARS
 cp $O/base.apk $O/unsigned.apk && (cd $O/dex && zip -q -j $O/unsigned.apk classes.dex)
 $BT/zipalign -f -p 4 $O/unsigned.apk $O/aligned.apk
 PW=$(cat $P/keystore-jelszo.txt)
@@ -31,7 +48,7 @@ BTOOL=${BUNDLETOOL:-$P/bundletool.jar}
 [ -f "$BTOOL" ] || { echo "Hiányzik a bundletool: $BTOOL (letöltés: https://github.com/google/bundletool/releases)"; exit 1; }
 cd $P/app/src/main
 $BT/aapt2 link --proto-format -o $O/proto.apk -I $JAR --manifest $O/AndroidManifest.xml -A assets \
-  --min-sdk-version 24 --target-sdk-version 36 --version-code $VC --version-name $VN $RENAME $O/res/res.zip
+  --min-sdk-version 24 --target-sdk-version 36 --version-code $VC --version-name $VN $RENAME $O/res/res.zip --auto-add-overlay $LIBRES
 rm -rf $O/protox $O/base $O/base.zip && mkdir -p $O/base/manifest $O/base/dex && unzip -q $O/proto.apk -d $O/protox
 mv $O/protox/AndroidManifest.xml $O/base/manifest/ && mv $O/protox/resources.pb $O/base/
 for d in res assets; do [ -d $O/protox/$d ] && mv $O/protox/$d $O/base/; done

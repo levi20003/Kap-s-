@@ -123,6 +123,10 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 10a.5 | Régi fogás kártyája (néhány perc internet után) | „Víz” sor a fogás napjának vízhozamával |
 | 10a.6 | Statisztika → Hivatalos fogási napló | Az elvitt halak naponta; jelöletlen fogásoknál „Elvittem / Elengedtem”; víztérkód helyenként megmarad |
 | 10a.7 | „Összesítő másolása”, majd beillesztés egy jegyzetbe | Soronként: dátum, víztérkód, halfaj, db, kg, a végén összesítő |
+| 10a.8 | Beállítások → Bejelentkezés Google-fiókkal (Google Cloud beállítva) | Fiókválasztó, engedélykérés; utána név és e-mail, „Feltöltés a Drive-ra…”, majd „Minden fent van” |
+| 10a.9 | drive.google.com → Kapás mentés mappa | Benne a `fogasnaplo.json`, a fotók, a videók (wifin) és az előnézetek |
+| 10a.10 | App törlése, újratelepítés, bejelentkezés ugyanazzal a fiókkal | Magától letölti, rákérdez, és minden fogás, fotó és videó visszajön |
+| 10a.11 | Mobilneten új videós fogás | „1 videó wifire vár”; wifin (vagy a kapcsolóval) felmegy |
 
 ## 10. Teljesítmény és stabilitás
 

@@ -76,6 +76,7 @@ public class MainActivity extends Activity {
     private static final int REQ_TREE = 5;
     private static final int REQ_ZIP_OUT = 6;
     private static final int REQ_ZIP_IN = 7;
+    private static final int REQ_GAUTH = 9;
     private static final int KEEP_BACKUPS = 4;
     private static final int PERM_LOC = 10;
     private static final int PERM_NOTIF = 11;
@@ -270,6 +271,24 @@ public class MainActivity extends Activity {
     private volatile JSONObject readyInfo; // version.json of the downloaded build
     private volatile boolean busy;
     private final Object logLock = new Object();
+
+    /** The mirrored log (files/naplo.json, or the copy before it if that one is unreadable), or "". Call with logLock held. */
+    private String readLogFile() {
+        for (String n : new String[]{"naplo.json", "naplo.prev.json"}) {
+            File f = new File(getFilesDir(), n);
+            if (!f.exists() || f.length() > 64L * 1024 * 1024) continue;
+            try (InputStream in = new FileInputStream(f)) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[65536];
+                int k;
+                while ((k = in.read(buf)) > 0) bo.write(buf, 0, k);
+                String s = new String(bo.toByteArray(), StandardCharsets.UTF_8);
+                new JSONObject(s); // must parse, else try the older copy
+                return s;
+            } catch (Exception ignored) {}
+        }
+        return "";
+    }
     private volatile boolean resign; // the published build has another signing key (see needsReinstall)
     private boolean awaitingResult;
     private long lastCheck;
@@ -956,6 +975,11 @@ public class MainActivity extends Activity {
                 else if (data.getData() != null) uris.add(data.getData());
                 if (!uris.isEmpty()) processMedia(uris);
             }
+        } else if (req == REQ_GAUTH) {
+            if (res != RESULT_OK) { try { js("__fnDrive", new JSONObject().put("state", "out")); } catch (Exception ignored) {} return; }
+            try {
+                signedIn(com.google.android.gms.auth.api.identity.Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data).getAccessToken());
+            } catch (Exception e) { driveFail(e); }
         } else if (req == REQ_TREE) {
             if (res == RESULT_OK && data != null && data.getData() != null) setBackupTree(data.getData());
             else js("__fnBackupFolder", err(""));
@@ -979,6 +1003,113 @@ public class MainActivity extends Activity {
                 new Thread(() -> readZip(u)).start();
             }
         }
+    }
+
+    /* ---------- Google sign-in (Play services AuthorizationClient, scope drive.file) and the Drive backup ----------
+       The sign-in is Google's own account picker and consent screen: the app never sees a password. Without an OAuth client
+       for this package + signing key in the developer's Google Cloud project, Google answers DEVELOPER_ERROR (10). */
+    private final Object driveLock = new Object();
+    private volatile boolean driveBusy, driveAgain, driveVideosOnMobile;
+    private String lastToken;
+
+    private com.google.android.gms.auth.api.identity.AuthorizationRequest authRequest() {
+        com.google.android.gms.auth.api.identity.AuthorizationRequest.Builder b = com.google.android.gms.auth.api.identity.AuthorizationRequest.builder()
+                .setRequestedScopes(java.util.Collections.singletonList(new com.google.android.gms.common.api.Scope(DriveSync.SCOPE)));
+        String email = prefs().getString("gEmail", null);
+        if (email != null) b.setAccount(new android.accounts.Account(email, "com.google"));
+        return b.build();
+    }
+
+    /** Silent token for background work; null when Google wants the user to sign in again. */
+    private String silentToken(boolean refresh) throws Exception {
+        if (refresh && lastToken != null) {
+            try { com.google.android.gms.auth.GoogleAuthUtil.clearToken(this, lastToken); } catch (Exception ignored) {}
+        }
+        com.google.android.gms.auth.api.identity.AuthorizationResult r = com.google.android.gms.tasks.Tasks.await(
+                com.google.android.gms.auth.api.identity.Identity.getAuthorizationClient(this).authorize(authRequest()), 30, java.util.concurrent.TimeUnit.SECONDS);
+        if (r.hasResolution()) return null;
+        lastToken = r.getAccessToken();
+        return lastToken;
+    }
+
+    private final DriveSync drive = new DriveSync(new DriveSync.Host() {
+        public android.content.Context ctx() { return MainActivity.this; }
+        public void js(String fn, JSONObject arg) { MainActivity.this.js(fn, arg); }
+        public String token(boolean refresh) throws Exception { return silentToken(refresh); }
+        public String log() { synchronized (logLock) { return readLogFile(); } }
+    });
+
+    /** A readable message for the page (Hungarian), from whatever went wrong. */
+    private static String driveError(Throwable e) {
+        Throwable t = e;
+        while (t.getCause() != null && !(t instanceof com.google.android.gms.common.api.ApiException)) t = t.getCause();
+        if (t instanceof com.google.android.gms.common.api.ApiException) {
+            int c = ((com.google.android.gms.common.api.ApiException) t).getStatusCode();
+            if (c == 10) return "A Google-bejelentkezés ehhez az apphoz még nincs beállítva (a fejlesztő Google Cloud-beállítása hiányzik).";
+            if (c == 7) return "Nincs internet. Próbáld újra, ha lesz kapcsolat.";
+            if (c == 16 || c == 12501) return "";
+            return "A Google-bejelentkezés nem sikerült (" + c + ").";
+        }
+        if (t instanceof java.net.UnknownHostException || t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException)
+            return "Nincs internet. Amint lesz, folytatom.";
+        String m = String.valueOf(t.getMessage());
+        if (m.contains("Drive 403") && m.contains("storageQuotaExceeded")) return "Megtelt a Google Drive-od, nem fér fel több fájl.";
+        if (m.contains("Drive 403") && m.contains("accessNotConfigured")) return "A Google Drive API nincs bekapcsolva a fejlesztő Google Cloud-projektjében.";
+        return "A Drive-mentés nem sikerült. Később újra megpróbálom.";
+    }
+
+    private void driveFail(Throwable e) {
+        try {
+            if (e instanceof DriveSync.NeedsLogin) { js("__fnDrive", new JSONObject().put("state", "needsLogin")); return; }
+            js("__fnDrive", new JSONObject().put("state", "error").put("error", driveError(e)));
+        } catch (Exception ignored) {}
+    }
+
+    private boolean playServicesOk() {
+        int r = com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this);
+        if (r == com.google.android.gms.common.ConnectionResult.SUCCESS) return true;
+        try { js("__fnDrive", new JSONObject().put("state", "error").put("error", "Ezen a telefonon nincs (vagy elavult) a Google Play-szolgáltatás, ezért a Google-bejelentkezés nem működik. A mappás mentés igen.")); } catch (Exception ignored) {}
+        return false;
+    }
+
+    /** "Bejelentkezés Google-fiókkal": the account picker and the consent screen, then who it is, then a first backup. */
+    private void googleSignIn() {
+        if (!playServicesOk()) return;
+        prefs().edit().remove("gEmail").apply(); // let the user pick the account
+        com.google.android.gms.auth.api.identity.Identity.getAuthorizationClient(this).authorize(authRequest())
+                .addOnSuccessListener(r -> {
+                    if (r.hasResolution()) {
+                        try {
+                            startIntentSenderForResult(r.getPendingIntent().getIntentSender(), REQ_GAUTH, null, 0, 0, 0);
+                            awaitingResult = true;
+                        } catch (Exception e) { driveFail(e); }
+                    } else signedIn(r.getAccessToken());
+                })
+                .addOnFailureListener(this::driveFail);
+    }
+
+    private void signedIn(String token) {
+        lastToken = token;
+        new Thread(() -> {
+            try {
+                JSONObject u = drive.about();
+                prefs().edit().putString("gEmail", u.optString("emailAddress")).putString("gName", u.optString("displayName")).apply();
+                js("__fnDrive", new JSONObject().put("state", "in").put("email", u.optString("emailAddress")).put("name", u.optString("displayName")));
+            } catch (Exception e) { driveFail(e); }
+        }).start();
+    }
+
+    private void driveSync() {
+        if (prefs().getString("gEmail", null) == null) return;
+        synchronized (driveLock) { if (driveBusy) { driveAgain = true; return; } driveBusy = true; }
+        new Thread(() -> {
+            try {
+                do {
+                    driveAgain = false;
+                    try { drive.sync(driveVideosOnMobile); } catch (Exception e) { driveFail(e); break; }
+                } while (driveAgain);
+            } finally { synchronized (driveLock) { driveBusy = false; } }
+        }).start();
     }
 
     /* ---------- backup with photos: zip of the log + photos/ + thumbs/ ---------- */
@@ -1421,23 +1552,41 @@ public class MainActivity extends Activity {
 
         /** The mirrored log, or "" when there is none (the previous copy if the last one is unreadable). */
         @JavascriptInterface
-        public String readLog() {
-            synchronized (logLock) {
-                for (String n : new String[]{"naplo.json", "naplo.prev.json"}) {
-                    File f = new File(getFilesDir(), n);
-                    if (!f.exists() || f.length() > 64L * 1024 * 1024) continue;
-                    try (InputStream in = new FileInputStream(f)) {
-                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                        byte[] buf = new byte[65536];
-                        int k;
-                        while ((k = in.read(buf)) > 0) bo.write(buf, 0, k);
-                        String s = new String(bo.toByteArray(), StandardCharsets.UTF_8);
-                        new JSONObject(s); // must parse, else try the older copy
-                        return s;
-                    } catch (Exception ignored) {}
-                }
-                return "";
-            }
+        public String readLog() { synchronized (logLock) { return readLogFile(); } }
+
+        /** Google account of the Drive backup: {email, name, synced} or {} when signed out. */
+        @JavascriptInterface
+        public String googleAccount() {
+            JSONObject o = new JSONObject();
+            try {
+                String e = prefs().getString("gEmail", null);
+                if (e != null) o.put("email", e).put("name", prefs().getString("gName", "")).put("synced", prefs().getLong("driveSynced", 0));
+            } catch (Exception ignored) {}
+            return o.toString();
+        }
+
+        @JavascriptInterface
+        public void googleSignIn() { runOnUiThread(MainActivity.this::googleSignIn); }
+
+        /** Backs up what is new (videos only on Wi-Fi unless videosOnMobile). Answers through __fnDrive. */
+        @JavascriptInterface
+        public void driveSync(boolean videosOnMobile) { driveVideosOnMobile = videosOnMobile; MainActivity.this.driveSync(); }
+
+        /** Downloads the Drive backup and hands it to the page's merge (__fnZipIn), like a ZIP restore. */
+        @JavascriptInterface
+        public void driveRestore() {
+            new Thread(() -> { try { drive.restore(); } catch (Exception e) { driveFail(e); } }).start();
+        }
+
+        @JavascriptInterface
+        public void googleSignOut() {
+            new Thread(() -> {
+                String t = null;
+                try { t = silentToken(false); } catch (Exception ignored) {}
+                drive.signOut(t);
+                lastToken = null;
+                try { js("__fnDrive", new JSONObject().put("state", "out")); } catch (Exception ignored) {}
+            }).start();
         }
 
         /** srcsJson: the log's photo uris, newest first; small copies of as many as fit go into the Google backup. */

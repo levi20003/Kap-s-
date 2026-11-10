@@ -10,6 +10,8 @@ A szövegek és válaszok a `play-aruhaz.md`-ben, a képek a `kepek/` mappában 
    a helyed és a fotóid nincsenek benne). A kiadási workflow **megáll**, ha ez üres.
 3. **Adatvédelmi oldal:** `docs/adatvedelem.html`, a `[ide jön a fejlesztői e-mail-cím]` helyére ugyanazt az e-mail-címet. A kiadási workflow ezt is ellenőrzi.
 4. A tesztek zöldek (`cd tests && npm test`), a CI is zöld az ágon.
+5. **Google-bejelentkezés:** `store/GOOGLE-BEJELENTKEZES.md` – Google Cloud-projekt, Drive API, hozzájárulási képernyő („In production”),
+   Android OAuth-kliens a valódi app SHA-1-ével (és a Play app-aláíró kulcséval, ha az más). Enélkül a bejelentkezés gomb hibát ír.
 
 ## 0. Ami kell hozzá
 

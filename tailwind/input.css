@@ -189,6 +189,16 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Beállítások: Google-fiók és Drive-mentés */
+  .gacct { @apply mb-3 flex flex-col gap-2 rounded-xl border p-3 text-sm; border-color: var(--line); background: var(--bg-2); }
+  .g-head { @apply flex items-start gap-2 leading-snug; }
+  .g-head svg { @apply mt-0.5 h-5 w-5 flex-none; color: var(--water); }
+  .g-head .hint { @apply block; }
+  .gacct .btnrow { @apply flex flex-wrap gap-2; }
+  .gacct .note, .gacct .hint { @apply m-0; }
+  .g-opt { @apply flex items-center gap-2 text-xs text-zinc-400 light:text-zinc-600; }
+  .g-opt input { @apply h-4 w-4 flex-none; accent-color: var(--water); }
+
   /* Statisztika: hivatalos fogási napló */
   .off-open { @apply mb-3 flex flex-col gap-2 rounded-xl border border-dashed p-3 text-sm; @apply border-sand-300/40 light:border-olive-600/40; }
   .off-q { @apply grid items-center gap-1.5; grid-template-columns: minmax(0, 1fr) auto auto; }

@@ -27,3 +27,6 @@ node_modules/
 # CI-only test signing key (GitHub Actions cache)
 ci-key/
 bundletool*.jar
+
+# Google sign-in library cache (build.sh downloads it, tools/gms-deps.lock pins it)
+.gms-cache/

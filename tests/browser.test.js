@@ -561,7 +561,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#plan .plan-item .plan-img img').count() === 1, 'csalifotó: az ajánlásban is látszik');
     await q.reload(); await q.waitForFunction(() => window.__lp && window.__lp.cleanup, null, { timeout: 5000 }).catch(() => {});
     const keep = await q.evaluate(() => window.__lp.cleanup);
-    ok(keep && keep.includes('file:///data/photos/lure1.jpg') && keep.includes('file:///data/thumbs/lure1.jpg'), 'csalifotó: a fájltakarítás megtartja');
+    ok(keep && keep.includes('file:///data/photos/lure1.jpg') && keep.includes('file:///data/thumbs/lure1.jpg'), 'csalifotó: a fájltakarítás megtartja' + (keep ? '' : ' (nem futott le)'));
     const f = path.join(os.tmpdir(), 'kapas-csalifoto-teszt.json');
     fs.writeFileSync(f, JSON.stringify({ app: 'fogasnaplo', version: 2, species: [], catches: [], lures: [{ id: 'n1', name: 'Új minnow', type: 'minnow', photo: { thumb: PX } }] }));
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#importFile').setInputFiles(f); await q.waitForTimeout(300);
@@ -716,6 +716,58 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
     const t = await q.locator('#gbkInfo').innerText();
     ok(t.includes('legújabb 3 fotó a 4-ból') && t.includes('25 MB'), 'Google-mentés: a Beállítások kiírja, hány fotó fért bele');
+    await ctx.close();
+  }
+  // Google account + Drive backup: sign in, state, restore on a new phone, sign out (fake bridge stands in for MainActivity/DriveSync)
+  {
+    const mkBridge = () => `window.__g = { acct: JSON.parse(sessionStorage.getItem('acct') || '{}'), calls: [] };
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, zipToFolder() {}, backupFolder() { return ''; }, pickBackupFolder() {},
+        googleAccount() { return JSON.stringify(window.__g.acct); },
+        googleSignIn() { window.__g.calls.push('in'); window.__g.acct = { email: 'horgasz@example.com', name: 'Horgász' }; sessionStorage.setItem('acct', JSON.stringify(window.__g.acct));
+          setTimeout(() => window.__fnDrive({ state: 'in', email: 'horgasz@example.com', name: 'Horgász' })); },
+        driveSync(v) { window.__g.calls.push('sync:' + v); setTimeout(() => { window.__fnDrive({ state: 'syncing', done: 1, total: 3 });
+          setTimeout(() => window.__fnDrive({ state: 'synced', up: 3, total: 3, waiting: v ? 0 : 1, ts: Date.now() }), 100); }); },
+        driveRestore() { window.__g.calls.push('restore'); setTimeout(() => { window.__fnDrive({ state: 'restoring', done: 0, total: 2 });
+          window.__fnZipIn({ drive: true, photos: 'file:///p/', thumbs: 'file:///t/', json: JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+            catches: [{ id: 'd1', sp: 's1', at: '2026-05-21T15:20:00.000Z', y: 2026, media: [{ src: 'file:///old/photos/a.jpg', thumb: 'file:///old/thumbs/a.jpg' }, { src: 'file:///old/photos/v.mp4', thumb: 'file:///old/thumbs/v.jpg', video: true }] }] }) });
+          window.__fnDrive({ state: 'restored', files: 4, missing: 0 }); }, 50); },
+        googleSignOut() { window.__g.calls.push('out'); window.__g.acct = {}; sessionStorage.removeItem('acct'); setTimeout(() => window.__fnDrive({ state: 'out' })); } };`;
+    // a new phone: empty log -> the Kezdőlap offers Google; signing in restores straight away (the merge still asks)
+    let ctx = await b.newContext(); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message)); q.on('dialog', d => d.accept());
+    await q.addInitScript(mkBridge());
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    const offer = q.locator('.restore-offer .btn-main');
+    ok(await offer.isVisible() && (await offer.innerText()) === 'Bejelentkezés Google-fiókkal', 'Google: üres naplónál a Kezdőlap Google-bejelentkezést kínál');
+    await offer.click(); await q.waitForTimeout(400);
+    ok((await q.evaluate(() => window.__g.calls)).join() === 'in,restore' && await q.locator('#importAsk').isVisible() && (await q.locator('#importAsk').innerText()).includes('1 új fogás'),
+      'Google: új telefonon a bejelentkezés után a Drive-ról tölt vissza, és megerősítést kér');
+    await q.locator('#importAsk .btn-main').click(); await q.waitForTimeout(1800);
+    const d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(d.catches.length === 1 && d.catches[0].media[0].src === 'file:///p/a.jpg' && d.catches[0].media[1].src === 'file:///p/v.mp4' && d.catches[0].media[1].video,
+      'Google: a visszatöltött fotók és videók az új telefon mappáira mutatnak');
+    ok((await q.evaluate(() => window.__g.calls)).some(c => c.startsWith('sync:')), 'Google: összefésülés után ez a telefon is ment a Drive-ra');
+    const g = (await q.locator('#gAcct').innerText()).replace(/\s+/g, ' ');
+    ok(g.includes('Horgász') && g.includes('horgasz@example.com') && g.includes('Minden fent van a Drive-on (3/3 fájl)') && g.includes('1 videó wifire vár'), 'Google: a Beállítások mutatja a fiókot és a mentés állását');
+    await q.locator('#gAcct .g-opt input').check(); await q.waitForTimeout(300);
+    ok((await q.evaluate(() => window.__g.calls)).includes('sync:true') && !(await q.locator('#gAcct').innerText()).includes('wifire vár'), 'Google: „Videók mobilneten is” bekapcsolva feltölti a videót');
+    await q.locator('#gAcct button', { hasText: 'Kijelentkezés' }).click(); await q.waitForTimeout(200);
+    ok((await q.locator('#gAcct').innerText()).includes('Bejelentkezés Google-fiókkal'), 'Google: kijelentkezés után újra a bejelentkezés gomb látszik');
+    await ctx.close();
+    // the Drive holds a log and this phone has none / another phone wrote a newer one: offer the restore, never overwrite
+    ctx = await b.newContext(); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { sessionStorage.setItem('acct', JSON.stringify({ email: 'h@example.com' }));
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [{ id: 'x', sp: 's1', at: new Date().toISOString(), y: 2026 }] })); });
+    await q.addInitScript(mkBridge());
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.evaluate(() => window.__fnDrive({ state: 'remote', catches: 16, newer: true }));
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
+    const t = await q.locator('#gAcct').innerText();
+    ok(t.includes('másik telefonról újabb mentés van (16 fogás)') && (await q.locator('#gAcct .btn-main').innerText()) === 'Visszaállítás a Drive-ról', 'Google: másik telefon újabb mentését nem írja felül, összefésülést kínál');
+    await q.evaluate(() => window.__fnDrive({ state: 'error', error: 'A Google-bejelentkezés ehhez az apphoz még nincs beállítva (a fejlesztő Google Cloud-beállítása hiányzik).' }));
+    ok((await q.locator('#gAcct').innerText()).includes('még nincs beállítva'), 'Google: érthető hibaüzenet, ha a Google Cloud-beállítás hiányzik');
+    ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Google: nincs vízszintes túlcsordulás');
     await ctx.close();
   }
   // river discharge: today's trend on the weather card and in the score, each catch's river, and "Mintázataid"

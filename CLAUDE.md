@@ -16,6 +16,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Aláírás: `fogasnaplo.keystore` + `keystore-jelszo.txt` a projekt gyökerében.
   **Ezek soha nem kerülhetnek a repóba** (`.gitignore` kizárja őket, az `out/`, `*.apk`, `*.zip` mellett).
 - A Gradle-fájlok (`build.gradle.kts` stb.) megvannak, de a hivatalos build a `build.sh`.
+- **Google Play-szolgáltatás (bejelentkezés)**: a `build.sh` a `tools/gms-deps.lock`-ban rögzített (sha256) `play-services-auth` 20.7.0-t és függőségeit
+  tölti le (`tools/gms-deps.py fetch`, gyorsítótár: `.gms-cache/`, `GMS_CACHE=`): az AAR-ok `classes.jar`-ja a dexbe, az erőforrásaik
+  overlayként (`-R`, `--extra-packages`) kerülnek. Manifest-összefésülő nincs: a könyvtárak 4 bejegyzése (SignInHubActivity, RevocationBoundService,
+  GoogleApiActivity, `com.google.android.gms.version`) kézzel van a manifestben. Verzióváltás: `tools/gms-deps.py lock …` és a manifest-bejegyzések ellenőrzése.
 - **Google Play: AAB** (a Play új appnál csak ezt fogadja): `AAB=1 ./build.sh …` → `out/Fogasnaplo.aab` is (aapt2 `--proto-format` → `base` modul → `bundletool`,
   `jarsigner`). Kell hozzá `bundletool.jar` (alapból a projekt gyökerében, vagy `BUNDLETOOL=…`). A CI minden pushnál megépíti és ellenőrzi (universal APK-vá alakítja).
 - **Kiadás**: a „Kiadás (Play Áruház)” workflow (`.github/workflows/kiadas.yml`, kézzel indítva, versionCode/versionName bemenettel) a valódi kulccsal
@@ -116,6 +120,15 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   (atomikus, előző: `naplo.prev.json`; kilépéskor azonnal). Induláskor `ANDROID.readLog()`: ha a localStorage üres/sérült, vagy a fájl `rev`-je újabb,
   a fájl nyer (`rescued` → toast). Megtelt localStorage-nál azonnal a fájlba ment (`#saveWarn` ezt írja). Az Android felhőmentése (`backup_rules.xml`,
   `data_extraction_rules.xml`) a fájlt is viszi, a `photos/`-t nem.
+- **Google-bejelentkezés és Drive-mentés** (Beállítások → Biztonsági mentés `#gAcct`, `renderGAcct`; natív: `googleSignIn` → `AuthorizationClient`,
+  hatókör `drive.file`; `DriveSync.java`): a napló (a `naplo.json` tükörből), az összes fotó, videó és előnézet a felhasználó Drive-jának
+  „Kapás mentés” mappájába, fájlonként egyszer (név + méret), resumable feltöltéssel. A napló `appProperties` (`catches`, `rev`, `device` – a
+  `no_backup/device-id`): üres napló sosem írja felül a Drive-ot, másik telefon újabb naplóját sem (`state:"remote"` → összefésülés a ZIP-visszaállítás
+  útján: `driveRestore` → `__fnZipIn {drive:true}` → `askImport` → `afterDriveMerge`). A naplóból kikerült fájlok a Drive kukájába mennek.
+  Videó alapból csak nem forgalomkorlátos hálózaton (`fogasnaplo.gvideo`). Indítók: mentés után 20 mp, induláskor, előtérbe jövéskor (`driveSyncSoon`).
+  Állapot: `__fnDrive` → `fogasnaplo.gdrive`. Új telefonon bejelentkezés után üres naplónál magától visszaállít. Kijelentkezés: token visszavonása.
+  Beállítás (Google Cloud, Android OAuth-kliensek SHA-1-gyel): `store/GOOGLE-BEJELENTKEZES.md`; a CI és a kiadási workflow kiírja a SHA-1-et.
+  Hiba 10 (DEVELOPER_ERROR) = nincs OAuth-kliens a csomagnévhez + kulcshoz.
 - **Fotók a Google-mentésben**: a `photos/` kimarad (25 MB felett a Google semmit nem ment), helyette `files/bkphotos/` 1280 px-es JPEG-másolatok
   a legújabb fotókról, amennyi a 22 MB-os keretbe fér a többi adat mellett (`syncBackupPhotos`, JS: `syncBkPhotos`, mentés után 8 mp-cel és induláskor;
   állapot: `__fnBkPhotos` → Beállítások `#gbkInfo`). Videó nem. Induláskor `restoreBackupPhotos` a hiányzó `photos/<név>`-t a másolatból pótolja.
