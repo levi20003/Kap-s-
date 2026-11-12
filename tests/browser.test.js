@@ -870,6 +870,31 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q3.locator('#today .today.skel .sk').count() === 4 && await q3.locator('#today .today.skel').getAttribute('aria-busy') === 'true', 'töltés: az előrejelzés helyén váz, nem csak szöveg');
     await c3.close();
   }
+  // editing a lure in the lure box; a new name carried over to the earlier catches (or not)
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+        catches: [{ id: 'a', sp: 's1', at: '2026-05-01T10:00:00.000Z', y: 2026, lure: 'Spintail' }, { id: 'b', sp: 's1', at: '2026-05-02T10:00:00.000Z', y: 2026, lure: 'spintail' }],
+        lures: [{ id: 'l1', name: 'Spintail', type: 'spintail', color: 'ezust', size: 5 }, { id: 'l2', name: 'Popper', type: 'popper' }] })); });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(250);
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
+    await q.locator('#lureBoxList .lure-edit-btn').first().click(); await q.waitForTimeout(100);
+    ok(await q.locator('#lureBoxList .lure-edit').count() === 1 && (await q.locator('#lureBoxList .lure-carry').innerText()).includes('2 korábbi fogásnál'), 'csali szerkesztése: a névre koppintva szerkesztő nyílik, a korábbi fogások számával');
+    await q.locator('#lureEditName').fill('Popper'); await q.locator('#lureBoxList .lure-edit .btn-main').click(); await q.waitForTimeout(100);
+    ok((await q.locator('#toast').innerText()).includes('Ilyen nevű csali már van'), 'csali szerkesztése: foglalt névre nem menti');
+    await q.locator('#lureEditName').fill('Spintail kék'); await q.locator('#lureBoxList .lure-edit select').nth(1).selectOption('sotet');
+    await q.locator('#lureBoxList .lure-edit input[type="number"]').fill('6.5'); await q.locator('#lureBoxList .lure-edit .btn-main').click(); await q.waitForTimeout(150);
+    let d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    let l1 = d.lures.find(l => l.id === 'l1');
+    ok(l1.name === 'Spintail kék' && l1.color === 'sotet' && l1.size === 6.5 && l1.type === 'spintail' && d.catches.every(c => c.lure === 'Spintail kék'), 'csali szerkesztése: név, szín, méret mentve, a korábbi fogásoknál is átírva');
+    await q.locator('#lureBoxList .lure-edit-btn').first().click(); await q.locator('#lureEditName').fill('Spintail 2'); await q.locator('#lureBoxList .lure-carry input').uncheck();
+    await q.locator('#lureBoxList .lure-edit select').nth(1).selectOption(''); await q.locator('#lureBoxList .lure-edit .btn-main').click(); await q.waitForTimeout(150);
+    d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1'))); l1 = d.lures.find(l => l.id === 'l1');
+    ok(l1.name === 'Spintail 2' && !('color' in l1) && d.catches.every(c => c.lure === 'Spintail kék'), 'csali szerkesztése: kikapcsolva a fogások nem változnak; a szín törölhető');
+    await ctx.close();
+  }
   // first start: species + water, Google backup, reminders; skippable; never for an existing log
   {
     let ctx = await b.newContext({ welcome: true, viewport: { width: 360, height: 760 } }); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

@@ -1032,6 +1032,9 @@ button{transition:transform .15s}
     deleteCatch(id,keepPhoto){const c=data.catches.find(c=>c.id===id);if(c&&!keepPhoto)dropPhoto(c);data.catches=data.catches.filter(c=>c.id!==id);save();return c},
     restoreCatch(c){if(!data.catches.some(x=>x.id===c.id)){data.catches.push(c);save()}},
     addLure(l){if(!Array.isArray(data.lures))data.lures=[];data.lures.push({id:rid(),...l});save()},
+    updateLure(id,patch,renameIn){if(!Array.isArray(data.lures))return;const old=data.lures.find(l=>l.id===id);if(!old)return;
+      if(renameIn&&patch.name&&norm(patch.name)!==norm(old.name)){const from=norm(old.name);data.catches=data.catches.map(c=>c.lure&&norm(c.lure)===from?{...c,lure:patch.name}:c)}
+      data.lures=data.lures.map(l=>{if(l.id!==id)return l;const n={...l,...patch};["color","size"].forEach(k=>{if(n[k]==null||n[k]==="")delete n[k]});return n});save()},
     removeLure(id){const i=lureBox().findIndex(l=>l.id===id);if(i<0)return null;const [l]=data.lures.splice(i,1);save();return{l,i}},
     restoreLure(x){if(!Array.isArray(data.lures))data.lures=[];if(!data.lures.some(l=>l.id===x.l.id)){data.lures.splice(Math.min(x.i,data.lures.length),0,x.l);save()}},
     startTrip(t){if(!Array.isArray(data.trips))data.trips=[];const n={id:rid(),...t};data.trips.push(n);save();return n.id},
@@ -2396,6 +2399,29 @@ button{transition:transform .15s}
     if(u){const im=document.createElement("img");im.alt="";im.src=u;im.onerror=()=>{if(l.photo.src&&im.src!==l.photo.src)im.src=l.photo.src};w.append(im)}
     else w.innerHTML=icoSvg("camera");return w}
   let lurePhotoOpen=null;
+  let lureEditOpen=null;
+  // edit a lure in place; a new name can be carried over to the earlier catches with it (they store the lure by name)
+  function lureEditForm(l){
+    const f=el("form","lureform lure-edit");f.autocomplete="off";
+    const nm=el("input");nm.maxLength=50;nm.value=l.name;nm.setAttribute("aria-label","Csali neve");
+    const ty=el("select");ty.setAttribute("aria-label","Csali típusa");LURE_TYPES.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;ty.append(o)});ty.value=l.type;
+    const co=el("select");co.setAttribute("aria-label","Csali színe");const o0=el("option",null,"Szín (nem kötelező)");o0.value="";co.append(o0);
+    LURE_COLORS.forEach(([k,n])=>{const o=el("option",null,n);o.value=k;co.append(o)});co.value=l.color||"";
+    const sz=el("input");sz.type="number";sz.inputMode="decimal";sz.min="1";sz.max="40";sz.step="0.5";sz.placeholder="cm";sz.setAttribute("aria-label","Méret (cm)");if(l.size)sz.value=l.size;
+    nm.id="lureEditName";f.append(nm,ty,co,sz);
+    const used=state.catches.filter(c=>c.lure&&norm(c.lure)===norm(l.name)).length;
+    let carry=null;
+    if(used){const lab=el("label","g-opt lure-carry");carry=el("input");carry.type="checkbox";carry.checked=true;
+      lab.append(carry,el("span",null,"Új névnél a "+used+" korábbi fogásnál is átírom"));f.append(lab)}
+    const ok=el("button","btn-main","Mentés");ok.type="submit";const no=el("button","btn-ghost","Mégse");no.type="button";
+    no.onclick=()=>{lureEditOpen=null;renderLureBox()};f.append(ok,no);
+    f.onsubmit=e=>{e.preventDefault();const name=nm.value.trim().replace(/\s+/g," ");if(!name)return;
+      if(lureBox().some(x=>x.id!==l.id&&norm(x.name)===norm(name))){toast("Ilyen nevű csali már van.");return}
+      const z=parseFloat(String(sz.value).replace(",","."));
+      store.updateLure(l.id,{name,type:ty.value,color:co.value||null,size:z>0?Math.round(z*10)/10:null},!!(carry&&carry.checked));
+      lureEditOpen=null;buzz("confirm");toast("Csali mentve")};
+    return f;
+  }
   function renderLureBox(){
     const list=$("lureBoxList");if(!list)return;list.replaceChildren();const L=lureBox();
     $("lureBoxTitle").textContent="Csalitáram"+(L.length?" ("+L.length+")":"");
@@ -2403,10 +2429,13 @@ button{transition:transform .15s}
     L.forEach(l=>{const r=el("div","myrow");
       const th=el("button","lthumb-btn");th.type="button";th.setAttribute("aria-label",(lureThumb(l)?"Fotó cseréje: ":"Fotó hozzáadása: ")+l.name);th.append(lureImg(l));
       th.onclick=()=>{lurePhotoOpen=lurePhotoOpen===l.id?null:l.id;renderLureBox()};r.append(th);
-      const t=el("div","mytxt");t.append(el("b",null,l.name));const ps=el("div","specs");ps.append(el("span","spec",typeName(l.type)));
+      const t=el("button","mytxt lure-edit-btn");t.type="button";t.setAttribute("aria-label",l.name+" szerkesztése");t.append(el("b",null,l.name));
+      const ps=el("div","specs");ps.append(el("span","spec",typeName(l.type)));
       if(l.color)ps.append(el("span","spec",colorName(l.color)));if(l.size)ps.append(el("span","spec",String(l.size).replace(".",",")+" cm"));t.append(ps);
+      t.onclick=()=>{lureEditOpen=lureEditOpen===l.id?null:l.id;lurePhotoOpen=null;renderLureBox()};
       const d=el("button","del","Törlés");d.type="button";d.setAttribute("aria-label",l.name+" törlése");
       d.onclick=()=>{const x=store.removeLure(l.id);if(x)toast(l.name+" törölve",{label:"Visszavonás",fn:()=>store.restoreLure(x)})};r.append(t,d);
+      if(lureEditOpen===l.id)r.append(lureEditForm(l));
       if(lurePhotoOpen===l.id){const m=el("div","lphoto-menu");
         const go=(label,src)=>{const b=el("button","btn-ghost",label);b.type="button";b.onclick=()=>{photoFor={lure:l.id};pickPhoto(src)};m.append(b)};
         go("📷 Fotó","camera");go("🖼 Galéria","gallery");

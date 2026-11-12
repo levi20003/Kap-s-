@@ -175,6 +175,9 @@
   .lphoto-menu { @apply flex w-full flex-wrap gap-2; }
   .lphoto-menu .btn-ghost { @apply flex-1; }
   .lureform { @apply mt-2 grid grid-cols-2 gap-2; }
+  .lure-edit { @apply w-full; }
+  .lure-edit input:first-child, .lure-edit .lure-carry { @apply col-span-2; }
+  .lure-edit-btn { @apply min-w-0 flex-1 border-0 bg-transparent p-0 text-left; color: inherit; font: inherit; }
   .lureform input#lureName { @apply col-span-2; }
   .lureform select, .lureform input { @apply min-w-0; }
 
