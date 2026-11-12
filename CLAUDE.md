@@ -97,6 +97,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   `canNotify`/`askNotifyPermission`. Befejezéskor összefoglaló, befejezési idő (12 óránál régebbinél az utolsó fogás + 30 perc), megjegyzés.
   Fogás nélküli alkalom is mentődik. Statisztika: siker %, hal/óra, siker helyenként és légnyomás szerint (`t.wx` induláskor), legutóbbiak.
   Mentés (ZIP/JSON/Drive) viszi; visszaállításkor csak a befejezettek jönnek (`planImport` → `newT`).
+- **Kezdőképernyő-widget** (`KapasWidget.java`, `res/layout/widget.xml`, `res/xml/widget_info.xml`): a JS `pushWidget` → `ANDROID.setWidget(json)`
+  a következő 7 nap értékelését adja (`days:[{d,lv,label,win}]`), így a widget egy hétig az app megnyitása nélkül is a jó napot mutatja; ezen kívül
+  a hely, a 2 „+ hal” (a gyorsrögzítés útján) és a futó horgászat (stopper `setChronometer`, „Befejezés”). Gombok: „Horgászat” → `TRIP_START`
+  → `__fnTripStart`. A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
 - **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
   `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
   `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).

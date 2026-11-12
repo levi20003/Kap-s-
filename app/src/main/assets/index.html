@@ -1008,7 +1008,7 @@ button{transition:transform .15s}
   // leaving the app (or the page) writes the pending copy right away
   document.addEventListener("visibilitychange",()=>{if(document.hidden&&mirrorPending())mirrorNow()});
   window.addEventListener("pagehide",()=>{if(mirrorPending())mirrorNow()});
-  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts();checkGame();pushTripNotif()}
+  function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts();checkGame();pushTripNotif();pushWidget()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
     addSpecies(name){data.species.push({id:rid(),name,created:new Date().toISOString()});save()},
@@ -1397,6 +1397,23 @@ button{transition:transform .15s}
     if(j===lastTripNotif)return;lastTripNotif=j;try{ANDROID.setTripNotification(j)}catch(e){}
   }
   window.__fnTripNotify=function(){lastTripNotif=null;pushTripNotif()};
+  window.__fnTripStart=function(){go("home");if(!activeTrip())openTripSheet("start")};
+
+  /* ---------- home-screen widget (KapasWidget): the next 7 days' ratings, so it stays right for a week without the app ---------- */
+  let lastWidget=null;
+  function pushWidget(){
+    if(!ANDROID||!ANDROID.setWidget)return;
+    const T=today.data,loc=wxPlace(),days=[];
+    if(T&&T.h&&T.d&&Math.abs(T.lat-loc.lat)<0.05&&Math.abs(T.lng-loc.lng)<0.05){
+      const D=T.d,now=new Date();
+      D.time.forEach((t,k)=>{const date=parseLocal(t);if(ymd(date)<ymd(now))return;const lv=dayLevel(T.h,date);if(!lv)return;
+        const set=D.sunset&&D.sunset[k]?parseLocal(D.sunset[k]):null;
+        days.push({d:ymd(date),lv,label:LEVELS[lv],win:set?"Esti rablás "+fmtHM(set)+"–"+fmtHM(new Date(set.getTime()+twilightMs(set,loc.lat))):""})});
+    }
+    const t=activeTrip();
+    const j=JSON.stringify({place:loc.name,days,sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)})),trip:t?{start:new Date(t.start).getTime(),n:tripCatches(t).length}:null});
+    if(j===lastWidget)return;lastWidget=j;try{ANDROID.setWidget(j)}catch(e){}
+  }
   window.__fnTripEnd=function(){const t=activeTrip();if(t){go("home");openTripSheet("end")}};
 
   function renderTrip(){
@@ -2835,7 +2852,7 @@ button{transition:transform .15s}
     if(!T||!fresh){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
     const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
     if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
-    const sc=scoreToday(H,i,now);
+    const sc=scoreToday(H,i,now);pushWidget();
     // the headline is the same daylight average the "Ma" row shows, so the two never disagree
     const lv=dayLevel(H,now)||sc.level;
     if(wxLv!==lv){wxLv=lv;renderGreet()}

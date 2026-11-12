@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
     static final String ACTION_TRIP_END = "hu.fogasnaplo.app.TRIP_END";
     private static final String TRIP_CHANNEL = "trip";
     private static final int TRIP_NOTIF = 4242;
-    private boolean pendingTripEnd;
+    private boolean pendingTripEnd, pendingTripStart;
     // test build self-update: CI publishes the latest test APK and its version here
     private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
     private static final String UA = "Kapas/1.8 (hu.fogasnaplo.app; Android personal fishing log)";
@@ -516,6 +516,12 @@ public class MainActivity extends Activity {
 
     /* ---------- home-screen shortcuts: "+ Csuka" opens straight into a new catch ---------- */
     private void handleIntent(Intent i) {
+        if (i != null && KapasWidget.ACTION_TRIP_START.equals(i.getAction())) {
+            pendingTripStart = true;
+            setIntent(new Intent(this, MainActivity.class));
+            deliverQuick();
+            return;
+        }
         if (i != null && ACTION_TRIP_END.equals(i.getAction())) {
             pendingTripEnd = true;
             setIntent(new Intent(this, MainActivity.class));
@@ -530,6 +536,7 @@ public class MainActivity extends Activity {
 
     private void deliverQuick() {
         if (pageReady && pendingTripEnd) { pendingTripEnd = false; js("__fnTripEnd", new JSONObject()); }
+        if (pageReady && pendingTripStart) { pendingTripStart = false; js("__fnTripStart", new JSONObject()); }
         if (!pageReady || pendingQuick == null) return;
         JSONObject o = new JSONObject();
         try { o.put("sp", pendingQuick); } catch (Exception ignored) {}
@@ -1447,6 +1454,10 @@ public class MainActivity extends Activity {
                 return true;
             } catch (Exception e) { return false; }
         }
+
+        /** The home-screen widget's data (see KapasWidget); redraws every widget. */
+        @JavascriptInterface
+        public void setWidget(String json) { KapasWidget.push(MainActivity.this, json == null ? "{}" : json); }
 
         /** The fishing trip's ongoing notification ("" removes it). */
         @JavascriptInterface

@@ -935,6 +935,30 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         lv: await q.locator('#today .score .dots i.on').count(), ex: await q.locator('#today .wx-explain').textContent() };
       await ctx.close(); return r;
     };
+    // the home-screen widget gets the next days' ratings, the evening window, the "+ fish" species and the running trip
+    {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(({ H, D }) => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }],
+          catches: [{ id: 'x', sp: 's2', at: new Date(Date.now() - 864e5 * 3).toISOString(), y: new Date().getFullYear() }] }));
+        localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
+        window.__wg = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setWidget(j) { window.__wg.push(j); } }; }, { H, D });
+      await q.route('https://**', r => r.abort());
+      await q.goto(PAGE); await q.waitForTimeout(400);
+      let w = JSON.parse(await q.evaluate(() => window.__wg[window.__wg.length - 1]));
+      const td = fmt(new Date());
+      ok(w.place === 'Szeged' && w.days.length >= 6 && w.days[0].d === td && w.days[0].lv >= 1 && w.days[0].label && /^Esti rablás 16:20–16:\d\d$/.test(w.days[0].win),
+        'widget: a következő napok értékelése és az esti rablás ideje (' + JSON.stringify(w.days[0]) + ')');
+      ok(w.sp.map(x => x.name).join() === 'Süllő,Balin' && w.trip === null, 'widget: a két „+ hal” gomb a leggyakoribb halakra, horgászat nélkül');
+      await q.evaluate(() => window.__fnTripStart()); await q.waitForTimeout(100);
+      ok(await q.locator('#tripWrap').isVisible(), 'widget: a „Horgászat” gomb az indító lapot nyitja');
+      await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(150);
+      w = JSON.parse(await q.evaluate(() => window.__wg[window.__wg.length - 1]));
+      ok(w.trip && w.trip.start > 0 && w.trip.n === 0, 'widget: futó horgászatnál a kezdés ideje (stopperhez) és a fogásszám');
+      const calls = await q.evaluate(() => window.__wg.length);
+      await q.evaluate(() => window.render && 0); await q.locator('.tabbar button[data-tab="stats"]').click(); await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(100);
+      ok(await q.evaluate(() => window.__wg.length) === calls, 'widget: csak változáskor frissül (fülváltásra nem)');
+      await ctx.close();
+    }
     const flat = await run(wdays.map(() => 130)), rising = await run(wdays.map((_, k) => k < 4 ? 100 : k < 7 ? 100 + (k - 3) * 40 : 260));
     ok(flat.facts.includes('Víz 130 m³/s') && flat.facts.includes('stagnál'), 'vízhozam: a mai nap kártyáján a folyó vízhozama és iránya (' + flat.facts.replace(/\n/g, ' ') + ')');
     ok(flat.reasons.includes('Stagnáló víz') && rising.reasons.includes('Gyorsan áradó víz'), 'vízhozam: az értékelés indoklásában szerepel');

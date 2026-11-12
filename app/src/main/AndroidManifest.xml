@@ -53,6 +53,15 @@
             </intent-filter>
         </receiver>
         <!--TESZT:<receiver android:name=".UpdateReceiver" android:exported="false" />-->
+        <receiver
+            android:name=".KapasWidget"
+            android:label="Kapás – horgászidő"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
+        </receiver>
         <provider
             android:name=".ShotProvider"
             android:authorities="hu.fogasnaplo.app.shot"

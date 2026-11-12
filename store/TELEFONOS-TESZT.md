@@ -138,6 +138,15 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 10b.4 | Egy horgászat fogás nélkül | „Fogás nélküli alkalom” szöveg, mentés után a Statisztika → Horgászataid mutatja |
 | 10b.5 | Horgászat közben az app bezárása, újranyitás | Az élő kártya és az idő megmaradt |
 
+## 10c. Kezdőképernyő-widget
+
+| # | Lépés | Várt eredmény |
+|---|---|---|
+| 10c.1 | Kezdőképernyő → hosszan nyomni → Modulok / Widgetek → Kapás – horgászidő | Zöld kártya: „Horgászidő ma · Szeged”, értékelés pöttyökkel, esti rablás ideje, 2 „+ hal” és „Horgászat” gomb |
+| 10c.2 | „+ Balin” a widgeten | Az app megnyílik, a fogás rögzül |
+| 10c.3 | „Horgászat” a widgeten, indítás | A widgeten futó stopper és „Befejezés” |
+| 10c.4 | Másnap (az app megnyitása nélkül) | A widget a másnapi értékelést mutatja |
+
 ## 10. Teljesítmény és stabilitás
 
 - [ ] 100+ fogással (importálva) a lista és a statisztika folyamatosan görgethető.
