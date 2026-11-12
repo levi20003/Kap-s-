@@ -128,6 +128,16 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 10a.10 | App törlése, újratelepítés, bejelentkezés ugyanazzal a fiókkal | Magától letölti, rákérdez, és minden fogás, fotó és videó visszajön |
 | 10a.11 | Mobilneten új videós fogás | „1 videó wifire vár”; wifin (vagy a kapcsolóval) felmegy |
 
+## 10b. Horgászat-mód
+
+| # | Lépés | Várt eredmény |
+|---|---|---|
+| 10b.1 | Kezdőlap → Horgászat indítása → hely, halak → Indulás | Zöld élő kártya órával; az értesítési sávban „Horgászat · hely” futó stopperrel |
+| 10b.2 | Zárolt képernyőn az értesítés „+ Balin” gombja | Az app megnyílik, a fogás rögzül, a szerkesztő nyitva |
+| 10b.3 | Értesítés „Befejezés” gombja | Az app az összefoglalóval nyílik: idő, fogások, legnagyobb hal |
+| 10b.4 | Egy horgászat fogás nélkül | „Fogás nélküli alkalom” szöveg, mentés után a Statisztika → Horgászataid mutatja |
+| 10b.5 | Horgászat közben az app bezárása, újranyitás | Az élő kártya és az idő megmaradt |
+
 ## 10. Teljesítmény és stabilitás
 
 - [ ] 100+ fogással (importálva) a lista és a statisztika folyamatosan görgethető.

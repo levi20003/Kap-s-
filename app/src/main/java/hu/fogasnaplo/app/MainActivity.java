@@ -80,7 +80,12 @@ public class MainActivity extends Activity {
     private static final int KEEP_BACKUPS = 4;
     private static final int PERM_LOC = 10;
     private static final int PERM_NOTIF = 11;
+    private static final int PERM_NOTIF_TRIP = 12;
     static final String ACTION_QUICK = "hu.fogasnaplo.app.QUICK";
+    static final String ACTION_TRIP_END = "hu.fogasnaplo.app.TRIP_END";
+    private static final String TRIP_CHANNEL = "trip";
+    private static final int TRIP_NOTIF = 4242;
+    private boolean pendingTripEnd;
     // test build self-update: CI publishes the latest test APK and its version here
     private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
     private static final String UA = "Kapas/1.8 (hu.fogasnaplo.app; Android personal fishing log)";
@@ -511,6 +516,12 @@ public class MainActivity extends Activity {
 
     /* ---------- home-screen shortcuts: "+ Csuka" opens straight into a new catch ---------- */
     private void handleIntent(Intent i) {
+        if (i != null && ACTION_TRIP_END.equals(i.getAction())) {
+            pendingTripEnd = true;
+            setIntent(new Intent(this, MainActivity.class));
+            deliverQuick();
+            return;
+        }
         if (i == null || !ACTION_QUICK.equals(i.getAction())) return;
         pendingQuick = i.getStringExtra("sp");
         setIntent(new Intent(this, MainActivity.class));
@@ -518,11 +529,55 @@ public class MainActivity extends Activity {
     }
 
     private void deliverQuick() {
+        if (pageReady && pendingTripEnd) { pendingTripEnd = false; js("__fnTripEnd", new JSONObject()); }
         if (!pageReady || pendingQuick == null) return;
         JSONObject o = new JSONObject();
         try { o.put("sp", pendingQuick); } catch (Exception ignored) {}
         pendingQuick = null;
         js("__fnQuick", o);
+    }
+
+    /* ---------- fishing trip: an ongoing notification with a running clock, "+ fish" buttons and "Befejezés" ----------
+       json: {start (ms), title, text, sp: [{id, name}] (max 2)}; "" removes it. The clock runs by itself (setUsesChronometer),
+       so nothing has to update it every minute. The buttons open the app the same way as the home-screen shortcuts. */
+    private void setTripNotification(String json) {
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (json == null || json.isEmpty()) { nm.cancel(TRIP_NOTIF); return; }
+        try {
+            JSONObject o = new JSONObject(json);
+            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(TRIP_CHANNEL) == null) {
+                android.app.NotificationChannel ch = new android.app.NotificationChannel(TRIP_CHANNEL, "Horgászat folyamatban", android.app.NotificationManager.IMPORTANCE_LOW);
+                ch.setShowBadge(false);
+                nm.createNotificationChannel(ch);
+            }
+            int flags = android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+            android.app.Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new android.app.Notification.Builder(this, TRIP_CHANNEL) : new android.app.Notification.Builder(this);
+            b.setSmallIcon(R.drawable.ic_stat_fish).setColor(0xFF2F4A3A)
+                    .setContentTitle(o.optString("title")).setContentText(o.optString("text"))
+                    .setWhen(o.optLong("start")).setShowWhen(true).setUsesChronometer(true)
+                    .setOngoing(true).setOnlyAlertOnce(true).setCategory(android.app.Notification.CATEGORY_STATUS)
+                    .setContentIntent(android.app.PendingIntent.getActivity(this, 40, new Intent(this, MainActivity.class), flags));
+            JSONArray sp = o.optJSONArray("sp");
+            for (int i = 0; sp != null && i < sp.length() && i < 2; i++) {
+                JSONObject x = sp.getJSONObject(i);
+                Intent in = new Intent(this, MainActivity.class).setAction(ACTION_QUICK).putExtra("sp", x.optString("id"))
+                        .setData(Uri.parse("kapas://trip/" + x.optString("id"))); // distinct per fish, so the PendingIntents do not merge
+                b.addAction(new android.app.Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_shortcut_add),
+                        "+ " + x.optString("name"), android.app.PendingIntent.getActivity(this, 41 + i, in, flags)).build());
+            }
+            Intent end = new Intent(this, MainActivity.class).setAction(ACTION_TRIP_END);
+            b.addAction(new android.app.Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_stat_fish),
+                    "Befejezés", android.app.PendingIntent.getActivity(this, 45, end, flags)).build());
+            nm.notify(TRIP_NOTIF, b.build());
+        } catch (SecurityException ignored) { // notifications not allowed: the trip still runs in the app
+        } catch (Exception ignored) {}
+    }
+
+    private boolean canNotify() {
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        return nm == null || nm.areNotificationsEnabled();
     }
 
     private void setShortcuts(String json) {
@@ -653,6 +708,7 @@ public class MainActivity extends Activity {
             boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
             js("__fnNotify", ok ? new JSONObject() : err("Az értesítések tiltva vannak. A telefon Beállítások → Alkalmazások → Kapás részében engedélyezheted."));
         }
+        if (req == PERM_NOTIF_TRIP) js("__fnTripNotify", new JSONObject());
         if (req == PERM_LOC) {
             boolean ok = false;
             for (int r : res) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
@@ -1390,6 +1446,23 @@ public class MainActivity extends Activity {
                 cm.setPrimaryClip(android.content.ClipData.newPlainText(label, text));
                 return true;
             } catch (Exception e) { return false; }
+        }
+
+        /** The fishing trip's ongoing notification ("" removes it). */
+        @JavascriptInterface
+        public void setTripNotification(String json) { runOnUiThread(() -> MainActivity.this.setTripNotification(json)); }
+
+        /** True when the app may show notifications (permission + not switched off). */
+        @JavascriptInterface
+        public boolean canNotify() { return MainActivity.this.canNotify(); }
+
+        /** Asks for the notification permission without turning the closed-season reminders on (Android 13+). */
+        @JavascriptInterface
+        public void askNotifyPermission() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERM_NOTIF_TRIP);
+            });
         }
 
         /** Asks for the notification permission where needed (Android 13+); answers through __fnNotify. */

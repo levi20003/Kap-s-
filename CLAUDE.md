@@ -90,6 +90,13 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   vágólapra másol). A levélben csak technikai adat van (`feedbackInfo`: verzió, képernyő, UA, téma, nyelv, fogás/halfaj darabszám), a napló, a hely és a fotók nincsenek;
   ezt teszt védi. Címzett: `FEEDBACK_EMAIL` az `index.html`-ben (üresen a felhasználó írja be); a kiadási workflow megáll, ha üres vagy ha az adatvédelmi oldalon
   helyőrző e-mail maradt. A tesztapp versionName-je a CI-ban `1.8-<commit>`, így a levélben a build-azonosító is ott van.
+- **Horgászat-mód** (Kezdőlap `#tripSec`, `renderTrip`; lap `#tripWrap`, `openTripSheet(start|end|view)`; Statisztika `#tripStatSec`, `renderTripStats`):
+  `data.trips = [{id, start, end?, place?, sp?, wx?, note?}]` (opcionális). Egyszerre egy fut (`activeTrip`: nincs `end`). A horgászat fogásai
+  **időpont alapján** számolódnak (`tripCatches`), a fogás formátuma nem változott. Élő kártya órával, „+ hal” gombokkal; állandó értesítés
+  (`ANDROID.setTripNotification`: stopper `setUsesChronometer`, „+ hal” = `ACTION_QUICK`, „Befejezés” = `ACTION_TRIP_END` → `__fnTripEnd`), engedély:
+  `canNotify`/`askNotifyPermission`. Befejezéskor összefoglaló, befejezési idő (12 óránál régebbinél az utolsó fogás + 30 perc), megjegyzés.
+  Fogás nélküli alkalom is mentődik. Statisztika: siker %, hal/óra, siker helyenként és légnyomás szerint (`t.wx` induláskor), legutóbbiak.
+  Mentés (ZIP/JSON/Drive) viszi; visszaállításkor csak a befejezettek jönnek (`planImport` → `newT`).
 - **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
   `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
   `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).
@@ -109,6 +116,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 ## Tesztek és CI
 
 - `cd tests && npm ci && npx playwright install chromium && npm test`: tilalmi számítás (`rules.test.js`) és böngészős tesztek ál-Android híddal (`browser.test.js`).
+  A böngészős tesztek egy helyi HTTP-szerverről (127.0.0.1:47821) töltik az oldalt, mert a fej nélküli Chromium `file://` alatt újratöltéskor
+  elveszíti a localStorage-ot (a telefon WebView-ja nem); `TEST_FILE_URL=1` a régi módra vált.
 - Új funkcióhoz tegyél tesztet a `browser.test.js`-be. A GitHub Actions (`.github/workflows/ci.yml`) minden pushnál lefuttatja, és a `build.sh`-val egy eldobható CI-kulccsal megépíti az APK-t.
 
 ## Adattárolás

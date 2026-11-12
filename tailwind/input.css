@@ -189,6 +189,40 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Horgászat-mód: indító sor, élő kártya, lap, statisztika */
+  .trip-start { @apply flex w-full items-center gap-3 rounded-2xl border p-3 text-left shadow-sm; border-color: var(--line); background: var(--surface); color: var(--fg); }
+  .trip-ic { @apply flex h-11 w-11 flex-none items-center justify-center rounded-full; background: var(--water); color: var(--on-water); }
+  .trip-ic svg { @apply h-5 w-5; }
+  .trip-tx { @apply flex min-w-0 flex-col; }
+  .trip-tx b { @apply text-base; }
+  .trip-tx small { @apply text-xs leading-snug text-zinc-400 light:text-zinc-500; }
+  .trip.live { @apply flex flex-col gap-2 rounded-3xl p-4 shadow-sm; background: linear-gradient(160deg, var(--hero-a), var(--hero-b) 60%, var(--hero-c)); color: var(--hero-side); }
+  .trip-top { @apply flex flex-wrap items-center gap-2 text-sm; color: var(--hero-lbl); }
+  .trip-live { @apply flex items-center gap-1.5 font-semibold; }
+  .trip-live::before { content: ""; @apply inline-block h-2 w-2 rounded-full; background: var(--accent); animation: trippulse 1.6s ease-in-out infinite; }
+  @keyframes trippulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .trip-live::before { animation: none; } }
+  .trip-place { @apply rounded-full px-2 py-0.5 text-xs; background: var(--hero-chip); border: 1px solid var(--hero-chip-line); }
+  .trip-clock { @apply text-5xl font-extrabold tabular-nums leading-none; font-family: var(--f-display); }
+  .trip-sum { @apply text-sm; color: var(--hero-lbl); }
+  .trip-add { @apply flex flex-wrap gap-2; }
+  .trip.live .pill { color: var(--hero-side); border-color: var(--hero-chip-line); background: var(--hero-chip); }
+  .trip.live .note { @apply m-0; }
+  .trip-end { @apply mt-1 w-full; background: var(--hero-btn) !important; color: var(--hero-btn-ink) !important; }
+  .trip-kpis { @apply grid grid-cols-3 gap-2; }
+  .trip-kpis > div { @apply flex flex-col rounded-xl p-2 text-center; background: var(--bg-2); }
+  .trip-kpis b { @apply text-xl font-extrabold; }
+  .trip-kpis span { @apply text-xs text-zinc-400 light:text-zinc-500; }
+  .trip-list { @apply m-0 flex list-none flex-col gap-1 p-0 text-sm; }
+  .trip-list b { @apply tabular-nums; }
+  .trip-rate { @apply mt-3; }
+  .trip-recent { @apply flex flex-col gap-1.5; }
+  .trip-row { @apply grid items-center gap-x-2 rounded-xl border p-2 text-left text-sm; grid-template-columns: auto minmax(0, 1fr) auto; border-color: var(--line); background: var(--surface); color: var(--fg); }
+  .trip-row span { @apply truncate text-zinc-400 light:text-zinc-500; }
+  .trip-row em { @apply not-italic font-semibold; color: var(--water); }
+  .trip-row.blank em { @apply text-zinc-400 light:text-zinc-500; }
+  #tripStats .flabel { @apply mt-3; }
+
   /* Első indítás: üdvözlő */
   .welcome { @apply gap-4; }
   .w-dots { @apply flex justify-center gap-1.5; }
