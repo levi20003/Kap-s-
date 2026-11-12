@@ -15,6 +15,8 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 - [ ] **Widget:** kezdőképernyő hosszan nyomva → Modulok → Kapás – horgászidő; „+ hal” és „Horgászat” gomb.
 - [ ] **Okos értesítés:** Beállítások → Értesítések → Jó horgászidő bekapcsolása; a „Következő:” sor mutatja, mikor szól.
 - [ ] **Húzás, rezgés, konfetti:** Fogások listán elhúzni egy elemet; egy rekordnál nagyobb hossz mentése.
+- [ ] **Csali szerkesztése:** Beállítások → Csalitáram → a csali nevére koppintva; átnevezésnél „a korábbi fogásoknál is átírom”.
+- [ ] **Logó a fejlécben:** sötét módban is jól látszik (vékony keret, halvány fény).
 - [ ] **Helyeim / Ma neked:** Térkép fül teteje és Kezdőlap (kell 2+ fogás ugyanazon a néven mentett helyen).
 - [ ] **A teljes lista:** `store/TELEFONOS-TESZT.md`, legalább az 1–6. és a 10a–10d. szakasz.
 
