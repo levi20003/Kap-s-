@@ -66,6 +66,19 @@ function wxMock(now){
   {const june=new Date('2026-06-12T17:40:00+02:00');
    ({q,ctx}=await app(june,year.filter(c=>c.at<'2026-06-12'),'light',{'fogasnaplo.terv':JSON.stringify({sp:['b','s'],day:0,parts:['alkony']})}));
    await top(q,'#planSec',-14);await q.screenshot({path:TMP+'/s2.png'});await ctx.close()}
+  // a running fishing trip (June evening, 1 h 42 min in, two catches) and the Helyeim cards with each spot's own forecast
+  {const june=new Date('2026-06-12T19:22:00+02:00'),st=new Date(june.getTime()-102*6e4);
+   const jc=year.filter(c=>c.at<'2026-06-12').concat([
+     {id:'tr1',sp:'b',at:new Date(st.getTime()+38*6e4).toISOString(),y:2026,t:true,l:54,lure:'Spintail',place:P.tisza},
+     {id:'tr2',sp:'s',at:new Date(st.getTime()+81*6e4).toISOString(),y:2026,t:true,l:47,lure:'Gumihal 8 cm',place:P.tisza}]);
+   const trips=[{id:'t0',start:'2026-06-05T16:00:00.000Z',end:'2026-06-05T19:00:00.000Z',place:P.maros},{id:'t1',start:st.toISOString(),place:P.tisza,sp:['b','s']}];
+   ({q,ctx}=await app(june,jc,'light',{'fogasnaplo.v1':JSON.stringify({species,catches:jc,lures:LURES,trips})}));
+   await q.evaluate(()=>scrollTo(0,0));await q.waitForTimeout(200);await q.screenshot({path:TMP+'/t1.png'});
+   const W=wxMock(june);await q.route('https://api.open-meteo.com/**',r=>{const u=new URL(r.request().url()),n=(u.searchParams.get('latitude')||'').split(',').length;
+     const slope=[-0.25,0.15,1.1,-0.1,0.5];r.fulfill({contentType:'application/json',body:JSON.stringify(Array.from({length:n},(_,k)=>({hourly:{...W.h,pressure_msl:W.h.time.map((_,i)=>1016+i*slope[k%5])},daily:W.d})))})});
+   await q.locator('.tabbar button[data-tab="map"]').click();
+   await q.waitForFunction(()=>document.querySelector('#spots .spot-lv'),null,{timeout:8000}).catch(()=>console.log('Helyeim: nincs mai értékelés a képen'));await q.waitForTimeout(300);
+   await top(q,'#spotsSec',-14);await q.screenshot({path:TMP+'/t2.png'});await ctx.close()}
   ({q,ctx}=await app(dec,year));
   await q.locator('.tabbar button[data-tab="list"]').click();await q.waitForTimeout(300);
   await q.evaluate(()=>{const c=[...document.querySelectorAll('.citem')].find(e=>e.textContent.includes('66 cm'));c.click()});await q.waitForTimeout(400);
@@ -87,13 +100,13 @@ function wxMock(now){
    const card=await q2.evaluate(()=>window.__card);fs.writeFileSync(TMP+'/s8.jpg',Buffer.from(card.split(',')[1],'base64'));await c2.close()}
   // ---------- compositions ----------
   const caps=[['Jó horgászidő ma?','Légnyomás, szél, eső és a folyó vízállása, egy pillantásra.','s1.png'],
+    ['Horgászat folyamatban','Idő, fogások, egy koppintás. A fogás nélküli nap is számít.','t1.png'],
     ['Mivel horgássz ma?','A legjobb 3 csali a saját dobozodból, halra és napszakra.','s2.png'],
+    ['Hová menj ma?','A helyeid mai horgászideje, a legjobb órákkal.','t2.png'],
     ['Tilalmi idők, mindig frissen','Fogható, hamarosan tilos, tilalom: fajonként.','s3.png'],
     ['Minden fogás egy kártyán','Fotók, videók, méret, csali, hely, időjárás, víz.','s4.png'],
-    ['Lásd, mi működik nálad','A saját mintáid: napszak, légnyomás, víz, hold.','s5.png'],
     ['A fogási napló kész','Az elvitt halak sorban, víztérkóddal, egy másolással.','s6.png'],
-    ['Semmi nem vész el','Fotók és videók a saját Google Drive-odra.','s7.png'],
-    ['Az éved a vízparton','Oszd meg az év halát.','s8.jpg']];
+    ['Semmi nem vész el','Fotók és videók a saját Google Drive-odra.','s7.png']];
   const SCENE=`<svg class="scene" viewBox="0 0 360 210" preserveAspectRatio="xMidYMax slice"><path d="M0 140C50 112 96 104 146 122S250 84 360 110V210H0Z" fill="rgba(228,236,224,.10)"/><path d="M0 162C66 136 124 150 186 138S300 124 360 142V210H0Z" fill="rgba(228,236,224,.14)"/><path d="M0 186C58 170 112 190 172 180S282 168 360 182V210H0Z" fill="rgba(16,30,22,.35)"/></svg>`;
   const cp=await (await b.newContext({viewport:{width:1080,height:1920},deviceScaleFactor:1})).newPage();
   for(let i=0;i<caps.length;i++){const [t,sub,f]=caps[i];const img='data:image/'+(f.endsWith('jpg')?'jpeg':'png')+';base64,'+fs.readFileSync(TMP+'/'+f).toString('base64');
