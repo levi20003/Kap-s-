@@ -189,6 +189,20 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Első indítás: üdvözlő */
+  .welcome { @apply gap-4; }
+  .w-dots { @apply flex justify-center gap-1.5; }
+  .w-dots i { @apply h-1.5 w-6 rounded-full; background: var(--line); }
+  .w-dots i.on { background: var(--water); }
+  .w-dots i.done { background: var(--water); opacity: .45; }
+  .w-head { @apply flex items-center gap-3; }
+  .w-head img { @apply h-14 w-14 flex-none rounded-2xl shadow-sm; }
+  .w-head .sub { @apply mt-1; }
+  .w-list { @apply m-0 flex flex-col gap-1.5 pl-5 text-sm; }
+  .w-actions { @apply flex flex-col gap-2; }
+  .w-actions button { @apply w-full; }
+  .w-restore { @apply self-center text-sm; }
+
   /* Beállítások: Google-fiók és Drive-mentés */
   .gacct { @apply mb-3 flex flex-col gap-2 rounded-xl border p-3 text-sm; border-color: var(--line); background: var(--bg-2); }
   .g-head { @apply flex items-start gap-2 leading-snug; }

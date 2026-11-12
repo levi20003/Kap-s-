@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#121915">
 <script>
+// error log (on the phone only, last 20; goes out only in the feedback e-mail the user sends): starts first, so even a broken main script is caught
+(function(){var K="fogasnaplo.errlog";
+  function add(m,src){try{var l=JSON.parse(localStorage.getItem(K)||"[]");m=String(m||"?").replace(/\s+/g," ").slice(0,200);src=src||"";
+    var t=new Date().toISOString().slice(0,16).replace("T"," "),last=l[l.length-1];
+    if(last&&last.m===m&&last.s===src){last.n=(last.n||1)+1;last.t=t}else l.push({t:t,m:m,s:src});
+    localStorage.setItem(K,JSON.stringify(l.slice(-20)))}catch(e){}}
+  window.__fnLogError=add;
+  addEventListener("error",function(e){if(e&&e.message)add(e.message,(e.filename||"").split("/").pop()+":"+(e.lineno||0)+":"+(e.colno||0))});
+  addEventListener("unhandledrejection",function(e){var r=e&&e.reason;add("Promise: "+(r&&(r.message||r)),"")})})();
 // theme before the first paint: the user's choice, else the phone's dark/light mode
 (function(){var t="auto",n=true;try{t=localStorage.getItem("fogasnaplo.theme")||"auto"}catch(e){}
   try{var A=window.FogasnaploAndroid;n=A&&A.isNight?A.isNight():matchMedia("(prefers-color-scheme: dark)").matches}catch(e){}
@@ -796,7 +805,7 @@ button{transition:transform .15s}
       <div class="panel">
         <p class="hint">Verzió: <b id="verLine">–</b></p>
         <div class="backup"><button class="btn-ghost" id="feedbackBtn" type="button">Visszajelzés küldése</button></div>
-        <p class="hint">A levélben automatikusan szerepel az app verziója, a képernyőméret és a telefon típusa. A naplód, a helyed és a fotóid nincsenek benne.</p>
+        <p class="hint">A levélben automatikusan szerepel az app verziója, a képernyőméret, a telefon típusa és az app utolsó hibaüzenetei (ha voltak). A naplód, a helyed és a fotóid nincsenek benne. A levelet elküldés előtt látod.</p>
         <details class="more"><summary>Honnan jönnek a tilalmi idők és korlátok?</summary>
           <p class="hint">Az országos szabályok (133/2013. VM rendelet), évente a rendelet szerint hétvégéhez és ünnepnaphoz igazítva; Duna és Tisza esetén az egységes vízterületi szabályokkal. Napi darabszám az elvitt halakra: csukából, balinból, süllőből, kősüllőből, pontyból és harcsából fajonként 3, összesen 5 db (Dunán 2 és 4). A helyi horgászrend ettől szigorúbb lehet, mindig azt nézd meg a jegyeden.</p>
         </details>
@@ -806,6 +815,7 @@ button{transition:transform .15s}
 </div>
 
 <button class="fab" id="fab" type="button" aria-label="Gyors fogásrögzítés"><span data-ic="plus"></span></button>
+<div class="overlay welcome-wrap" id="welcomeWrap" hidden><div class="sheet welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"></div></div>
 <div class="overlay" id="quickWrap" hidden><div class="sheet quick" id="quick" role="dialog" aria-modal="true" aria-labelledby="quickTitle"></div></div>
 <nav class="tabbar" role="tablist">
   <div class="in">
@@ -1479,6 +1489,12 @@ button{transition:transform .15s}
   const FEEDBACK_EMAIL=""; // where the feedback goes; empty = the person picks the recipient in their mail app
   function appVersionText(){let v="böngésző";try{if(ANDROID&&ANDROID.appVersion)v=ANDROID.appVersion()}catch(e){}return v}
   // only technical facts: no catches, places, photos or coordinates
+  // the last errors (JS and native crashes), oldest first; only messages and code positions, no log data
+  function errLogText(){
+    let l=[];try{l=JSON.parse(localStorage.getItem("fogasnaplo.errlog")||"[]")}catch(e){}
+    if(!l.length)return"Hibák: nincs";
+    return"Hibák (utolsó "+l.length+"):\n"+l.map(x=>"  "+x.t+(x.n>1?" ×"+x.n:"")+" "+x.m+(x.s?" ("+x.s+")":"")).join("\n");
+  }
   function feedbackInfo(){
     const sc=window.screen||{},nav=navigator;
     let test="";try{test=ANDROID&&ANDROID.isTestBuild&&ANDROID.isTestBuild()?" (tesztverzió)":""}catch(e){}
@@ -1488,7 +1504,8 @@ button{transition:transform .15s}
       "Téma: "+document.documentElement.dataset.theme+(themePref()==="auto"?" (automatikus)":" (kézi)"),
       "Nyelv: "+nav.language+", hálózat: "+(nav.onLine?"online":"offline")+", natív híd: "+(ANDROID?"igen":"nem"),
       "Adatok: "+state.catches.length+" fogás, "+state.species.length+" halfaj",
-      "Időpont: "+new Date().toISOString()].join("\n");
+      "Időpont: "+new Date().toISOString(),
+      errLogText()].join("\n");
   }
   function sendFeedback(){
     const subject="Kapás visszajelzés – "+appVersionText();
@@ -2760,6 +2777,7 @@ button{transition:transform .15s}
     btn("no","Kikapcsolás",()=>{try{localStorage.removeItem(NOTIFY_KEY)}catch(e){}pushReminders();renderNotify()});
   }
   window.__fnNotify=function(r){
+    if(welcome&&welcome.waitNotify){welcome.waitNotify=false;setTimeout(welcomeNext,0)}
     if(r&&r.error){toast(r.error);return}
     try{localStorage.setItem(NOTIFY_KEY,"1")}catch(e){}pushReminders();renderNotify();toast("Értesítések bekapcsolva");
   };
@@ -2804,6 +2822,56 @@ button{transition:transform .15s}
     QUICK_SPECIES.forEach(n=>{const b=el("button","pill species",n);b.type="button";b.onclick=()=>quickPick(n);sc.append(b)});
     sg.append(sc);box.append(sg);
     const act=el("div","sheet-actions");const x=el("button","btn-ghost","Mégse");x.type="button";x.onclick=closeQuick;act.append(x);box.append(act);
+  }
+
+  /* ---------- first start: three short steps (species + water, Google backup, reminders) ----------
+     Only for a brand-new log; whoever has species or catches never sees it. Every step can be skipped. */
+  const WELCOME_KEY="fogasnaplo.welcome",WELCOME_SPECIES=["Balin","Süllő","Csuka","Sügér","Harcsa","Domolykó","Kősüllő","Ponty"];
+  let welcome=null; // {step, pick:Set}
+  const welcomeSteps=()=>["species"].concat(hasGoogle()?["backup"]:[],hasNotify()?["notify"]:[]);
+  function maybeWelcome(){
+    try{if(localStorage.getItem(WELCOME_KEY))return}catch(e){return}
+    if(data.species.length||data.catches.length||rescued)return;
+    welcome={step:0,pick:new Set()};$("welcomeWrap").hidden=false;document.body.style.overflow="hidden";renderWelcome();
+  }
+  function closeWelcome(){welcome=null;try{localStorage.setItem(WELCOME_KEY,"1")}catch(e){}$("welcomeWrap").hidden=true;document.body.style.overflow="";render()}
+  function welcomeNext(){if(!welcome)return;welcome.step++;if(welcome.step>=welcomeSteps().length)closeWelcome();else renderWelcome()}
+  function renderWelcome(){
+    const box=$("welcome");box.replaceChildren();if(!welcome)return;
+    const steps=welcomeSteps(),kind=steps[welcome.step];
+    const dots=el("div","w-dots");dots.setAttribute("aria-label",(welcome.step+1)+". lépés a "+steps.length+"-ből");
+    steps.forEach((_,i)=>dots.append(el("i",i===welcome.step?"on":i<welcome.step?"done":"")));box.append(dots);
+    const act=el("div","sheet-actions w-actions");
+    const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;act.append(b);return b};
+    if(kind==="species"){
+      const hd=el("div","w-head");const lg=el("img");lg.src="logo.png";lg.alt="";hd.append(lg);
+      const tt=el("div");const h=el("h3",null,"Üdv a Kapásban!");h.id="welcomeTitle";tt.append(h,el("div","sub","Pergető fogásnapló a magyar tilalmi időkkel és méretkorlátokkal."));hd.append(tt);box.append(hd);
+      const g=el("div","fgroup");g.append(el("div","flabel","Melyik halakra horgászol?"));const c=el("div","chips quick-pills");
+      WELCOME_SPECIES.forEach(n=>{const on=welcome.pick.has(n),b=el("button","pill"+(on?" on":""),n);b.type="button";b.setAttribute("aria-pressed",on?"true":"false");
+        b.onclick=()=>{if(on)welcome.pick.delete(n);else welcome.pick.add(n);renderWelcome()};c.append(b)});
+      g.append(c,el("p","hint","Később bármikor bővítheted: Beállítások → Halfajaim."));box.append(g);
+      const r=el("div","fgroup");r.append(el("div","flabel","Hol horgászol leginkább? (a méretkorlátok miatt)"));const rc=el("div","chips quick-pills");
+      [["orszagos","Országos szabály"],["tisza","Tisza / Tisza-tó"],["duna","Duna"]].forEach(([v,l])=>{const b=el("button","pill"+(state.region===v?" on":""),l);b.type="button";
+        b.setAttribute("aria-pressed",state.region===v?"true":"false");b.onclick=()=>{state.region=v;try{localStorage.setItem("fogasnaplo.region",v)}catch(_){}renderWelcome()};rc.append(b)});
+      r.append(rc);box.append(r);
+      const go2=btn("btn-main",welcome.pick.size?"Tovább":"Kihagyom",()=>{
+        WELCOME_SPECIES.filter(n=>welcome.pick.has(n)).forEach(n=>{if(!data.species.some(s=>norm(s.name)===norm(n)))store.addSpecies(n)});welcomeNext()});
+      const old=el("button","linkbtn w-restore","Volt már naplód? Visszaállítás");old.type="button";
+      old.onclick=()=>{closeWelcome();go("more");if(hasGoogle())ANDROID.googleSignIn();else $("restoreBtn").click()};
+      box.append(act,old);
+    }else if(kind==="backup"){
+      const h=el("h3",null,"Ne vesszen el egy fogás se");h.id="welcomeTitle";box.append(h);
+      box.append(el("div","sub","Ha bejelentkezel a Google-fiókoddal, a naplód, a fotóid és a videóid a saját Google Drive-odra mentődnek. Új telefonon bejelentkezel, és minden visszajön."));
+      const ul=el("ul","w-list");["Csak a Kapás mappáját látja a Drive-odon, mást nem.","A fejlesztő semmit nem kap meg belőle.","A videók alapból csak wifin mennek fel."].forEach(t=>ul.append(el("li",null,t)));box.append(ul);
+      btn("btn-main","Bejelentkezés Google-fiókkal",()=>{welcome.waitGoogle=true;ANDROID.googleSignIn()});
+      btn("btn-ghost","Most nem",welcomeNext);box.append(act);
+    }else{
+      const h=el("h3",null,"Szóljak a tilalmak előtt?");h.id="welcomeTitle";box.append(h);
+      const names=data.species.map(s=>s.name).slice(0,4).join(", ");
+      box.append(el("div","sub","A tilalom előtti este 18 órakor és amikor újra fogható, reggel 8-kor kapsz értesítést"+(names?" a halaidra ("+names+")":"")+". Napi egynél több soha."));
+      btn("btn-main","Értesítések bekapcsolása",()=>{welcome.waitNotify=true;ANDROID.enableNotifications()});
+      btn("btn-ghost","Most nem",welcomeNext);box.append(act);
+    }
   }
 
   /* ---------- theme: light / dark sage, automatic by the phone's mode ---------- */
@@ -2882,6 +2950,7 @@ button{transition:transform .15s}
 
   /* ---------- back button (Android) ---------- */
   window.__fnBack=function(){
+    if(welcome){welcomeNext();return true}
     if(!$("quickWrap").hidden){closeQuick();return true}
     if(!$("picker").hidden){closePicker();return true}
     if(ed){closeEditor();return true}
@@ -3055,6 +3124,8 @@ button{transition:transform .15s}
   function driveRestore(){gLive={state:"restoring",done:0,total:0};renderGAcct();try{ANDROID.driveRestore()}catch(e){}}
   window.__fnDrive=function(r){
     if(!r)return;const i=gInfo();
+    if(r.state==="in"&&welcome){welcome.waitGoogle=false;if(!data.catches.length){closeWelcome()}else welcomeNext()}
+    if(r.state==="out"&&welcome&&welcome.waitGoogle){welcome.waitGoogle=false}
     if(r.state==="in"){setGInfo({});gLive=null;toast("Bejelentkezve: "+r.email);
       if(!data.catches.length)driveRestore();else driveSyncNow()}            // a new phone restores first, an old one backs up
     else if(r.state==="out"){setGInfo({});gLive=null}
@@ -3138,6 +3209,8 @@ button{transition:transform .15s}
   sync();
   renderAutoBk();renderGAcct();applySeason();applyTheme();
   if(data.catches.length)driveSyncSoon(5000);
+  maybeWelcome();
+  if(ANDROID&&ANDROID.takeCrashes)try{const t=ANDROID.takeCrashes();if(t)t.split("\n").filter(Boolean).forEach(x=>window.__fnLogError&&window.__fnLogError("Natív: "+x,"MainActivity"))}catch(e){}
   if(rescued)setTimeout(()=>toast(rescued.why==="empty"?"Visszatöltöttem a naplódat a telefon belső másolatából ("+rescued.n+" fogás).":
     "A napló legutóbbi változásait a belső másolatból töltöttem vissza."),600);
   if(hasMirror()&&(data.catches.length||data.species.length))setTimeout(mirrorNow,2000); // the first copy for logs from older versions

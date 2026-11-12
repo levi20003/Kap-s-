@@ -16,8 +16,11 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
   // reduced motion makes the checks deterministic; the motion tests ask for 'no-preference' themselves
   const rawNew = b.newContext.bind(b);
   // the river discharge API is never reached for real (page routes in a test override this)
-  b.newContext = async (o = {}) => { const c = await rawNew({ reducedMotion: 'reduce', ...o }); c.setDefaultTimeout(6000);
-    await c.route('https://flood-api.open-meteo.com/**', r => r.abort()); return c; };
+  // and the first-start welcome counts as seen, unless a test asks for it with { welcome: true }
+  b.newContext = async (o = {}) => { const { welcome, ...rest } = o; const c = await rawNew({ reducedMotion: 'reduce', ...rest }); c.setDefaultTimeout(6000);
+    await c.route('https://flood-api.open-meteo.com/**', r => r.abort());
+    if (!welcome) await c.addInitScript(() => { try { localStorage.setItem('fogasnaplo.welcome', '1'); } catch (e) {} });
+    return c; };
   const ctx = await b.newContext(); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.addInitScript(({seed}) => {
@@ -484,6 +487,35 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(fb && fb.body.includes('1 fogás, 1 halfaj') && !fb.body.includes('TITOKHELY') && !fb.body.includes('Titkos') && !fb.body.includes('46.123'), 'visszajelzés: csak darabszám megy ki, a napló, a hely és a megjegyzés nem');
     await ctx.close();
   }
+  // error log in the feedback e-mail: JS errors and native crash notes, last 20, no log data (this page's errors are on purpose)
+  {
+    const ctx = await b.newContext(); const q = await ctx.newPage();
+    await q.addInitScript(() => {
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [{ id: 'f1', sp: 's1', at: new Date().toISOString(), y: 2026, note: 'TITOKHELY-123' }] }));
+      window.__fb = null; window.__crash = '2026-11-12 18:03 NullPointerException: x @ MainActivity.onCreate:120\n';
+      window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, takeCrashes() { const c = window.__crash; window.__crash = ''; return c; },
+        sendFeedback(to, subject, body) { window.__fb = body; } };
+    });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#feedbackBtn').click(); await q.waitForTimeout(100);
+    let fb = await q.evaluate(() => window.__fb);
+    ok(fb.includes('Hibák (utolsó 1)') && fb.includes('Natív: 2026-11-12 18:03 NullPointerException'), 'hibanapló: a natív összeomlás a következő indításkor bekerül a levélbe');
+    for (let i = 0; i < 3; i++) await q.evaluate(() => setTimeout(() => { throw new Error('próba-hiba'); }));
+    await q.evaluate(() => { Promise.reject(new Error('elutasított ígéret')); });
+    for (let i = 0; i < 25; i++) await q.evaluate(i => setTimeout(() => { throw new Error('sok-' + i); }), i);
+    await q.waitForTimeout(300);
+    const log = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.errlog')));
+    ok(log.length === 20 && log[log.length - 1].m.includes('sok-24'), 'hibanapló: legfeljebb az utolsó 20 hiba marad');
+    await q.evaluate(() => localStorage.setItem('fogasnaplo.errlog', '[]'));
+    for (let i = 0; i < 3; i++) await q.evaluate(() => setTimeout(() => { throw new Error('próba-hiba'); }));
+    await q.evaluate(() => { Promise.reject(new Error('elutasított ígéret')); });
+    await q.waitForTimeout(200);
+    await q.locator('#feedbackBtn').click(); await q.waitForTimeout(100);
+    fb = await q.evaluate(() => window.__fb);
+    ok(/×3 .*próba-hiba/.test(fb) && fb.includes('Promise: elutasított ígéret') && !fb.includes('TITOKHELY'), 'hibanapló: ismétlődő hiba egy sorban (×3), elutasított ígéret is, napló adat nincs benne');
+    await ctx.close();
+  }
   // lure box and the day's lure plan
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
@@ -716,6 +748,47 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
     const t = await q.locator('#gbkInfo').innerText();
     ok(t.includes('legújabb 3 fotó a 4-ból') && t.includes('25 MB'), 'Google-mentés: a Beállítások kiírja, hány fotó fért bele');
+    await ctx.close();
+  }
+  // first start: species + water, Google backup, reminders; skippable; never for an existing log
+  {
+    let ctx = await b.newContext({ welcome: true, viewport: { width: 360, height: 760 } }); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { window.__w = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders() {},
+      googleAccount() { return '{}'; }, googleSignIn() { window.__w.push('google'); setTimeout(() => window.__fnDrive({ state: 'out' })); },
+      enableNotifications() { window.__w.push('notify'); setTimeout(() => window.__fnNotify({})); } }; });
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    ok(await q.locator('#welcomeWrap').isVisible() && (await q.locator('#welcome h3').innerText()) === 'Üdv a Kapásban!' && await q.locator('#welcome .w-dots i').count() === 3,
+      'üdvözlő: új naplónál megjelenik, 3 lépés');
+    ok((await q.locator('#welcome .w-actions .btn-main').innerText()) === 'Kihagyom', 'üdvözlő: hal nélkül „Kihagyom”');
+    await q.locator('#welcome .pill', { hasText: /^Balin$/ }).click(); await q.locator('#welcome .pill', { hasText: /^Süllő$/ }).click();
+    await q.locator('#welcome .pill', { hasText: 'Tisza / Tisza-tó' }).click();
+    ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'üdvözlő: 360 px-en nincs vízszintes túlcsordulás');
+    await q.locator('#welcome .w-actions .btn-main').click(); await q.waitForTimeout(100);
+    let d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    ok(d.species.map(s => s.name).join() === 'Balin,Süllő' && await q.evaluate(() => localStorage.getItem('fogasnaplo.region')) === 'tisza', 'üdvözlő: a választott halfajok és a víz elmentve');
+    ok((await q.locator('#welcome h3').innerText()).includes('Ne vesszen el') && (await q.locator('#welcome').innerText()).includes('Google Drive'), 'üdvözlő: 2. lépés a Google-mentés');
+    await q.locator('#welcome .btn-ghost', { hasText: 'Most nem' }).click(); await q.waitForTimeout(100);
+    ok((await q.locator('#welcome').innerText()).includes('Balin, Süllő'), 'üdvözlő: 3. lépés az értesítések, a választott halakkal');
+    await q.locator('#welcome .btn-main').click(); await q.waitForTimeout(200);
+    ok((await q.evaluate(() => window.__w)).join() === 'notify' && await q.locator('#welcomeWrap').isHidden() && await q.evaluate(() => localStorage.getItem('fogasnaplo.welcome')) === '1',
+      'üdvözlő: az értesítés bekapcsolása után bezárul, és többet nem jön elő');
+    ok(await q.locator('#list .row').count() === 2, 'üdvözlő: a Kezdőlapon ott a két választott hal');
+    await q.reload(); await q.waitForTimeout(300);
+    ok(await q.locator('#welcomeWrap').isHidden(), 'üdvözlő: újraindítás után sem jelenik meg');
+    await ctx.close();
+    // an existing log never sees it; the back button skips a step
+    ctx = await b.newContext({ welcome: true }); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [] })));
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    ok(await q.locator('#welcomeWrap').isHidden(), 'üdvözlő: meglévő naplónál nem jelenik meg');
+    await ctx.close();
+    ctx = await b.newContext({ welcome: true }); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.route('https://**', r => r.abort());
+    await q.goto(PAGE); await q.waitForTimeout(300);
+    ok(await q.locator('#welcome .w-dots i').count() === 1, 'üdvözlő: böngészőben (Google és értesítés nélkül) csak az első lépés');
+    ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#welcomeWrap').isHidden(), 'üdvözlő: a Vissza gomb továbblép / bezár');
     await ctx.close();
   }
   // Google account + Drive backup: sign in, state, restore on a new phone, sign out (fake bridge stands in for MainActivity/DriveSync)

@@ -95,9 +95,39 @@ public class MainActivity extends Activity {
     private String pendingZipJson;
     private final Handler main = new Handler(Looper.getMainLooper());
 
+    /* ---------- crash notes for the feedback e-mail: one line per crash in no_backup/crash.txt, taken by the page on the next start ---------- */
+    private static boolean crashHook;
+
+    static void noteCrash(android.content.Context ctx, String line) {
+        try {
+            File f = new File(ctx.getNoBackupFilesDir(), "crash.txt");
+            if (f.length() > 16384) f.delete();
+            String t = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT).format(new java.util.Date());
+            try (OutputStream o = new FileOutputStream(f, true)) { o.write((t + " " + line.replace('\n', ' ') + "\n").getBytes(StandardCharsets.UTF_8)); }
+        } catch (Exception ignored) {}
+    }
+
+    private void installCrashHook() {
+        if (crashHook) return;
+        crashHook = true;
+        final android.content.Context app = getApplicationContext();
+        final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((th, ex) -> {
+            StringBuilder b = new StringBuilder(ex.getClass().getSimpleName()).append(": ").append(String.valueOf(ex.getMessage()));
+            int n = 0;
+            for (StackTraceElement e : ex.getStackTrace()) {
+                if (n++ >= 4) break;
+                b.append(" @ ").append(e.getClassName().replaceAll("^.*\\.", "")).append('.').append(e.getMethodName()).append(':').append(e.getLineNumber());
+            }
+            noteCrash(app, b.length() > 400 ? b.substring(0, 400) : b.toString());
+            if (prev != null) prev.uncaughtException(th, ex);
+        });
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        installCrashHook();
         restoreBackupPhotos(); // before the page asks for any picture
         web = new WebView(this);
         root = new FrameLayout(this);
@@ -151,6 +181,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
                 if (view == web) {
+                    noteCrash(MainActivity.this, "A WebView megjelenítője leállt (" + (detail.didCrash() ? "összeomlás" : "kevés memória") + "), az app újraindult");
                     webDead = true;
                     ((android.view.ViewGroup) view.getParent()).removeView(view);
                     view.destroy();
@@ -1563,6 +1594,18 @@ public class MainActivity extends Activity {
                 if (e != null) o.put("email", e).put("name", prefs().getString("gName", "")).put("synced", prefs().getLong("driveSynced", 0));
             } catch (Exception ignored) {}
             return o.toString();
+        }
+
+        /** The crash notes since the last start (and forgets them), one per line; "" when none. */
+        @JavascriptInterface
+        public String takeCrashes() {
+            File f = new File(getNoBackupFilesDir(), "crash.txt");
+            if (!f.exists()) return "";
+            try (InputStream in = new FileInputStream(f)) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] b = new byte[8192]; int k; while ((k = in.read(b)) > 0) bo.write(b, 0, k);
+                return new String(bo.toByteArray(), StandardCharsets.UTF_8);
+            } catch (Exception e) { return ""; } finally { f.delete(); }
         }
 
         @JavascriptInterface

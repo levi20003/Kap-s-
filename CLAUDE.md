@@ -90,6 +90,12 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   vágólapra másol). A levélben csak technikai adat van (`feedbackInfo`: verzió, képernyő, UA, téma, nyelv, fogás/halfaj darabszám), a napló, a hely és a fotók nincsenek;
   ezt teszt védi. Címzett: `FEEDBACK_EMAIL` az `index.html`-ben (üresen a felhasználó írja be); a kiadási workflow megáll, ha üres vagy ha az adatvédelmi oldalon
   helyőrző e-mail maradt. A tesztapp versionName-je a CI-ban `1.8-<commit>`, így a levélben a build-azonosító is ott van.
+- **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
+  `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
+  `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).
+- **Első indítás** (`#welcomeWrap`, `maybeWelcome`, `renderWelcome`): csak üres naplónál és ha `fogasnaplo.welcome` nincs; 1. halfajok + víz (régió),
+  2. Google-mentés (ha van híd), 3. értesítések (ha van). Minden lépés kihagyható, a Vissza gomb továbblép. A tesztek alapból „látottnak” veszik
+  (`b.newContext({welcome:true})` kéri).
 - Statisztika teteje: **év összefoglaló** (`renderYearCard`, `yearSummary`): fogásszám, az év hala, legtöbb faj, legjobb hónap, horgásznapok;
   „Évösszefoglaló megosztása” → `yearCardImage` 1080×1920-as sztori-kép (`shareDataUrl`, ugyanaz az út, mint a fogáskártyánál).
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).
