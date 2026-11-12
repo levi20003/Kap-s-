@@ -111,6 +111,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   ha a mentés megdönti a faj rekordját (`saveEditor`: előtte számolt `prevBest`), és szintlépésnél / új jelvénynél (`checkGame`);
   csökkentett mozgásnál csak üzenet. Fogáslista: `swipeable` (jobbra szerkesztés, balra törlés visszavonással, 84 px küszöb, a koppintás megmarad).
   Időjárás töltés közben vázzal (`.today.skel`).
+- **Helyeim és Ma neked** (Térkép `#spotsSec`, `renderSpots`; Kezdőlap `#forYouSec`, `renderForYou`, az időjárás alatt): a helyek a fogások és a
+  befejezett horgászatok `place` mezőjéből, név szerint, 2+ alkalomtól (`spotsOf`). A top 4 mai előrejelzése egy Open-Meteo-kérésben (koordináta-lista),
+  vízhozama a saját `floodNear`-ével (`loadSpotsWx`, `fogasnaplo.spotswx`, 1 óra); a pontozás a hely saját vizével (`scoreToday`/`dayLevel` `waterFn`
+  paramétere). Kártyán: mai szint, legjobb 2 óra (`spotToday`), víz, fogások, siker (horgászatok), legjobb csali, napszak; „Horgászat itt” →
+  `openTripSheet("start",null,{place})`. A „Ma neked” a ma legjobb helyét ajánlja a legjobb órákkal, a víz irányával, a csaliajánlóval.
 - **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
   `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
   `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).

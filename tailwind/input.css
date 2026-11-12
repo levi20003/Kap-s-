@@ -189,6 +189,25 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Helyeim és Ma neked */
+  .spots { @apply flex flex-col gap-3; }
+  .spot { @apply flex flex-col gap-2 rounded-2xl border p-3 shadow-sm; border-color: var(--line); background: var(--surface); }
+  .spot-h { @apply flex items-center justify-between gap-2; }
+  .spot-h b { @apply min-w-0 truncate text-base; font-family: var(--f-display); }
+  .spot-lv { @apply flex flex-none items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold; background: var(--water-soft); color: var(--water); }
+  .spot-lv.lv4, .spot-lv.lv5 { background: var(--glow-accent); color: var(--accent-txt); }
+  .spot-lv .dots { @apply flex gap-0.5; }
+  .spot-lv .dots i { @apply h-1.5 w-1.5 rounded-full border-0; background: currentColor; opacity: .25; }
+  .spot-lv .dots i.on { opacity: 1; background: currentColor; }
+  .spot-facts { @apply flex flex-wrap gap-1.5; }
+  .spot .hint { @apply m-0; }
+  .spot .btnrow { @apply flex gap-2; }
+  .spot .btnrow button { @apply flex-1; }
+  .foryou { @apply flex flex-col gap-2 rounded-2xl border p-4 shadow-sm; border-color: var(--line); background: linear-gradient(160deg, var(--surface), var(--bg-2)); }
+  .fy-lead { @apply m-0 text-base leading-snug; }
+  .foryou .hint { @apply m-0; }
+  .fy-more { @apply m-0 text-xs text-zinc-400 light:text-zinc-500; }
+
   /* Érzés: húzás a fogáslistán, konfetti, vázas töltés */
   .swipe { @apply relative overflow-hidden rounded-2xl; }
   .swipe .citem { @apply relative w-full; touch-action: pan-y; transition: transform .22s cubic-bezier(.2,.8,.2,1); }

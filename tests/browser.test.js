@@ -1047,6 +1047,39 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(!ev.some(e => e.title.includes('hetes sorozatod')), 'sorozat-mentő: horgászat után már nem szól');
       await ctx.close();
     }
+    // Helyeim + Ma neked: spots from catches and trips, each with its own forecast (one request), the best one for today
+    {
+      const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      const Y = new Date().getFullYear(), at = (d, h) => new Date(Y, 4, d, h).toISOString();
+      const HM = { name: 'Holt-Maros', lat: 46.2, lng: 20.3 }, BH = { name: 'Bertalan híd', lat: 46.25, lng: 20.15 };
+      const cs = [{ id: 'm1', sp: 's1', at: at(2, 18), y: Y, place: HM, lure: 'Spintail' }, { id: 'm2', sp: 's1', at: at(5, 18), y: Y, place: HM, lure: 'Spintail' },
+        { id: 'm3', sp: 's1', at: at(9, 18), y: Y, place: HM, lure: 'Spintail' }, { id: 'b1', sp: 's2', at: at(3, 7), y: Y, place: BH }, { id: 'b2', sp: 's2', at: at(6, 7), y: Y, place: BH },
+        { id: 'x1', sp: 's1', at: at(7, 9), y: Y, place: { name: 'Egyszeri hely', lat: 47, lng: 19 } }];
+      await q.addInitScript(cs => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+        localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }], catches: cs,
+          trips: [{ id: 't1', start: new Date(Date.now() - 864e5 * 3).toISOString(), end: new Date(Date.now() - 864e5 * 3 + 3 * 36e5).toISOString(), place: { name: 'Holt-Maros', lat: 46.2, lng: 20.3 } }] })); }, cs);
+      const Hof = dp => ({ ...H, pressure_msl: hours.map((_, k) => 1015 + k * dp), cloud_cover: hours.map(() => 70) });
+      let multi = '';
+      await q.route('https://api.open-meteo.com/**', r => { const u = r.request().url();
+        if (/latitude=[^&]*%2C|latitude=[^&]*,/.test(u)) { multi = u; r.fulfill({ contentType: 'application/json', body: JSON.stringify([{ hourly: Hof(-0.3), daily: D }, { hourly: Hof(1.2), daily: D }]) }); }
+        else r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: H, daily: D }) }); });
+      await q.goto(PAGE); await q.waitForTimeout(600);
+      ok(/latitude=46\.200(,|%2C)46\.250/.test(multi), 'helyeim: a két visszatérő hely időjárása egy kérésben (az egyszeri hely nem hely)');
+      const fy = (await q.locator('#forYou').innerText()).replace(/\s+/g, ' ');
+      ok(await q.locator('#forYouSec').isVisible() && fy.startsWith('Ma Holt-Maros') && fy.includes('óra') && fy.includes('Bertalan híd ('),
+        'ma neked: a ma legjobb helyed, a legjobb órákkal, a többi hely röviden (' + fy.slice(0, 120) + ')');
+      await q.locator('#forYou .btn-main').click(); await q.waitForTimeout(100);
+      ok(await q.locator('#tripSheet .pill.on', { hasText: 'Holt-Maros' }).count() === 1, 'ma neked: „Horgászat indítása itt” a hellyel előre kiválasztva');
+      await q.evaluate(() => window.__fnBack());
+      await q.locator('.tabbar button[data-tab="map"]').click(); await q.waitForTimeout(400);
+      const cards = q.locator('#spots .spot');
+      const c1 = (await cards.first().innerText()).replace(/\s+/g, ' ');
+      ok(await cards.count() === 2 && c1.startsWith('Holt-Maros') && c1.includes('3 fogás') && c1.includes('siker 0/1') && c1.includes('Legjobb csali: Spintail (3)') && /Ma \d+–\d+ óra/.test(c1),
+        'helyeim: kártyánként a mai értékelés, legjobb órák, fogások, siker, legjobb csali (' + c1 + ')');
+      ok(await cards.first().locator('.spot-lv').count() === 1 && await cards.nth(1).locator('.spot-lv').count() === 1, 'helyeim: mindkét helynek saját mai értékelése');
+      ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'helyeim: nincs vízszintes túlcsordulás');
+      await ctx.close();
+    }
     const flat = await run(wdays.map(() => 130)), rising = await run(wdays.map((_, k) => k < 4 ? 100 : k < 7 ? 100 + (k - 3) * 40 : 260));
     ok(flat.facts.includes('Víz 130 m³/s') && flat.facts.includes('stagnál'), 'vízhozam: a mai nap kártyáján a folyó vízhozama és iránya (' + flat.facts.replace(/\n/g, ' ') + ')');
     ok(flat.reasons.includes('Stagnáló víz') && rising.reasons.includes('Gyorsan áradó víz'), 'vízhozam: az értékelés indoklásában szerepel');

@@ -643,6 +643,11 @@ button{transition:transform .15s}
       <div id="today"></div>
     </section>
 
+    <section id="forYouSec" hidden>
+      <div class="sechead"><h2><span class="ic acc" data-ic="sparkles"></span>Ma neked</h2></div>
+      <div id="forYou"></div>
+    </section>
+
     <section id="planSec">
       <div class="sechead"><h2><span class="ic" data-ic="target"></span>Mivel horgássz?</h2></div>
       <div id="plan"></div>
@@ -734,6 +739,10 @@ button{transition:transform .15s}
 
   <!-- ===== Térkép ===== -->
   <div id="tab-map" class="wrap" style="gap:12px" hidden>
+    <section id="spotsSec" hidden>
+      <div class="sechead"><h2><span class="ic" data-ic="pin"></span>Helyeim</h2></div>
+      <div class="spots" id="spots"></div>
+    </section>
     <div class="sechead"><h2><span class="ic" data-ic="pin"></span><span id="mapTitle">Fogások térképen</span></h2></div>
     <div id="bigMap"></div>
     <p class="hint" id="mapHint"></p>
@@ -1194,6 +1203,7 @@ button{transition:transform .15s}
     const y=state.year;renderGreet();renderBkNudge();renderTrip();
     $("todaySec").hidden=y!==NOW_Y;if(y===NOW_Y)renderToday();
     $("planSec").hidden=y!==NOW_Y;if(y===NOW_Y)renderPlan();
+    renderForYou();
     $("regionSel").value=state.region;
     const total=state.species.reduce((a,s)=>a+st[s.id].n,0);
     countTo($("totalN"),total);
@@ -1395,6 +1405,104 @@ button{transition:transform .15s}
     box.append(g);
     box.append(el("div","hint",`Legtöbb fogás ${MONTHS_LONG[best]} (${mx}). Koppints egy hónapra, és megnézheted a fogásait.`));
   }
+  /* ---------- Helyeim (my spots) and "Ma neked" ----------
+     Spots come from the places of catches and trips, by name (2+ visits). The top 4 get today's forecast in one Open-Meteo
+     request and their own river (floodNear), so each is scored with its own water. "Ma neked" picks the best of them for today. */
+  const SPOT_WX_KEY="fogasnaplo.spotswx";
+  function spotsOf(){
+    const m=new Map();const add=(p,kind,x)=>{if(!p||!p.name||p.lat==null)return;const k=p.name.trim();
+      const o=m.get(k)||{name:k,lat:0,lng:0,n:0,catches:[],trips:[]};o.lat+=+p.lat;o.lng+=+p.lng;o.n++;o[kind].push(x);m.set(k,o)};
+    state.catches.forEach(c=>{if(state.species.some(s=>s.id===c.sp))add(c.place,"catches",c)});
+    tripList().filter(t=>t.end).forEach(t=>add(t.place,"trips",t));
+    return [...m.values()].map(o=>({...o,lat:Math.round(o.lat/o.n*1e3)/1e3,lng:Math.round(o.lng/o.n*1e3)/1e3,
+      last:[...o.catches.map(c=>c.at),...o.trips.map(t=>t.start)].sort().pop()}))
+      .filter(o=>o.catches.length+o.trips.length>=2).sort((a,b)=>(b.catches.length+b.trips.length)-(a.catches.length+a.trips.length)||(b.last>a.last?1:-1));
+  }
+  let spotWx=null;try{const c=JSON.parse(localStorage.getItem(SPOT_WX_KEY)||"null");if(c&&c.spots)spotWx=c}catch(e){}
+  let spotBusy=false;
+  async function loadSpotsWx(){
+    const top=spotsOf().slice(0,4);if(!top.length||spotBusy)return;
+    const sig=top.map(s=>s.name+"@"+s.lat+","+s.lng).join("|");
+    if(spotWx&&spotWx.sig===sig&&Date.now()-spotWx.fetched<60*6e4&&spotWx.day===ymd(new Date()))return;
+    spotBusy=true;
+    try{
+      const url="https://api.open-meteo.com/v1/forecast?latitude="+top.map(s=>s.lat.toFixed(3)).join(",")+"&longitude="+top.map(s=>s.lng.toFixed(3)).join(",")+
+        "&hourly=temperature_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,weather_code,precipitation"+
+        "&daily=sunrise,sunset&past_days=1&forecast_days=2&timezone=auto&wind_speed_unit=kmh";
+      const r=await fetchT(url);if(!r.ok)throw new Error("http");let j=await r.json();if(!Array.isArray(j))j=[j];
+      const spots=top.map((s,k)=>({name:s.name,lat:s.lat,lng:s.lng,h:j[k]&&j[k].hourly,d:j[k]&&j[k].daily,water:null})).filter(x=>x.h&&x.h.time&&x.d);
+      for(const sp of spots){try{const d=await floodNear(sp.lat,sp.lng,"past_days=4&forecast_days=2");sp.water={time:d.time,q:d.river_discharge}}catch(e){}}
+      spotWx={sig,fetched:Date.now(),day:ymd(new Date()),spots};try{localStorage.setItem(SPOT_WX_KEY,JSON.stringify(spotWx))}catch(e){}
+      if(state.tab==="home")renderForYou();if(state.tab==="map")renderSpots();
+    }catch(e){}finally{spotBusy=false}
+  }
+  // a spot's own river on a day (same rules as the weather card's waterOn)
+  const spotWaterFn=w=>date=>{if(!w||!w.time)return null;const k=w.time.indexOf(ymd(date));if(k<3)return null;const q=w.q[k];if(q==null||q<WATER_MIN)return null;
+    const t=waterTrend(q,w.q[k-3]);return t?{q,...t}:null};
+  // today at a spot: the day's level and the best two hours (5-21 h) by the hourly score
+  function spotToday(name){
+    const sw=spotWx&&spotWx.spots.find(x=>x.name===name);if(!sw)return null;
+    const H=sw.h,now=new Date(),wf=spotWaterFn(sw.water),lv=dayLevel(H,now,wf);if(!lv)return null;
+    let best=null;for(let h=Math.max(5,now.getHours());h<=20;h++){const k=H.time.indexOf(ymd(now)+"T"+pad(h)+":00"),k2=k+1;if(k<3||k2>=H.time.length)continue;
+      const sc=scoreToday(H,k,parseLocal(H.time[k]),wf).sc+scoreToday(H,k2,parseLocal(H.time[k2]),wf).sc;if(!best||sc>best.sc)best={sc,h}}
+    const dk=sw.d.time.indexOf(ymd(now)),set=dk>=0&&sw.d.sunset?parseLocal(sw.d.sunset[dk]):null;
+    return{lv,label:LEVELS[lv],best:best?{from:best.h,to:best.h+2}:null,set,water:wf(now)};
+  }
+  // what worked at a spot: best lure, part of the day, success rate of its trips
+  function spotStats(s){
+    const top=(arr,key)=>{const m=new Map();arr.forEach(x=>{const k=key(x);if(k)m.set(k,(m.get(k)||0)+1)});let b=null;m.forEach((n,k)=>{if(!b||n>b[1])b=[k,n]});return b};
+    const lure=top(s.catches,c=>c.lure&&c.lure.trim()),part=top(s.catches,c=>{const k=daypart(c);return k==null?null:["hajnalban","nappal","alkonyatkor","éjszaka"][k]}),sp=top(s.catches,c=>c.sp);
+    const ok=s.trips.filter(t=>tripCatches(t).length).length;
+    return{lure,part,sp:sp&&sp[0],trips:s.trips.length,ok};
+  }
+  function renderSpots(){
+    const box=$("spots");if(!box)return;box.replaceChildren();
+    const list=spotsOf();$("spotsSec").hidden=!list.length;if(!list.length)return;
+    loadSpotsWx();
+    list.slice(0,6).forEach(s=>{
+      const st=spotStats(s),td=spotToday(s.name),card=el("div","spot");
+      const h=el("div","spot-h");h.append(el("b",null,s.name));
+      if(td){const dots=el("span","spot-lv lv"+td.lv);dots.append(el("span",null,td.label));const d=el("span","dots");for(let k=1;k<=5;k++)d.append(el("i",k<=td.lv?"on":""));dots.append(d);h.append(dots)}
+      card.append(h);
+      const facts=el("div","spot-facts");const f=t=>facts.append(el("span","spec",t));
+      if(td&&td.best)f("Ma "+td.best.from+"–"+td.best.to+" óra");if(td&&td.water)f("Víz "+WATER_ARROW[td.water.k]+" "+WATER_TXT[td.water.k]);
+      f(s.catches.length+" fogás");if(st.trips)f("siker "+st.ok+"/"+st.trips);
+      card.append(facts);
+      const why=[st.lure&&"legjobb csali: "+st.lure[0]+" ("+st.lure[1]+")",st.part&&st.part[1]>=2&&"leginkább "+st.part[0],s.last&&"utoljára "+fmtDate(s.last)].filter(Boolean);
+      if(why.length)card.append(el("p","hint",why.join(" · ").replace(/^./,c=>c.toUpperCase())));
+      const row=el("div","btnrow");
+      const go1=el("button","btn-ghost","Térképen");go1.type="button";go1.onclick=()=>{if(bigMap){bigMap.setView([s.lat,s.lng],14);$("bigMap").scrollIntoView({behavior:reducedMotion()?"auto":"smooth"})}};
+      const go2=el("button","btn-main","Horgászat itt");go2.type="button";go2.onclick=()=>{go("home");openTripSheet("start",null,{place:{name:s.name,lat:s.lat,lng:s.lng}})};
+      row.append(go1,go2);if(!activeTrip())card.append(row);else card.append(row.firstChild);
+      box.append(card);
+    });
+  }
+  function renderForYou(){
+    const box=$("forYou");if(!box)return;box.replaceChildren();
+    const sec=$("forYouSec"),list=spotsOf().slice(0,4);sec.hidden=true;
+    if(state.year!==NOW_Y||!list.length||activeTrip())return;
+    loadSpotsWx();
+    const scored=list.map(s=>({s,td:spotToday(s.name)})).filter(x=>x.td).sort((a,b)=>b.td.lv-a.td.lv||(b.s.catches.length-a.s.catches.length));
+    if(!scored.length)return;
+    const {s,td}=scored[0],st=spotStats(s),card=el("div","foryou");sec.hidden=false;
+    const lead=el("p","fy-lead");
+    lead.append("Ma ",el("b",null,s.name),td.lv>=4?" a legjobb választás: ":" a legjobb a helyeid közül: ",el("b",null,td.label.toLowerCase()));
+    if(td.best)lead.append(", leginkább ",el("b",null,td.best.from+"–"+td.best.to+" óra"),td.set?" (napnyugta "+fmtHM(td.set)+")":"");lead.append(".");
+    card.append(lead);
+    const bits=[];
+    if(td.water)bits.push("A víz "+WATER_TXT[td.water.k]+" ("+Math.round(td.water.q)+" m³/s).");
+    if(st.part&&st.part[1]>=2)bits.push("Itt a fogásaid többsége "+st.part[0]+" jött.");
+    const sp=st.sp&&state.species.find(x=>x.id===st.sp);
+    if(sp&&lureBox().length){try{const parts=td.best&&td.best.from>=17?["alkony"]:td.best&&td.best.from<8?["hajnal"]:["nappal"];
+      const r=rankLures(sp,new Date(),parts,planWx(new Date(),parts));if(r.top&&r.top[0])bits.push("Csali "+sp.name.toLowerCase()+"ra: "+r.top[0].l.name+".")}catch(e){}}
+    else if(st.lure)bits.push("Itt eddig a "+st.lure[0]+" vált be legjobban.");
+    if(bits.length)card.append(el("p","hint",bits.join(" ")));
+    const b=el("button","btn-main","Horgászat indítása itt");b.type="button";b.onclick=()=>openTripSheet("start",null,{place:{name:s.name,lat:s.lat,lng:s.lng}});card.append(b);
+    if(scored.length>1){const o=el("p","fy-more");o.append("Többi helyed ma: "+scored.slice(1).map(x=>x.s.name+" ("+x.td.label.toLowerCase()+")").join(", ")+". ");
+      const m=el("button","linkbtn","Helyeim →");m.type="button";m.onclick=()=>go("map");o.append(m);card.append(o)}
+    box.append(card);
+  }
+
   /* ---------- fishing trips ("Horgászat indítása"): time on the water, catches or not ----------
      data.trips = [{id, start, end?, place?:{name,lat,lng}, sp?:[ids], wx?, note?}] (optional, older logs have none).
      A trip's catches are the catches whose time falls between start and end: the catch format does not change.
@@ -1474,11 +1582,11 @@ button{transition:transform .15s}
     tripTick=setInterval(()=>{if(document.hidden||!activeTrip())return;const a=Date.now()-new Date(activeTrip().start).getTime();clock.textContent=clockText(a)},20000);
   }
 
-  function openTripSheet(mode,id){
+  function openTripSheet(mode,id,pre){
     const t=mode==="view"?tripList().find(x=>x.id===id):activeTrip();
     if(mode!=="start"&&!t)return;
     const places=recentPlaces(),last=tripList().filter(x=>x.place).slice(-1)[0];
-    tripSheet={mode,id:t&&t.id,place:mode==="start"?(last?last.place:places[0]||null):null,gps:false,
+    tripSheet={mode,id:t&&t.id,place:mode==="start"?(pre&&pre.place||(last?last.place:places[0]||null)):null,gps:false,
       sp:mode==="start"?tripSpecies(null).slice(0,2):[],note:t&&t.note||"",end:null};
     $("tripWrap").hidden=false;document.body.style.overflow="hidden";renderTripSheet();
   }
@@ -1492,7 +1600,8 @@ button{transition:transform .15s}
       h.textContent="Horgászat indítása";box.append(el("div","sub","Indítsd el, amikor a vízhez értél. A fogásaid maguktól hozzá tartoznak, és a fogás nélküli alkalom is mentődik."));
       const g=el("div","fgroup");g.append(el("div","flabel","Hol horgászol?"));const c=el("div","chips quick-pills");
       const opt=(label,on,fn)=>{const b=el("button","pill"+(on?" on":""),label);b.type="button";b.setAttribute("aria-pressed",on?"true":"false");b.onclick=fn;c.append(b)};
-      recentPlaces().forEach(p=>opt(p.name,!S.gps&&S.place&&S.place.name===p.name,()=>{S.place=p;S.gps=false;renderTripSheet()}));
+      const pl=recentPlaces();if(S.place&&!pl.some(p=>p.name===S.place.name))pl.unshift(S.place);
+      pl.forEach(p=>opt(p.name,!S.gps&&S.place&&S.place.name===p.name,()=>{S.place=p;S.gps=false;renderTripSheet()}));
       opt("Jelenlegi helyem",S.gps,()=>{S.gps=true;S.place=null;renderTripSheet()});
       opt("Hely nélkül",!S.gps&&!S.place,()=>{S.gps=false;S.place=null;renderTripSheet()});
       g.append(c);box.append(g);
@@ -1757,6 +1866,7 @@ button{transition:transform .15s}
   function tiles(){return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"})}
   function pinIcon(cls){return L.divIcon({className:"",html:'<div class="pin '+(cls||"")+'"></div>',iconSize:[22,22],iconAnchor:[11,22],popupAnchor:[0,-20]})}
   function renderMap(){
+    renderSpots();
     const y=state.year;
     const pts=state.catches.filter(c=>c.y===y&&coordsOf(c)&&state.species.some(s=>s.id===c.sp));
     const auto=pts.filter(c=>!(c.place&&c.place.lat!=null)).length;
@@ -2707,7 +2817,7 @@ button{transition:transform .15s}
     }catch(e){today.err=today.data?"Nincs internet, a legutóbbi adatot látod.":"Nincs internet. Ha lesz kapcsolat, magától betöltöm."}
     today.loading=false;renderToday();loadWater(force);
   }
-  function scoreToday(H,i,now){
+  function scoreToday(H,i,now,waterFn){
     const reasons=[];let sc=0;
     const p=H.pressure_msl[i],dp=i>=3?Math.round((p-H.pressure_msl[i-3])*10)/10:0;
     const fmt=v=>(v>0?"+":"")+String(v).replace(".",",");
@@ -2726,7 +2836,7 @@ button{transition:transform .15s}
     if(H.weather_code[i]>=95){sc-=1;reasons.push(["neg","Zivatar: nyílt vízen, pergetőbottal veszélyes."])}
     const mp=moonPhase(now),mb=moonBucket(mp);if(mb===0||mb===2){sc+=.5;reasons.push(["",moonName(mp)+" közelében."])}
     // the river (daily): steady or slowly falling water clears, a fast rise brings murky water and debris
-    const wt=waterOn(now);
+    const wt=(waterFn||waterOn)(now);
     if(wt){const w=" ("+waterTxt(wt)+")";
       if(wt.k==="flat"||wt.k==="down"){sc+=.5;reasons.push(["",(wt.k==="flat"?"Stagnáló":"Lassan apadó")+" víz"+w+": tisztul, a ragadozó a megszokott helyén."])}
       else if(wt.k==="up"){sc-=.5;reasons.push(["neg","Áradó víz"+w+": zavarosodik, a hal áthelyeződik."])}
@@ -2746,9 +2856,9 @@ button{transition:transform .15s}
   }
   const LEVELS=["","Gyenge","Közepes","Jó","Nagyon jó","Kiváló"];
   // a day's rating: the average of its daylight hours (6–20 h), so one good hour does not make a good day
-  function dayLevel(H,date){
+  function dayLevel(H,date,waterFn){
     const day=ymd(date);let s=0,n=0;
-    for(let h=6;h<=20;h++){const k=H.time.indexOf(day+"T"+pad(h)+":00");if(k>=3){s+=scoreToday(H,k,parseLocal(H.time[k])).sc;n++}} // each hour scored at its own time (moon phase), so the same day always gets the same rating
+    for(let h=6;h<=20;h++){const k=H.time.indexOf(day+"T"+pad(h)+":00");if(k>=3){s+=scoreToday(H,k,parseLocal(H.time[k]),waterFn).sc;n++}} // each hour scored at its own time (moon phase), so the same day always gets the same rating
     return n?Math.max(1,Math.min(5,Math.round(s/n+1))):0;
   }
   function sparkSvg(H,i){

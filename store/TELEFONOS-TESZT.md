@@ -147,6 +147,17 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 10c.3 | „Horgászat” a widgeten, indítás | A widgeten futó stopper és „Befejezés” |
 | 10c.4 | Másnap (az app megnyitása nélkül) | A widget a másnapi értékelést mutatja |
 
+## 10d. Okos értesítés, érzés, helyek
+
+| # | Lépés | Várt eredmény |
+|---|---|---|
+| 10d.1 | Beállítások → Értesítések → Jó horgászidő bekapcsolása, időpont | „Következő: …” sor; jó napon a választott időben értesítés okokkal és csalival |
+| 10d.2 | Fogás mentése, törlése | Rövid rezgés (ha a telefonon be van kapcsolva az érintési visszajelzés) |
+| 10d.3 | Egy fajnál a rekordnál nagyobb hossz mentése | Konfetti és „Új rekord!” |
+| 10d.4 | Fogások lista: elem húzása jobbra / balra | Jobbra: szerkesztő; balra: törlés, a sávon „Visszavonás” |
+| 10d.5 | Térkép fül → Helyeim (2+ alkalom egy helyen) | Kártyánként mai értékelés, legjobb órák, fogások, legjobb csali; „Horgászat itt” |
+| 10d.6 | Kezdőlap → Ma neked | A ma legjobb helyed, órákkal; „Horgászat indítása itt” a hellyel |
+
 ## 10. Teljesítmény és stabilitás
 
 - [ ] 100+ fogással (importálva) a lista és a statisztika folyamatosan görgethető.
