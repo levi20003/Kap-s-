@@ -158,6 +158,15 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | 10d.5 | Térkép fül → Helyeim (2+ alkalom egy helyen) | Kártyánként mai értékelés, legjobb órák, fogások, legjobb csali; „Horgászat itt” |
 | 10d.6 | Kezdőlap → Ma neked | A ma legjobb helyed, órákkal; „Horgászat indítása itt” a hellyel |
 
+## 10e. Állandó kártya
+
+- [ ] Beállítások → Értesítések → **Állandó kártya** be (Android 13+ engedélyt kér) → az értesítési sávban: „Horgászidő ma: … ●●●○○”, esti rablás, hely.
+- [ ] Lenyitva: „Holnap: …”, gombok: „+ hal” ×2 (a gyakori halaid), „Horgászat”. Mindegyik a megfelelő helyre visz.
+- [ ] Zárolt képernyőn is látszik; nem csörög, nem rezeg.
+- [ ] Horgászat indításakor eltűnik (csak a stopperes értesítés marad), befejezés után visszajön.
+- [ ] Telefon újraindítása után app-megnyitás nélkül is visszajön; éjfél után magától a következő napot mutatja.
+- [ ] Kikapcsolva azonnal eltűnik.
+
 ## 10. Teljesítmény és stabilitás
 
 - [ ] 100+ fogással (importálva) a lista és a statisztika folyamatosan görgethető.

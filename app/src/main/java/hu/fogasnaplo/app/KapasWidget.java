@@ -29,6 +29,7 @@ public class KapasWidget extends AppWidgetProvider {
     static void push(Context c, String json) {
         c.getSharedPreferences("fogasnaplo", Context.MODE_PRIVATE).edit().putString("widget", json).apply();
         updateAll(c);
+        PinnedCard.refresh(c);
     }
 
     static void updateAll(Context c) {

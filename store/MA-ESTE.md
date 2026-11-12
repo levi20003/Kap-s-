@@ -13,6 +13,8 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 - [ ] **Új ikon:** a kezdőképernyőn a Tisza-kanyar (nap + folyó); ha a régi látszik, indítsd újra a telefont. Téma-ikon: Beállítások → Háttérkép és stílus → Témájú ikonok.
 - [ ] **Horgászat-mód:** Kezdőlap → Horgászat indítása → az értesítési sávban futó stopper; zárolt képernyőn „+ Balin”; „Befejezés” → összefoglaló.
 - [ ] **Widget:** kezdőképernyő hosszan nyomva → Modulok → Kapás – horgászidő; „+ hal” és „Horgászat” gomb.
+- [ ] **Állandó kártya:** Beállítások → Értesítések → Állandó kártya be → lehúzott értesítési sávban és zárolt képernyőn: mai horgászidő,
+  esti rablás, „+ hal”, „Horgászat”. Horgászat indításakor eltűnik (a stopper van helyette), befejezéskor visszajön; telefon-újraindítás után is ott van.
 - [ ] **Okos értesítés:** Beállítások → Értesítések → Jó horgászidő bekapcsolása; a „Következő:” sor mutatja, mikor szól.
 - [ ] **Húzás, rezgés, konfetti:** Fogások listán elhúzni egy elemet; egy rekordnál nagyobb hossz mentése.
 - [ ] **Csali szerkesztése:** Beállítások → Csalitáram → a csali nevére koppintva; átnevezésnél „a korábbi fogásoknál is átírom”.
@@ -41,6 +43,13 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 - [ ] Adatbiztonság (Data safety): a `play-aruhaz.md` két táblázata szerint (a Google Drive-os rész is).
 - [ ] Zárt teszt: a `.aab` feltöltése, 12 tesztelő Gmail-címe a tesztelői listára **és** a Google Cloud → Audience → Test users közé.
 - [ ] A Google Cloud hozzájárulási képernyő: amíg zárt teszt van, maradhat „Testing”; az éles kiadás előtt **Publish app** („In production”).
+
+## D. A kiadás után (fejlesztés, nem sürgős)
+
+- [ ] Angol nyelvű változat (a szövegek kiemelése egy fordítótáblába, aztán az angol áruházi adatlap).
+- [ ] A CI-akciók frissítése (Node 24-es verziók, `setup-java` v5), mielőtt a GitHub kikapcsolja a régieket.
+- [ ] `BRIDGE_DAYS`: a 2027-es áthelyezett munkanapok, amikor a rendelet megjelenik (évente).
+- [ ] Az első visszajelzések és a Play Console összeomlás-jelentései alapján javítások.
 
 ## Ha valami nem stimmel
 

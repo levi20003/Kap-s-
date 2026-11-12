@@ -103,6 +103,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   a következő 7 nap értékelését adja (`days:[{d,lv,label,win}]`), így a widget egy hétig az app megnyitása nélkül is a jó napot mutatja; ezen kívül
   a hely, a 2 „+ hal” (a gyorsrögzítés útján) és a futó horgászat (stopper `setChronometer`, „Befejezés”). Gombok: „Horgászat” → `TRIP_START`
   → `__fnTripStart`. A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
+- **Állandó kártya** (Beállítások → Értesítések `#pinBox`, `renderPin`; `fogasnaplo.pinned` = "1"; natív: `PinnedCard.java`): opcionális, csendes,
+  folyamatos értesítés (csatorna `allando`, IMPORTANCE_LOW): mai értékelés pöttyökkel, esti rablás, hely, holnap; gombok „+ hal” ×2 és „Horgászat”.
+  A widget adatából dolgozik (`KapasWidget.push` → `PinnedCard.refresh`), riasztás 3 óránként és éjfél után, újraindítás/frissítés után a
+  `ReminderReceiver` hozza vissza. Futó horgászatnál eltűnik (a horgászat-értesítés van helyette). Induláskor a JS `ANDROID.setPinned(pinOn())`-nal szinkronizál.
 - **Okos értesítés** (Beállítások → Értesítések `#smartBox`, `renderSmart`; `fogasnaplo.smart` = `{on, h, streak}`): `smartEvents` a betöltött
   előrejelzésből a „Nagyon jó”/„Kiváló” napokra (`dayLevel` ≥ 4), naponta egyet, legfeljebb ~3 nappal előre, a választott órában (7/12/15/18);
   szöveg: a napnyugta órájának pozitív okai (`scoreToday`), esti rablás, a csalitár legjobb csalija (`rankLures`, nyitott halra). `streakEvents`:

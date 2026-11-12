@@ -54,6 +54,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         String act = intent.getAction();
         if (ACTION.equals(act)) postDue(c);
         if (ACTION.equals(act) || Intent.ACTION_BOOT_COMPLETED.equals(act) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(act)) scheduleNext(c);
+        if (Intent.ACTION_BOOT_COMPLETED.equals(act) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(act)) PinnedCard.refresh(c); // the always-on card comes back
     }
 
     private static void postDue(Context c) {

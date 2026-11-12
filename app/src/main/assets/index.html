@@ -783,6 +783,7 @@ button{transition:transform .15s}
     <section id="notifySec" hidden>
       <div class="sechead"><h2><span class="ic" data-ic="bell"></span>Értesítések</h2></div>
       <div class="autobk smart" id="smartBox"></div>
+      <div class="autobk smart" id="pinBox" hidden></div>
       <div class="flabel">Tilalmi idők</div>
       <div class="autobk" id="notifyBox"></div>
     </section>
@@ -1544,7 +1545,7 @@ button{transition:transform .15s}
       sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)}))}):"";
     if(j===lastTripNotif)return;lastTripNotif=j;try{ANDROID.setTripNotification(j)}catch(e){}
   }
-  window.__fnTripNotify=function(){lastTripNotif=null;pushTripNotif()};
+  window.__fnTripNotify=function(){lastTripNotif=null;pushTripNotif();lastWidget=null;pushWidget();if(typeof renderNotify==="function"&&state.tab==="more")renderNotify()};
   window.__fnTripStart=function(){go("home");if(!activeTrip())openTripSheet("start")};
 
   /* ---------- home-screen widget (KapasWidget): the next 7 days' ratings, so it stays right for a week without the app ---------- */
@@ -3180,7 +3181,7 @@ button{transition:transform .15s}
   }
   function renderNotify(){
     $("notifySec").hidden=!hasNotify();if(!hasNotify())return;
-    renderSmart();
+    renderSmart();renderPin();
     const box=$("notifyBox");box.replaceChildren();
     const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b)};
     if(!notifyOn()){box.append(el("span",null,"Szólok a tilalom előtti estén és amikor újra fogható, a te halfajaidra."));
@@ -3205,6 +3206,27 @@ button{transition:transform .15s}
     box.append(el("p","hint",next?"Következő: "+dayName(new Date(next.at),new Date())+" "+fmtHM(new Date(next.at))+", "+next.title.charAt(0).toLocaleLowerCase("hu")+next.title.slice(1)+".":
       "A következő 3 napban nincs kiemelkedő horgászidő. Ha lesz, szólok."));
   }
+  /* the optional always-on card in the notification shade (PinnedCard.java): today's rating, the evening feed, "+ fish", "Horgászat".
+     It reads the widget's data (pushWidget), so it stays right for a week without the app; fogasnaplo.pinned = "1" when on */
+  const PIN_KEY="fogasnaplo.pinned";
+  const pinOn=()=>{try{return localStorage.getItem(PIN_KEY)==="1"}catch(e){return false}};
+  const hasPin=()=>!!(ANDROID&&ANDROID.setPinned);
+  function setPinned(on){
+    try{on?localStorage.setItem(PIN_KEY,"1"):localStorage.removeItem(PIN_KEY)}catch(e){}
+    if(on&&ANDROID.canNotify&&!ANDROID.canNotify()&&ANDROID.askNotifyPermission)try{ANDROID.askNotifyPermission()}catch(e){}
+    try{ANDROID.setPinned(!!on)}catch(e){}
+    if(on)buzz("confirm");renderNotify();
+  }
+  function renderPin(){
+    const box=$("pinBox");if(!box)return;box.hidden=!hasPin();if(box.hidden)return;box.replaceChildren();const on=pinOn();
+    const head=el("div","smart-head");const tx=el("div");
+    tx.append(el("b",null,"Állandó kártya"),el("span","hint","Az értesítési sávban és a zárolt képernyőn mindig ott a mai horgászidő, az esti rablás, „+ hal” és „Horgászat” gomb. Csendes, napváltáskor magától frissül; horgászat közben a stopper veszi át a helyét."));
+    head.append(tx);const sw=el("button","switch"+(on?" on":""));sw.type="button";sw.setAttribute("role","switch");sw.setAttribute("aria-checked",on?"true":"false");sw.setAttribute("aria-label","Állandó kártya az értesítési sávban");
+    sw.onclick=()=>setPinned(!on);head.append(sw);box.append(head);
+    if(on&&ANDROID.canNotify&&!ANDROID.canNotify())box.append(el("p","hint","Az értesítések le vannak tiltva a telefonon, ezért a kártya nem látszik. Engedélyezd: Beállítások → Alkalmazások → Kapás → Értesítések."));
+  }
+  if(hasPin())try{ANDROID.setPinned(pinOn())}catch(e){} // keeps the native switch in step (restore, reinstall)
+
   window.__fnNotify=function(r){
     if(welcome&&welcome.waitNotify){welcome.waitNotify=false;setTimeout(welcomeNext,0)}
     if(r&&r.error){toast(r.error);return}

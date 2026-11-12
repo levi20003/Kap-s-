@@ -1072,6 +1072,30 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(!ev.some(e => e.title.includes('hetes sorozatod')), 'sorozat-mentő: horgászat után már nem szól');
       await ctx.close();
     }
+    // the optional always-on card (PinnedCard): off by default, a switch in Beállítások → Értesítések, kept in step on every start
+    {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(() => { window.__pin = []; window.__asked = 0; window.__can = false;
+        window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders() {}, setWidget() {},
+          setPinned(on) { window.__pin.push(on); }, canNotify() { return window.__can; }, askNotifyPermission() { window.__asked++; } }; });
+      await q.route('https://**', r => r.abort());
+      await q.goto(PAGE); await q.waitForTimeout(200);
+      ok((await q.evaluate(() => window.__pin)).join() === 'false', 'állandó kártya: alapból kikapcsolva, induláskor szinkronizál');
+      await q.locator('.tabbar button[data-tab="more"]').click();
+      ok(await q.locator('#pinBox').isVisible() && (await q.locator('#pinBox .switch').getAttribute('aria-checked')) === 'false', 'állandó kártya: kapcsoló a Beállításokban');
+      await q.locator('#pinBox .switch').click(); await q.waitForTimeout(100);
+      ok((await q.evaluate(() => [window.__pin.at(-1), window.__asked, localStorage.getItem('fogasnaplo.pinned')])).join() === 'true,1,1',
+        'állandó kártya: bekapcsolás engedélyt kér és a natív részt élesíti');
+      ok((await q.locator('#pinBox').innerText()).includes('le vannak tiltva'), 'állandó kártya: letiltott értesítésnél figyelmeztet');
+      await q.evaluate(() => { window.__can = true; }); await q.waitForTimeout(400);
+      await q.reload(); await q.waitForTimeout(200);
+      ok((await q.evaluate(() => window.__pin)).join() === 'true', 'állandó kártya: újraindítás után is bekapcsolva marad');
+      await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#pinBox .switch').click(); await q.waitForTimeout(100);
+      ok((await q.evaluate(() => [window.__pin.at(-1), localStorage.getItem('fogasnaplo.pinned')])).join() === 'false,', 'állandó kártya: kikapcsolható');
+      await ctx.close();
+      const q2 = await b.newPage(); await q2.goto(PAGE); await q2.locator('.tabbar button[data-tab="more"]').click();
+      ok(await q2.locator('#pinBox').isHidden(), 'állandó kártya: böngészőben (híd nélkül) nem látszik'); await q2.close();
+    }
     // Helyeim + Ma neked: spots from catches and trips, each with its own forecast (one request), the best one for today
     {
       const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

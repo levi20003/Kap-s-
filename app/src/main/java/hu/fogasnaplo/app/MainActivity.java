@@ -1475,6 +1475,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setWidget(String json) { KapasWidget.push(MainActivity.this, json == null ? "{}" : json); }
 
+        /** The optional always-on card in the notification shade (PinnedCard). */
+        @JavascriptInterface
+        public void setPinned(boolean on) { PinnedCard.set(MainActivity.this, on); }
+
         /** The fishing trip's ongoing notification ("" removes it). */
         @JavascriptInterface
         public void setTripNotification(String json) { runOnUiThread(() -> MainActivity.this.setTripNotification(json)); }

@@ -52,6 +52,10 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- the optional always-on card: rebuilt every 3 hours and after midnight -->
+        <receiver
+            android:name=".PinnedCard"
+            android:exported="false" />
         <!--TESZT:<receiver android:name=".UpdateReceiver" android:exported="false" />-->
         <receiver
             android:name=".KapasWidget"
