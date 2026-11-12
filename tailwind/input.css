@@ -189,6 +189,17 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Értesítések: jó horgászidő kapcsoló */
+  .autobk.smart { @apply mb-3 flex-col items-stretch; }
+  .smart-head { @apply flex items-start gap-3; }
+  .smart-head > div { @apply flex min-w-0 flex-1 flex-col gap-0.5; }
+  .smart-head .hint { @apply m-0; }
+  .switch { @apply relative h-7 w-12 flex-none rounded-full border-0 p-0 transition-colors; background: var(--line); }
+  .switch::after { content: ""; @apply absolute left-1 top-1 h-5 w-5 rounded-full shadow-sm transition-transform; background: var(--surface); }
+  .switch.on { background: var(--water); }
+  .switch.on::after { transform: translateX(20px); }
+  @media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
   /* Horgászat-mód: indító sor, élő kártya, lap, statisztika */
   .trip-start { @apply flex w-full items-center gap-3 rounded-2xl border p-3 text-left shadow-sm; border-color: var(--line); background: var(--surface); color: var(--fg); }
   .trip-ic { @apply flex h-11 w-11 flex-none items-center justify-center rounded-full; background: var(--water); color: var(--on-water); }

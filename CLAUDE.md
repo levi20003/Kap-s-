@@ -101,6 +101,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   a következő 7 nap értékelését adja (`days:[{d,lv,label,win}]`), így a widget egy hétig az app megnyitása nélkül is a jó napot mutatja; ezen kívül
   a hely, a 2 „+ hal” (a gyorsrögzítés útján) és a futó horgászat (stopper `setChronometer`, „Befejezés”). Gombok: „Horgászat” → `TRIP_START`
   → `__fnTripStart`. A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
+- **Okos értesítés** (Beállítások → Értesítések `#smartBox`, `renderSmart`; `fogasnaplo.smart` = `{on, h, streak}`): `smartEvents` a betöltött
+  előrejelzésből a „Nagyon jó”/„Kiváló” napokra (`dayLevel` ≥ 4), naponta egyet, legfeljebb ~3 nappal előre, a választott órában (7/12/15/18);
+  szöveg: a napnyugta órájának pozitív okai (`scoreToday`), esti rablás, a csalitár legjobb csalija (`rankLures`, nyitott halra). `streakEvents`:
+  vasárnap 17:00, ha a heti sorozat élne, de a héten még nem volt fogás vagy horgászat. A tilalmi emlékeztetőkkel együtt megy a `setReminders`-be.
+  A heti sorozat (`gameState`) a horgászatokat is számolja (fogás nélkül is).
 - **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
   `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
   `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).

@@ -959,6 +959,43 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(await q.evaluate(() => window.__wg.length) === calls, 'widget: csak változáskor frissül (fülváltásra nem)');
       await ctx.close();
     }
+    // smart notifications: good days only, at the chosen hour, with reasons, window and lure; the streak saver; a trip keeps the streak
+    {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      const lastWeek = new Date(); lastWeek.setDate(lastWeek.getDate() - 7);
+      await q.addInitScript(({ H, D, lw }) => { if (!sessionStorage.getItem('s')) { sessionStorage.setItem('s', 1);
+          localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], lures: [{ id: 'l1', name: 'Spintail kék', type: 'spintail', color: 'ezust', size: 5 }],
+            catches: [{ id: 'x', sp: 's1', at: lw, y: new Date(lw).getFullYear() }] })); }
+        localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
+        window.__rm = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders(j) { window.__rm.push(j); }, canNotify() { return true; } }; },
+        { H, D, lw: lastWeek.toISOString() });
+      await q.route('https://**', r => r.abort());
+      await q.goto(PAGE); await q.waitForTimeout(300);
+      ok((await q.evaluate(() => window.__rm.length ? JSON.parse(window.__rm[window.__rm.length - 1]).length : 0)) === 0, 'okos értesítés: alapból kikapcsolva, nem ütemez');
+      await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#smartBox .switch').click(); await q.waitForTimeout(150);
+      let ev = JSON.parse(await q.evaluate(() => window.__rm[window.__rm.length - 1]));
+      const good = ev.filter(e => e.title.includes('horgászidő'));
+      const days = new Set(good.map(e => new Date(e.at).toDateString()));
+      ok(good.length >= 2 && good.length <= 4 && days.size === good.length && good.every(e => new Date(e.at).getHours() === 15 && e.at - Date.now() < 3.3 * 864e5),
+        'okos értesítés: jó napokra, naponta legfeljebb egy, 15 órakor, legfeljebb 3 nappal előre (' + good.length + ')');
+      ok(good[0].title.includes('nagyon jó horgászidő · Szeged') && /Esti rablás 16:20–16:\d\d\./.test(good[0].text) && good[0].text.includes('Ajánlott csali (balin): Spintail kék') && !/, [A-ZÁÉÍÓÖŐÚÜŰ]/.test(good[0].text),
+        'okos értesítés: okokkal, esti rablással és a csalitár legjobb csalijával (' + good[0].text + ')');
+      await q.locator('#smartBox .pill', { hasText: 'Reggel 7' }).click(); await q.waitForTimeout(100);
+      ev = JSON.parse(await q.evaluate(() => window.__rm[window.__rm.length - 1]));
+      ok(ev.filter(e => e.title.includes('horgászidő')).every(e => new Date(e.at).getHours() === 7) && ev.some(e => e.title.startsWith('Ma nagyon jó')), 'okos értesítés: a választott időpontban (reggel „Ma …”)');
+      const sun = new Date(); sun.setDate(sun.getDate() + ((7 - sun.getDay()) % 7)); sun.setHours(17, 0, 0, 0);
+      const st = ev.find(e => e.title.includes('hetes sorozatod'));
+      ok(sun <= new Date() ? !st : (st && new Date(st.at).getDay() === 0 && new Date(st.at).getHours() === 17 && st.title.includes('1 hetes')), 'okos értesítés: sorozat-mentő vasárnap 17-kor, ha a héten még nem horgásztál');
+      ok((await q.locator('#smartBox').innerText()).includes('Következő:'), 'okos értesítés: a Beállítások mutatja a következőt');
+      // a trip without a catch keeps the weekly streak alive
+      await q.locator('.tabbar button[data-tab="home"]').click(); await q.locator('#tripSec .trip-start').click(); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
+      await q.locator('#tripSec .trip-end').click(); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
+      await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(100);
+      ok((await q.locator('#gameSec').innerText()).includes('ezen a héten is horgásztál'), 'sorozat: egy fogás nélküli horgászat is tartja a heti sorozatot');
+      ev = JSON.parse(await q.evaluate(() => window.__rm[window.__rm.length - 1]));
+      ok(!ev.some(e => e.title.includes('hetes sorozatod')), 'sorozat-mentő: horgászat után már nem szól');
+      await ctx.close();
+    }
     const flat = await run(wdays.map(() => 130)), rising = await run(wdays.map((_, k) => k < 4 ? 100 : k < 7 ? 100 + (k - 3) * 40 : 260));
     ok(flat.facts.includes('Víz 130 m³/s') && flat.facts.includes('stagnál'), 'vízhozam: a mai nap kártyáján a folyó vízhozama és iránya (' + flat.facts.replace(/\n/g, ' ') + ')');
     ok(flat.reasons.includes('Stagnáló víz') && rising.reasons.includes('Gyorsan áradó víz'), 'vízhozam: az értékelés indoklásában szerepel');

@@ -771,6 +771,8 @@ button{transition:transform .15s}
 
     <section id="notifySec" hidden>
       <div class="sechead"><h2><span class="ic" data-ic="bell"></span>Értesítések</h2></div>
+      <div class="autobk smart" id="smartBox"></div>
+      <div class="flabel">Tilalmi idők</div>
       <div class="autobk" id="notifyBox"></div>
     </section>
 
@@ -2307,10 +2309,12 @@ button{transition:transform .15s}
     const byWeek=new Map();cs.forEach(c=>{const k=wk(weekStart(new Date(c.at)));if(!byWeek.has(k))byWeek.set(k,[]);byWeek.get(k).push(c)});
     let xp=cs.reduce((a,c)=>a+catchXp(c),0);
     byWeek.forEach((list,k)=>weekQuests(new Date(k+"T00:00")).forEach(q=>{if(list.filter(q.test).length>=q.need)xp+=q.xp}));
-    // the streak is still alive during a week without a catch yet; it breaks when a whole week is missed
-    const cur=weekStart(now),active=byWeek.has(wk(cur));let streak=0;
-    for(let d=active?cur:prevWeek(cur);byWeek.has(wk(d));d=prevWeek(d))streak++;
-    let best=0,run=0,last=null;[...byWeek.keys()].sort().forEach(k=>{run=last&&wk(prevWeek(new Date(k+"T00:00")))===last?run+1:1;best=Math.max(best,run);last=k});
+    // the streak: weeks with a catch or a fishing trip (a trip without a catch counts too); still alive during the current week,
+    // it breaks when a whole week is missed
+    const wks=new Set(byWeek.keys());tripList().forEach(t=>{const d=new Date(t.start);if(!isNaN(d))wks.add(wk(weekStart(d)))});
+    const cur=weekStart(now),active=wks.has(wk(cur));let streak=0;
+    for(let d=active?cur:prevWeek(cur);wks.has(wk(d));d=prevWeek(d))streak++;
+    let best=0,run=0,last=null;[...wks].sort().forEach(k=>{run=last&&wk(prevWeek(new Date(k+"T00:00")))===last?run+1:1;best=Math.max(best,run);last=k});
     const badges=[];
     GAME_SPECIES.forEach(n=>badges.push({id:"sp-"+canon(n),group:"Halfaj",name:n,icon:"fish",n:cs.filter(c=>isSp(c,n)).length,tiers:[1,10,25],unit:"hal"}));
     GAME_LURES.forEach(l=>badges.push({id:"lure-"+norm(l),group:"Csalimester",name:l,icon:"bolt",n:cs.filter(c=>usesLure(c,l)).length,tiers:[1,5,15],unit:"fogás"}));
@@ -2335,7 +2339,7 @@ button{transition:transform .15s}
     grid.append(lv);
     // streak
     const st=el("div","gm-card gm-streak");const fl=el("span","gm-flame"+(G.active?" on":""));fl.innerHTML=icoSvg("flame");st.append(fl);
-    st.append(num(G.streak,"hét"),el("div","gm-sub",G.streak?(G.active?"Heti sorozat, ezen a héten is fogtál.":"Ezen a héten még nem fogtál, ne szakadjon meg!"):"Fogj ezen a héten, és indul a sorozat."));
+    st.append(num(G.streak,"hét"),el("div","gm-sub",G.streak?(G.active?"Heti sorozat, ezen a héten is horgásztál.":"Ezen a héten még nem horgásztál, ne szakadjon meg!"):"Horgássz ezen a héten, és indul a sorozat."));
     st.append(el("span","spec","Leghosszabb: "+G.best+" hét"));grid.append(st);
     // this week
     const done=G.quests.filter(q=>q.have>=q.need).length;
@@ -2359,7 +2363,7 @@ button{transition:transform .15s}
     bc.append(bg);grid.append(bc);box.append(grid);
     const d=el("details","gm-help");d.append(el("summary",null,"Hogyan jár az XP?"));
     d.append(el("p","hint","Fogás 10 XP; hossz vagy súly +5, csali +3, hely +3, fotó vagy videó +5, visszaengedett hal +5. Teljesített heti küldetés +25, minden jelvényszint +20. "+
-      "A heti sorozathoz hetente (hétfőtől vasárnapig) legalább egy fogás kell. Tilalmi időben lévő halfajra nem kapsz küldetést."));box.append(d);
+      "A heti sorozathoz hetente (hétfőtől vasárnapig) legalább egy fogás vagy egy horgászat kell (a Horgászat gombbal, akár fogás nélkül is). Tilalmi időben lévő halfajra nem kapsz küldetést."));box.append(d);
   }
   // after a change: announce new XP, a level-up or a new badge once (nothing on the first run, and nothing over an undo toast)
   function checkGame(){
@@ -2852,7 +2856,7 @@ button{transition:transform .15s}
     if(!T||!fresh){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
     const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
     if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
-    const sc=scoreToday(H,i,now);pushWidget();
+    const sc=scoreToday(H,i,now);pushWidget();pushReminders();
     // the headline is the same daylight average the "Ma" row shows, so the two never disagree
     const lv=dayLevel(H,now)||sc.level;
     if(wxLv!==lv){wxLv=lv;renderGreet()}
@@ -2954,13 +2958,47 @@ button{transition:transform .15s}
     });
     return seasons.concat(log).sort((a,b)=>a.at-b.at);
   }
+  /* good fishing days (at most one notification a day, up to 3 days ahead, only "Nagyon jó" or "Kiváló") and the streak saver;
+     settings in fogasnaplo.smart = {on, h (hour), streak} */
+  const SMART_KEY="fogasnaplo.smart",SMART_HOURS=[[7,"Reggel 7"],[12,"Délben 12"],[15,"Délután 3"],[18,"Este 6"]];
+  function smartPref(){let p={};try{p=JSON.parse(localStorage.getItem(SMART_KEY)||"{}")||{}}catch(e){}
+    return{on:!!p.on,h:SMART_HOURS.some(x=>x[0]===p.h)?p.h:15,streak:p.streak!==false}}
+  function setSmart(patch){try{localStorage.setItem(SMART_KEY,JSON.stringify({...smartPref(),...patch}))}catch(e){}pushReminders();renderNotify()}
+  function smartEvents(){
+    const p=smartPref();if(!p.on)return[];
+    const T=today.data,loc=wxPlace();if(!T||!T.h||!T.d||Math.abs(T.lat-loc.lat)>=0.05||Math.abs(T.lng-loc.lng)>=0.05)return[];
+    const H=T.h,D=T.d,now=Date.now(),out=[],sp=tripSpecies(null).map(id=>state.species.find(s=>s.id===id)).filter(Boolean);
+    D.time.forEach((t,k)=>{
+      const date=parseLocal(t),at=new Date(date);at.setHours(p.h,0,0,0);
+      if(at.getTime()<=now||at.getTime()-now>3.2*864e5)return;
+      const lv=dayLevel(H,date);if(lv<4)return;
+      const set=D.sunset&&D.sunset[k]?parseLocal(D.sunset[k]):null,eh=set?set.getHours():18;
+      const i=H.time.indexOf(ymd(date)+"T"+pad(eh)+":00");
+      const why=i>=3?scoreToday(H,i,date).reasons.filter(r=>r[0]!=="neg").slice(0,2).map(r=>r[1].replace(/ \(.*?\)/g,"").replace(/\.$/,"")):[];
+      let lure="";const open=sp.find(s=>!ruleStatus(ruleFor(s.name),date)||ruleStatus(ruleFor(s.name),date).kind!=="closed");
+      if(open&&lureBox().length){try{const r=rankLures(open,date,["alkony"],planWx(date,["alkony"]));if(r.top&&r.top[0])lure=r.top[0].l.name}catch(e){}}
+      out.push({at:at.getTime(),title:(at.getHours()<12?"Ma ":"Ma este ")+LEVELS[lv].toLowerCase()+" horgászidő · "+loc.name,
+        text:[why.map((w,n)=>n?w.charAt(0).toLocaleLowerCase("hu")+w.slice(1):w).join(", ")+(why.length?".":""),set?"Esti rablás "+fmtHM(set)+"–"+fmtHM(new Date(set.getTime()+twilightMs(set,loc.lat)))+".":"",
+          lure?"Ajánlott csali"+(open?" ("+open.name.toLowerCase()+")":"")+": "+lure+".":""].filter(Boolean).join(" ")});
+    });
+    return out;
+  }
+  function streakEvents(){
+    const p=smartPref();if(!p.on||!p.streak)return[];
+    const G=gameState();if(!G.streak||G.active)return[];
+    const sun=new Date(G.weekStart);sun.setDate(sun.getDate()+6);sun.setHours(17,0,0,0);if(sun.getTime()<=Date.now())return[];
+    return[{at:sun.getTime(),title:"Ma este véget ér a "+G.streak+" hetes sorozatod",text:"Egy horgászat a héten megmenti, akár fogás nélkül is: indítsd el a Kezdőlap „Horgászat indítása” gombjával."}];
+  }
   let lastReminders=null;
   function pushReminders(){
-    if(!hasNotify())return;const j=notifyOn()?JSON.stringify(reminderEvents()):"[]";
+    if(!hasNotify())return;
+    const ev=(notifyOn()?reminderEvents():[]).concat(smartEvents(),streakEvents()).sort((a,b)=>a.at-b.at);
+    const j=JSON.stringify(ev);
     if(j===lastReminders)return;lastReminders=j;try{ANDROID.setReminders(j)}catch(e){}
   }
   function renderNotify(){
     $("notifySec").hidden=!hasNotify();if(!hasNotify())return;
+    renderSmart();
     const box=$("notifyBox");box.replaceChildren();
     const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b)};
     if(!notifyOn()){box.append(el("span",null,"Szólok a tilalom előtti estén és amikor újra fogható, a te halfajaidra."));
@@ -2969,6 +3007,21 @@ button{transition:transform .15s}
     box.append(el("span",null,next?`Bekapcsolva. Következő: ${fmtDM(new Date(next.at))}, ${next.title.charAt(0).toLocaleLowerCase("hu")+next.title.slice(1)}.`:
       "Bekapcsolva. A következő évben nincs tilalom a halfajaidra."));
     btn("no","Kikapcsolás",()=>{try{localStorage.removeItem(NOTIFY_KEY)}catch(e){}pushReminders();renderNotify()});
+  }
+  function renderSmart(){
+    const box=$("smartBox");if(!box)return;box.replaceChildren();const p=smartPref();
+    const head=el("div","smart-head");const tx=el("div");tx.append(el("b",null,"Jó horgászidő"),el("span","hint","Szólok, ha egy nap „Nagyon jó” vagy „Kiváló” lesz, az okokkal, az esti rablás idejével és a csalitárad legjobb csalijával. Naponta legfeljebb egyszer."));
+    head.append(tx);const sw=el("button","switch"+(p.on?" on":""));sw.type="button";sw.setAttribute("role","switch");sw.setAttribute("aria-checked",p.on?"true":"false");sw.setAttribute("aria-label","Jó horgászidő értesítés");
+    sw.onclick=()=>{const on=!p.on;if(on&&ANDROID&&ANDROID.canNotify&&!ANDROID.canNotify()&&ANDROID.askNotifyPermission)try{ANDROID.askNotifyPermission()}catch(e){}setSmart({on})};
+    head.append(sw);box.append(head);
+    if(!p.on)return;
+    const c=el("div","chips quick-pills");SMART_HOURS.forEach(([h,l])=>{const b=el("button","pill"+(p.h===h?" on":""),l);b.type="button";b.setAttribute("aria-pressed",p.h===h?"true":"false");b.onclick=()=>setSmart({h});c.append(b)});
+    box.append(c);
+    const lab=el("label","g-opt"),cb=el("input");cb.type="checkbox";cb.checked=p.streak;cb.onchange=()=>setSmart({streak:cb.checked});
+    lab.append(cb,el("span",null,"Sorozat-mentő: vasárnap délután szólok, ha a heti sorozatod elveszne"));box.append(lab);
+    const next=smartEvents().concat(streakEvents()).sort((a,b)=>a.at-b.at)[0];
+    box.append(el("p","hint",next?"Következő: "+dayName(new Date(next.at),new Date())+" "+fmtHM(new Date(next.at))+", "+next.title.charAt(0).toLocaleLowerCase("hu")+next.title.slice(1)+".":
+      "A következő 3 napban nincs kiemelkedő horgászidő. Ha lesz, szólok."));
   }
   window.__fnNotify=function(r){
     if(welcome&&welcome.waitNotify){welcome.waitNotify=false;setTimeout(welcomeNext,0)}
