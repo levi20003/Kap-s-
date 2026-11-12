@@ -255,7 +255,10 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
 
 ## Név és logó
 
-- Az app neve **Kapás** (1.8-ig Fogásnapló). A logó a folyóvölgyes kép: a fejlécben `app/src/main/assets/logo.png`, adaptív ikon előtérként
-  `res/drawable-nodpi/ic_launcher_fg.png` (világos zsálya háttér: `ic_launcher_bg.xml`), egyszínű téma-ikon `ic_launcher_mono.xml`, régebbi Androidon az `ic_launcher.png`-k.
+- Az app neve **Kapás** (1.8-ig Fogásnapló). Logó: **„Tisza-kanyar”** (folyókanyar, esti nap, part; forrás: `store/kepek/logo.svg`, 512 egység).
+  Adaptív ikon vektorosan: háttér `res/drawable/ic_launcher_bg.xml` (ég-átmenet + part), előtér `ic_launcher_fg.xml` (nap + folyó), egyszínű
+  téma-ikon `ic_launcher_mono.xml`; a 768 egységes vásznon a rajz a látható középső 72 dp-be esik (eltolás 128). Értesítési ikon `ic_stat_fish.xml`
+  (nap + folyó maszk, a név maradt). PNG-k a vektorból: `mipmap-*/ic_launcher.png` (régi Android), `assets/logo.png` (fejléc, üdvözlő),
+  `store/kepek/ikon-512.png` (Play, lekerekítés nélkül, RGBA). A többi ötlet: `store/logo-otletek/`.
 - **Nem változott** (kompatibilitás): csomagnév `hu.fogasnaplo.app`, `fogasnaplo.*` tárolókulcsok, `FogasnaploAndroid` híd, mentésfájl-nevek,
   és a release-eszközök neve (`Fogasnaplo-TESZT.apk`, `version.json`), mert a már telepített tesztappok frissítője ezeket keresi.

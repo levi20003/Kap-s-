@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#DCE6D9" android:pathData="M0,0h108v108h-108z" />
+<!-- Adaptive icon, background layer ("Tisza-kanyar"): evening sky and the far bank. 768 units = 108 dp; the artwork's 512 units
+     sit in the visible middle 72 dp (offset 128), the rest bleeds to the edges. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="768" android:viewportHeight="768">
+    <path android:pathData="M0,0h768v768h-768z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="768"
+                android:startColor="#FF4F7159" android:centerColor="#FF3C5C48" android:endColor="#FF2F4A3A" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FF2F4A3A" android:pathData="M0,382C80,350 160,340 256,346C298,349 340,356 384,364C468,380 556,360 640,336C690,322 730,316 768,312V768H0Z" />
 </vector>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon, foreground layer: the evening sun and the river bend (same geometry as store/logo-otletek/kanyar.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="768" android:viewportHeight="768">
+    <group android:translateX="128" android:translateY="128">
+        <path android:fillColor="#FFFF8350" android:pathData="M256,112a64,64 0,1 0,0.01 0Z" />
+        <path android:fillColor="#FFF4F0E8"
+            android:pathData="M232,238C250,238 266,242 270,252C276,268 236,278 212,296C180,320 196,352 262,370C340,392 380,430 360,512L360,640L236,640L236,512C262,446 236,420 176,398C110,374 110,318 162,286C188,270 214,262 232,238Z" />
+    </group>
+</vector>

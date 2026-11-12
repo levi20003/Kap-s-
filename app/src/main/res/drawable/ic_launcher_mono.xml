@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): sun and river as one shape; the system colours it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:strokeColor="#FF000000" android:strokeWidth="8" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M36,90C60,86 78,78 68,64S34,58 42,48S52,44 58,42" />
+    android:width="108dp" android:height="108dp" android:viewportWidth="768" android:viewportHeight="768">
+    <group android:translateX="128" android:translateY="128">
+        <path android:fillColor="#FF000000" android:pathData="M256,112a64,64 0,1 0,0.01 0Z" />
+        <path android:fillColor="#FF000000"
+            android:pathData="M232,238C250,238 266,242 270,252C276,268 236,278 212,296C180,320 196,352 262,370C340,392 380,430 360,512L236,512C262,446 236,420 176,398C110,374 110,318 162,286C188,270 214,262 232,238Z" />
+    </group>
 </vector>

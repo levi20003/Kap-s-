@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notification icon: a plain fish silhouette (Android shows it as a white mask). -->
+<!-- Notification icon (Android shows it as a white mask): the logo's sun and river bend. The name stays for the code that uses it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M2.5,12C5.5,7.2 11.5,6.2 15.8,9.3L21.5,5.8V18.2L15.8,14.7C11.5,17.8 5.5,16.8 2.5,12ZM7.2,10.4a1.1,1.1 0,1 0,0.01 0Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,2.4a3.6,3.6 0,1 0,0.01 0Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M10.9,10.6C11.8,10.6 12.5,10.8 12.7,11.3C13,12 11.1,12.5 10,13.3C8.5,14.4 9.2,15.9 12.3,16.7C15.9,17.7 17.8,19.5 16.9,23H11.1C12.3,20.1 11.1,18.9 8.3,17.9C5.2,16.8 5.2,14.3 7.6,12.8C8.8,12 10,11.7 10.9,10.6Z" />
 </vector>

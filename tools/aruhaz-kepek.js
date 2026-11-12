@@ -113,7 +113,7 @@ function wxMock(now){
   await cp.setContent(`<html><head><style>${FONTS}
     body{margin:0;width:1024px;height:500px;overflow:hidden;background:linear-gradient(160deg,#4a6b55 0%,#2f4a3a 55%,#22382b 100%);font-family:Figtree;position:relative;color:#f1f4ee}
     .scene{position:absolute;left:0;bottom:0;width:100%;height:330px}.sun{position:absolute;right:150px;top:84px;width:118px;height:118px;border-radius:50%;background:#f0a46b}
-    .row{position:absolute;left:72px;top:96px;display:flex;align-items:center;gap:26px}.row img{width:112px;height:112px;border-radius:28px;background:#dce6d9;padding:8px;box-sizing:border-box}
+    .row{position:absolute;left:72px;top:96px;display:flex;align-items:center;gap:26px}.row img{width:112px;height:112px;border-radius:26px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
     h1{margin:0;font-family:Fraunces;font-weight:600;font-size:116px;letter-spacing:-2px;line-height:1}
     p{position:absolute;left:72px;top:250px;margin:0;font-size:40px;color:#dfe8da}
     .chips{position:absolute;left:72px;top:328px;display:flex;gap:12px}.chips span{font-size:26px;padding:9px 20px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}

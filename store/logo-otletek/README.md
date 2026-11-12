@@ -1,5 +1,7 @@
 # Kapás – logó-ötletek
 
+**A választott: 3. Tisza-kanyar** (2026. 11. 12.), a végleges forrás: `store/kepek/logo.svg`.
+
 `logo-osszevetes.png`: a jelenlegi és a három új irány nagyban, app-ikonként (kerek maszk, világos és sötét háttéren) és 48 / 32 / 24 px-en.
 
 | Fájl | Irány | Miért |
