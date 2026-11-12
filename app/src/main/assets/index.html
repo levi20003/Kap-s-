@@ -38,6 +38,7 @@
 /* Layout: "Erdei csend" — warm cream paper, deep evergreen panels, serif headings (Fraunces), soft rounded cards.
    Two themes: light (cream + evergreen) and dark (night forest + cream text). Every colour lives here. */
 :root{
+  --logo-ring:rgba(239,235,225,.30); --logo-glow:rgba(255,131,80,.22); --logo-shadow:0 6px 16px rgba(0,0,0,.45);
   color-scheme:dark;
   /* sötét: éjszakai erdő, krém szöveg (palette: Sage Hint #DCE6D9, Mint #BFCFBB, Sage #8EA58C, Moss #738A6E, Evergreen #344C3D) */
   --bg:#121915; --bg-2:#18211b; --surface:#1c261f; --surface-2:#212d25; --line:#34423a; --line-soft:rgba(220,230,217,.1);
@@ -63,6 +64,7 @@
 }
 /* világos: krémpapír + Evergreen */
 :root[data-theme="light"]{
+  --logo-ring:rgba(30,42,34,.12); --logo-glow:rgba(196,80,31,.10); --logo-shadow:0 5px 14px rgba(62,45,25,.22);
   color-scheme:light;
   --bg:#f4f0e8; --bg-2:#ece7dd; --surface:#fdfbf7; --surface-2:#fffefb; --line:#ddd5c6; --line-soft:rgba(70,60,40,.1);
   --fg:#1e2a22; --muted:#596259; --faint:#687067;
@@ -169,7 +171,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* header */
 header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.logo{width:1.9rem;height:1.9rem;flex:none;object-fit:contain}
+.logo{width:2.25rem;height:2.25rem;flex:none;object-fit:cover;border-radius:24%;box-shadow:0 0 0 1.5px var(--logo-ring),0 0 18px 2px var(--logo-glow),var(--logo-shadow)}
 .brand{display:flex;align-items:center;gap:.5rem;font-family:var(--f-display);font-weight:600;font-size:1.5rem;letter-spacing:-.01em;line-height:1}
 .hright{display:flex;align-items:center;gap:8px}
 .yearbar{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--edge);border-radius:999px;padding:3px;box-shadow:var(--shadow-card)}
