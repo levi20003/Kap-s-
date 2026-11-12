@@ -3075,7 +3075,7 @@ button{transition:transform .15s}
     const box=$("autoBk");box.hidden=!hasZip();if(box.hidden)return;
     box.replaceChildren();const f=ANDROID.backupFolder();
     const btn=(cls,label,fn)=>{const b=el("button",cls,label);b.type="button";b.onclick=fn;box.append(b);return b};
-    if(!f){box.append(el("span",null,"Automatikus heti mentés: válassz egy mappát (pl. Drive vagy SD-kártya), és a fotókkal együtt oda ment."));
+    if(!f){box.append(el("span",null,"Heti mentés egy mappába a telefonon (pl. SD-kártya): a napló és a fotók egy ZIP-fájlban. A Google Drive-ra a fenti bejelentkezéssel ment."));
       btn("btn-ghost","Mappa kiválasztása",()=>ANDROID.pickBackupFolder());return}
     const i=autoInfo();
     const txt=zipBusy?`Mentés folyamatban ide: ${f}…`:i.err?`Az utolsó automatikus mentés nem sikerült. ${i.err}`:

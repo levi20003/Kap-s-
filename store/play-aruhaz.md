@@ -11,7 +11,7 @@ Kapás – horgász fogásnapló
 ## Rövid leírás (max. 80 karakter)
 
 ```
-Fogásnapló, tilalmi idők, méretkorlátok és horgászidő – magyar horgászoknak.
+Fogásnapló, tilalmi idők, horgászidő és csaliajánló magyar horgászoknak.
 ```
 
 ## Teljes leírás (max. 4000 karakter)
@@ -19,62 +19,67 @@ Fogásnapló, tilalmi idők, méretkorlátok és horgászidő – magyar horgás
 ```
 Kapás – a horgásznapló, ami a tiéd marad.
 
-Rögzítsd a fogásaidat egy koppintással, nézd meg, jó horgászidő van-e ma, és tudd mindig, melyik hal fogható. Magyar horgászoknak, magyar szabályokkal, reklám és regisztráció nélkül.
+Rögzítsd a fogásaidat egy koppintással, nézd meg, jó horgászidő van-e ma, mivel érdemes kimenni, és tudd mindig, melyik hal fogható. Magyar horgászoknak, magyar szabályokkal, reklám nélkül.
 
 🎣 FOGÁSNAPLÓ EGY KOPPINTÁSSAL
-• A halfaj melletti „+” gomb azonnal rögzíti a fogást: időpont, hely és az akkori időjárás magától kerül mellé.
+• A halfaj melletti „+” vagy a gyors gomb azonnal rögzíti a fogást: időpont, hely, az akkori időjárás és a folyó vízállása magától kerül mellé.
 • Utána ráérsz kitölteni: méret, súly, csali, hely a térképen, megjegyzés.
 • Több fotó és rövid videó minden fogáshoz.
 • Elvitted vagy visszaengedted? Az app figyelmeztet, ha elérnéd a napi darabszám-korlátot.
-• Az app ikonját nyomva tartva a leggyakoribb halfajaidhoz gyorsgombot kapsz.
+
+🪝 MIVEL HORGÁSSZ MA?
+• Vedd fel a csalijaidat (akár fotóval), és az app halra, napra és napszakra összeállítja a legjobb 3-at a saját dobozodból.
+• Számol az évszakkal, a fénnyel, a víz színével és a saját fogásaiddal; vezetési tippet is ad.
 
 📅 TILALMI IDŐK ÉS MÉRETKORLÁTOK
-• Az országos szabályok (133/2013. VM rendelet) minden halfajra, a pihenőnapos eltolással együtt kiszámolva, évről évre.
+• Az országos szabályok (133/2013. VM rendelet) minden halfajra, a pihenőnapos eltolással együtt, évről évre.
 • Duna és Tisza külön szabályokkal: szigorúbb méretek, felső korlát, téli elviteli tilalom.
-• Minden halfajnál látod: fogható, hamarosan tilalom, vagy tilalom van – és meddig.
 • Értesítés a tilalom előtti estén és amikor újra fogható.
 
 🌤 HORGÁSZIDŐ MA
-• 1–5-ös értékelés a légnyomás változása, a szél, a felhőzet, a hőmérséklet és a holdfázis alapján – indoklással.
-• 7 napos előrejelzés, óránkénti sáv, eső mm-ben és esélyben, szél és lökés.
-• Napív napkeltével, napnyugtával, hajnali és esti rablási ablakkal.
-• Ahogy gyűlnek a fogásaid, a saját mintádat is figyelembe veszi: melyik légnyomás-helyzetben fogsz a legjobban.
-• Te választod a települést – az app magától soha nem kér GPS-t az időjáráshoz.
+• 1–5-ös értékelés a légnyomás változása, a szél, a felhőzet, a hőmérséklet, a holdfázis és a folyó vízállása (árad, stagnál, apad) alapján, indoklással.
+• 7 napos előrejelzés, óránkénti sáv, eső, szél, napív hajnali és esti rablási ablakkal.
+• Te választod a települést, az app magától soha nem kér GPS-t az időjáráshoz.
 
-📊 STATISZTIKA, AMIBŐL TANULSZ
-• Havonta, fajonként, napszak és holdfázis szerint: mikor, mivel és hol fogsz a legtöbbet.
-• Melyik csali és hely vált be az egyes fajoknál.
-• Rekordok trófea-sorban, térkép a fogásaidról.
+📊 MINTÁZATAID
+• Mikor, mivel és hol fogsz a legtöbbet: havonta, fajonként, napszak, légnyomás, vízállás és holdfázis szerint.
+• Melyik csali és hely vált be az egyes fajoknál, rekordok, térkép a fogásaidról.
+
+📝 HIVATALOS FOGÁSI NAPLÓ
+• Az elvitt halaid naponta, víztérkóddal, darabbal és súllyal, ahogy a fogási naplóba kell írni. Egy koppintással kimásolható.
+• Emlékeztet a február végi leadásra.
 
 📤 OSZD MEG, AMIRE BÜSZKE VAGY
-• Minden fogásból szép, megosztható kártya készül fotóval, mérettel, hellyel.
-• Év végén az éved összefoglalója: hány hal, az év hala, a legjobb hónap – sztori-méretben.
+• Minden fogásból megosztható kártya készül fotóval, mérettel, hellyel.
+• Év végén az éved összefoglalója sztori-méretben.
 
 🔒 A HELYEID A TIÉID MARADNAK
-• Nincs fiók, nincs közösségi hírfolyam, senki nem látja, hol fogtál.
-• Minden adat a telefonodon van. Biztonsági mentés egy gombnyomással (fotókkal együtt), és heti automatikus mentés a választott mappába (pl. SD-kártyára).
-• Reklám nincs.
+• Nincs saját fiók, nincs közösségi hírfolyam, senki nem látja, hol fogtál.
+• Ha bejelentkezel a Google-fiókoddal, a napló, a fotók és a videók a saját Google Drive-odra mentődnek; új telefonon minden visszajön. Az app csak a saját mappáját látja.
+• Mentés fájlba is, egy gombnyomással. Reklám nincs.
 
-Szép, nyugodt felület világos és sötét témával, ami a telefonod beállítását követi.
+Négy évszak színvilága, mindegyik világos és sötét változatban.
 
-Fontos: a helyi horgászrend szigorúbb lehet az országos szabálynál – az app ezt jelzi is. Horgászat előtt mindig nézd meg a horgászvíz saját rendjét.
+Fontos: a helyi horgászrend szigorúbb lehet az országos szabálynál, az app ezt jelzi is. Horgászat előtt mindig nézd meg a horgászvíz saját rendjét.
 
 Jó kapást!
 ```
 
 ## Képernyőkép-feliratok (sorrendben)
 
-A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-7.png` (1080×1920). A feliratok rá vannak írva a képekre.
+A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-8.png` (1080×1920). A feliratok rá vannak írva a képekre.
+Újragenerálás: `cd tests && node ../tools/aruhaz-kepek.js <munkamappa> <csalitár.json>` (bemutató adatok, a valódi app oldalából).
 
 | # | Felirat | Alcím | Mit mutat |
 |---|---|---|---|
-| 1 | Jó horgászidő ma? | Egy pillantás, és tudod. | Kezdőlap: köszöntés, horgászidő-panel, napsáv |
-| 2 | Tilalmi idők, mindig frissen | Fogható, hamarosan tilos, tilalom – fajonként. | Halfaj-kártyák állapotcímkékkel |
-| 3 | Napív, szél, eső – óránként | Hajnali és esti rablás percre pontosan. | Időjárás részletek |
-| 4 | Minden fogás egy kártyán | Fotók, méret, csali, hely, időjárás. | Fogás megtekintő |
-| 5 | Lásd, mi működik | Mikor, mivel és hol fogsz a legtöbbet. | Statisztika |
-| 6 | Az éved a vízparton | Oszd meg az év halát. | Év összefoglaló |
-| 7 | A helyeid a tiéd maradnak | Nincs fiók, nincs reklám. Minden a telefonodon. | Fogások listája |
+| 1 | Jó horgászidő ma? | Légnyomás, szél, eső és a folyó vízállása, egy pillantásra. | Horgászidő-panel, napsáv, napív, vízhozam (tavaszi színvilág) |
+| 2 | Mivel horgássz ma? | A legjobb 3 csali a saját dobozodból, halra és napszakra. | Csaliajánló csalifotókkal (nyári színvilág) |
+| 3 | Tilalmi idők, mindig frissen | Fogható, hamarosan tilos, tilalom: fajonként. | Halfaj-kártyák állapotcímkékkel |
+| 4 | Minden fogás egy kártyán | Fotók, videók, méret, csali, hely, időjárás, víz. | Fogás megtekintő |
+| 5 | Lásd, mi működik nálad | A saját mintáid: napszak, légnyomás, víz, hold. | Statisztika → Mintázataid (téli színvilág) |
+| 6 | A fogási napló kész | Az elvitt halak sorban, víztérkóddal, egy másolással. | Hivatalos fogási napló |
+| 7 | Semmi nem vész el | Fotók és videók a saját Google Drive-odra. | Google-fiókos mentés, sötét téma |
+| 8 | Az éved a vízparton | Oszd meg az év halát. | Év összefoglaló sztori-kép |
 
 ## Grafikák
 
@@ -82,7 +87,7 @@ A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-7.png` (1080×1920). 
 |---|---|---|
 | `store/kepek/ikon-512.png` | 512×512 | Alkalmazásikon |
 | `store/kepek/kiemelt-grafika.png` | 1024×500 | Kiemelt grafika |
-| `store/kepek/kepernyo-1…7.png` | 1080×1920 | Telefonos képernyőképek |
+| `store/kepek/kepernyo-1…8.png` | 1080×1920 | Telefonos képernyőképek (a Play legfeljebb 8-at enged) |
 
 ## Kategória és címkék
 
@@ -96,7 +101,7 @@ A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-7.png` (1080×1920). 
 ## Első kiadás – „Újdonságok” szöveg (max. 500 karakter)
 
 ```
-Az első kiadás! Fogásnapló egy koppintással, tilalmi idők és méretkorlátok a magyar szabályok szerint, horgászidő-értékelés 7 napos előrejelzéssel, fotók és videók a fogásokhoz, statisztika, megosztható fogáskártya és év összefoglaló. Jó kapást!
+Az első kiadás! Fogásnapló egy koppintással, tilalmi idők és méretkorlátok a magyar szabályok szerint, horgászidő a folyó vízállásával, csaliajánló a saját dobozodból, hivatalos fogási napló kimásolva, fotók és videók, mentés a saját Google Drive-odra, négy évszak színvilága. Jó kapást!
 ```
 
 ## Adatbiztonság (Data safety) – válaszok

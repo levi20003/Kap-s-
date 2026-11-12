@@ -80,7 +80,7 @@ a képernyőméretet és a telefon típusát automatikusan tartalmazza. Írd hoz
 | # | Lépés | Várt eredmény |
 |---|---|---|
 | 6.1 | Beállítások → Mentés most | Fájlválasztóval ZIP-et ment, a siker visszajelzést ad |
-| 6.2 | Beállítások → Mappa kiválasztása (pl. Google Drive vagy SD-kártya) | A kiválasztott mappa látszik az állapotsorban |
+| 6.2 | Beállítások → Mappa kiválasztása (pl. SD-kártya vagy Letöltések; a Drive itt nem választható, arra a Google-bejelentkezés való) | A kiválasztott mappa látszik az állapotsorban |
 | 6.3 | Mentés most, ha van kiválasztott mappa | Közvetlenül oda ment, fotókkal együtt |
 | 6.4 | Hagyd 7+ napig az automatikus mentést (vagy módosítsd az óra dátumát) | A mappában megjelenik a heti `fogasnaplo-ÉÉÉÉ-HH-NN.zip`; legfeljebb 4 marad |
 | 6.5 | **Visszaállítás** egy másik/tiszta telefonon vagy az app törlése után | Megerősítést kér, majd a fogások és fotók visszajönnek, a meglévőt nem írja felül |

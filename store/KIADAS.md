@@ -90,7 +90,7 @@ ráfrissülni a telefonodon lévő Kapásra (csak törlés után telepíthető, 
 - Kormányzati / pénzügyi / egészségügyi app: nem
 
 **Fő áruházi adatlap**: név, rövid és teljes leírás a `play-aruhaz.md`-ből; ikon `kepek/ikon-512.png`, kiemelt grafika
-`kepek/kiemelt-grafika.png`, telefonos képernyőképek `kepek/kepernyo-1…7.png`. Kategória: Sport.
+`kepek/kiemelt-grafika.png`, telefonos képernyőképek `kepek/kepernyo-1…8.png`. Kategória: Sport.
 
 ## 5. Zárt tesztelés (új személyes fiókoknál kötelező)
 
