@@ -10,7 +10,13 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 - [ ] **Videó:** egy rövid videós fogás wifin felmegy (a Drive-on `….mp4`).
 - [ ] **Visszaállítás próbája:** második telefon (vagy az app törlése, újratelepítés), bejelentkezés ugyanazzal a fiókkal → rákérdez → minden fogás, fotó és videó visszajön.
 - [ ] **Visszajelzés gomb:** Beállítások → Az appról → Visszajelzés küldése: a levél végén „Hibák: nincs” (vagy a hibák listája).
-- [ ] **A teljes lista:** `store/TELEFONOS-TESZT.md`, legalább az 1–6. és a 10a. szakasz.
+- [ ] **Új ikon:** a kezdőképernyőn a Tisza-kanyar (nap + folyó); ha a régi látszik, indítsd újra a telefont. Téma-ikon: Beállítások → Háttérkép és stílus → Témájú ikonok.
+- [ ] **Horgászat-mód:** Kezdőlap → Horgászat indítása → az értesítési sávban futó stopper; zárolt képernyőn „+ Balin”; „Befejezés” → összefoglaló.
+- [ ] **Widget:** kezdőképernyő hosszan nyomva → Modulok → Kapás – horgászidő; „+ hal” és „Horgászat” gomb.
+- [ ] **Okos értesítés:** Beállítások → Értesítések → Jó horgászidő bekapcsolása; a „Következő:” sor mutatja, mikor szól.
+- [ ] **Húzás, rezgés, konfetti:** Fogások listán elhúzni egy elemet; egy rekordnál nagyobb hossz mentése.
+- [ ] **Helyeim / Ma neked:** Térkép fül teteje és Kezdőlap (kell 2+ fogás ugyanazon a néven mentett helyen).
+- [ ] **A teljes lista:** `store/TELEFONOS-TESZT.md`, legalább az 1–6. és a 10a–10d. szakasz.
 
 ## B. A kiadás feltételei (csak te tudod)
 
