@@ -189,6 +189,27 @@
   .restore-offer { @apply mt-3; }
   .restore-offer .btn-ghost { @apply mt-2; }
 
+  /* Érzés: húzás a fogáslistán, konfetti, vázas töltés */
+  .swipe { @apply relative overflow-hidden rounded-2xl; }
+  .swipe .citem { @apply relative w-full; touch-action: pan-y; transition: transform .22s cubic-bezier(.2,.8,.2,1); }
+  .swipe-under { @apply absolute inset-0 flex items-center justify-between rounded-2xl px-5 text-sm font-bold opacity-0; }
+  .swipe.to-right .swipe-under, .swipe.to-left .swipe-under { @apply opacity-100; }
+  .swipe.to-right .swipe-under { background: var(--water); color: var(--on-water); }
+  .swipe.to-left .swipe-under { background: var(--danger); color: var(--on-danger); }
+  .swipe.to-right .sw-del, .swipe.to-left .sw-edit { visibility: hidden; }
+  .swipe.armed .swipe-under span { transform: scale(1.12); }
+  .swipe-under span { transition: transform .15s; }
+  .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 3000; }
+  .today.skel { @apply flex flex-col gap-3; }
+  .sk-wrap { @apply flex flex-col gap-2.5; }
+  .sk { @apply block rounded-xl; background: linear-gradient(90deg, var(--bg-2) 0%, var(--line) 50%, var(--bg-2) 100%); background-size: 200% 100%; animation: skel 1.3s ease-in-out infinite; }
+  .sk-a { @apply h-24 w-full rounded-2xl; }
+  .sk-b { @apply h-14 w-full; }
+  .sk-c { @apply h-4 w-2/3; }
+  .sk-d { @apply h-4 w-1/2; }
+  @keyframes skel { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } .swipe .citem { transition: none; } }
+
   /* Értesítések: jó horgászidő kapcsoló */
   .autobk.smart { @apply mb-3 flex-col items-stretch; }
   .smart-head { @apply flex items-start gap-3; }

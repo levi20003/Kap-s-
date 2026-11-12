@@ -819,6 +819,57 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok((await q2.locator('#importAsk').innerText()).includes('1 horgászat'), 'horgászat: a visszaállítás a befejezett horgászatot hozza, a futót nem');
     await c2.close();
   }
+  // feel: haptics, record celebration, swipe on the catch list, skeleton while the forecast loads
+  {
+    const mk = async opts => { const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, ...opts }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      const Y = new Date().getFullYear();
+      await q.addInitScript(Y => { if (!sessionStorage.getItem('s')) { sessionStorage.setItem('s', 1); localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+        catches: [{ id: 'a', sp: 's1', at: new Date(Y, 4, 2, 9).toISOString(), y: Y, l: 40 }, { id: 'b', sp: 's1', at: new Date(Y, 4, 3, 9).toISOString(), y: Y, l: 45 }] })); }
+        window.__h = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, haptic(k) { window.__h.push(k); } }; }, Y);
+      await q.route('https://**', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
+    let { ctx, q } = await mk({});
+    await q.locator('#list .row .plus').first().click(); await q.waitForTimeout(150);
+    ok((await q.evaluate(() => window.__h)).join() === 'confirm', 'rezgés: gyors fogásnál egy rövid jelzés');
+    await q.locator('#edL').fill('52');
+    await q.locator('#sheet .btn-main', { hasText: 'Mentés' }).click(); await q.waitForTimeout(250);
+    const rec = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).catches.find(c => c.l === 52));
+    ok(rec && (await q.evaluate(() => window.__h)).includes('success') && (await q.locator('#toast').innerText()).includes('Új rekord! Balin, 52 cm') && await q.locator('canvas.confetti').count() === 0,
+      'ünneplés: rekordnál dupla rezgés és „Új rekord!”; csökkentett mozgásnál konfetti nélkül');
+    // swipe: left deletes (with undo), a short drag does nothing, right opens the editor
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.waitForTimeout(150);
+    const drag = async (sel, dx) => { const bx = await q.locator(sel).boundingBox(); const y = bx.y + bx.height / 2, x = bx.x + bx.width / 2;
+      await q.mouse.move(x, y); await q.mouse.down(); for (let i = 1; i <= 6; i++) await q.mouse.move(x + dx * i / 6, y + 1); await q.mouse.up(); await q.waitForTimeout(150); };
+    const count = () => q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')).catches.length);
+    const n0 = await count();
+    await drag('#catchList .swipe >> nth=0', -40);
+    ok(await count() === n0 && await q.locator('#sheetWrap').isHidden(), 'húzás: rövid húzás nem csinál semmit (és nem nyit)');
+    await drag('#catchList .swipe >> nth=0', -130);
+    ok(await count() === n0 - 1 && (await q.locator('#toast').innerText()).includes('törölve') && (await q.evaluate(() => window.__h)).includes('reject'), 'húzás: balra húzva törlés, visszavonással és rezgéssel');
+    await q.locator('#toast button').click(); await q.waitForTimeout(150);
+    ok(await count() === n0, 'húzás: a törlés visszavonható');
+    await drag('#catchList .swipe >> nth=0', 130);
+    ok(await q.locator('#sheetWrap').isVisible() && (await q.locator('#sheet').innerText()).includes('Mentés'), 'húzás: jobbra húzva a szerkesztő nyílik');
+    await q.evaluate(() => window.__fnBack()); await q.waitForTimeout(100);
+    await q.locator('#catchList .citem').first().click(); await q.waitForTimeout(150);
+    ok(await q.locator('#sheetWrap').isVisible(), 'húzás: a sima koppintás továbbra is a fogás kártyáját nyitja');
+    await ctx.close();
+    // with motion: the confetti canvas appears and goes away by itself
+    ({ ctx, q } = await mk({ reducedMotion: 'no-preference' }));
+    await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('#catchList .citem').first().click(); await q.waitForTimeout(150);
+    await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click(); await q.waitForTimeout(150);
+    await q.locator('#edL').fill('60');
+    await q.locator('#sheet .btn-main', { hasText: 'Mentés' }).click(); await q.waitForTimeout(200);
+    const had = await q.locator('canvas.confetti').count(); await q.waitForTimeout(1700);
+    ok(had === 1 && await q.locator('canvas.confetti').count() === 0, 'ünneplés: konfetti, ami magától eltűnik');
+    await ctx.close();
+    // skeleton while the forecast is on its way
+    const c3 = await b.newContext(); const q3 = await c3.newPage(); q3.on('pageerror', e => errs.push(e.message));
+    await q3.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [] })));
+    await q3.route('https://api.open-meteo.com/**', () => {}); await q3.route('https://flood-api.open-meteo.com/**', r => r.abort());
+    await q3.goto(PAGE); await q3.waitForTimeout(500);
+    ok(await q3.locator('#today .today.skel .sk').count() === 4 && await q3.locator('#today .today.skel').getAttribute('aria-busy') === 'true', 'töltés: az előrejelzés helyén váz, nem csak szöveg');
+    await c3.close();
+  }
   // first start: species + water, Google backup, reminders; skippable; never for an existing log
   {
     let ctx = await b.newContext({ welcome: true, viewport: { width: 360, height: 760 } }); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

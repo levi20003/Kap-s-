@@ -1455,6 +1455,22 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return false; }
         }
 
+        /** A short vibration in the phone's own style (no permission; follows the system's touch-feedback setting).
+            kind: tap | confirm | reject | success (two quick confirms). */
+        @JavascriptInterface
+        public void haptic(String kind) {
+            runOnUiThread(() -> {
+                View v = root != null ? root : web;
+                if (v == null) return;
+                int confirm = Build.VERSION.SDK_INT >= 30 ? android.view.HapticFeedbackConstants.CONFIRM : android.view.HapticFeedbackConstants.VIRTUAL_KEY;
+                int reject = Build.VERSION.SDK_INT >= 30 ? android.view.HapticFeedbackConstants.REJECT : android.view.HapticFeedbackConstants.LONG_PRESS;
+                if ("tap".equals(kind)) v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+                else if ("reject".equals(kind)) v.performHapticFeedback(reject);
+                else if ("success".equals(kind)) { v.performHapticFeedback(confirm); v.postDelayed(() -> v.performHapticFeedback(confirm), 140); }
+                else v.performHapticFeedback(confirm);
+            });
+        }
+
         /** The home-screen widget's data (see KapasWidget); redraws every widget. */
         @JavascriptInterface
         public void setWidget(String json) { KapasWidget.push(MainActivity.this, json == null ? "{}" : json); }

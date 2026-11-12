@@ -106,6 +106,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   szöveg: a napnyugta órájának pozitív okai (`scoreToday`), esti rablás, a csalitár legjobb csalija (`rankLures`, nyitott halra). `streakEvents`:
   vasárnap 17:00, ha a heti sorozat élne, de a héten még nem volt fogás vagy horgászat. A tilalmi emlékeztetőkkel együtt megy a `setReminders`-be.
   A heti sorozat (`gameState`) a horgászatokat is számolja (fogás nélkül is).
+- **Érzés**: `buzz(kind)` → `ANDROID.haptic` (`performHapticFeedback`, engedély nélkül; tap/confirm/reject/success) gyors fogásnál, mentésnél,
+  törlésnél, horgászat indításánál/befejezésénél. `celebrate(msg)`: konfetti-vászon (`canvas.confetti`, 1,4 mp, az évszak színeivel) + dupla rezgés,
+  ha a mentés megdönti a faj rekordját (`saveEditor`: előtte számolt `prevBest`), és szintlépésnél / új jelvénynél (`checkGame`);
+  csökkentett mozgásnál csak üzenet. Fogáslista: `swipeable` (jobbra szerkesztés, balra törlés visszavonással, 84 px küszöb, a koppintás megmarad).
+  Időjárás töltés közben vázzal (`.today.skel`).
 - **Hibanapló** (`fogasnaplo.errlog`, legfeljebb 20, ismétlődés ×n-nel): a `<head>` első szkriptje gyűjti (`error`, `unhandledrejection`,
   `window.__fnLogError`), így a fő szkript szintaxishibáját is; a natív összeomlást (`installCrashHook`) és a WebView-renderer leállását a
   `no_backup/crash.txt` őrzi, a következő induláskor `ANDROID.takeCrashes()` veszi át. Csak a visszajelző levélbe kerül (`errLogText`).

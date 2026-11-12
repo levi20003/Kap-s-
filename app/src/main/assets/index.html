@@ -1038,7 +1038,25 @@ button{transition:transform .15s}
   // a deleted catch can be brought back for a few seconds; its photo is only removed after that
   let undoDel=null;
   function finishDelete(){if(!undoDel)return;clearTimeout(undoDel.timer);dropPhoto(undoDel.c);undoDel=null}
-  function deleteWithUndo(id,msg){
+  /* ---------- feel: haptics and celebrations ---------- */
+  function buzz(kind){if(ANDROID&&ANDROID.haptic)try{ANDROID.haptic(kind||"confirm")}catch(e){}}
+  const reducedMotion=()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){return false}};
+  // a record, a level, a badge: a short confetti burst in the season's colours (only a message when motion is reduced)
+  function celebrate(msg){
+    buzz("success");setTimeout(()=>toast(msg),60);
+    if(reducedMotion())return;
+    const cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,W=innerWidth,H=innerHeight;
+    cv.className="confetti";cv.width=W*dpr;cv.height=H*dpr;cv.setAttribute("aria-hidden","true");document.body.append(cv);
+    const g=cv.getContext("2d");g.scale(dpr,dpr);const css=getComputedStyle(document.documentElement);
+    const cols=["--accent","--water","--hero-sun","--warn","--hero-a"].map(v=>css.getPropertyValue(v).trim()).filter(Boolean);
+    const P=Array.from({length:90},(_,i)=>({x:W/2+(Math.random()-.5)*60,y:H*.38,vx:(Math.random()-.5)*9,vy:-6-Math.random()*8,s:5+Math.random()*6,
+      r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length]||"#ff8350"}));
+    const t0=performance.now();
+    (function frame(t){const k=(t-t0)/1400;g.clearRect(0,0,W,H);
+      P.forEach(p=>{p.vy+=.32;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;g.save();g.globalAlpha=Math.max(0,1-k);g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);g.restore()});
+      if(k<1)requestAnimationFrame(frame);else cv.remove()})(t0);
+  }
+  function deleteWithUndo(id,msg){buzz("reject");
     finishDelete();const c=store.deleteCatch(id,true);if(!c)return;
     undoDel={c,timer:setTimeout(finishDelete,6500)};
     toast(msg,{label:"Visszavonás",fn:()=>{if(!undoDel||undoDel.c!==c)return;clearTimeout(undoDel.timer);undoDel=null;store.restoreCatch(c);toast("Visszaállítva")}});
@@ -1267,8 +1285,23 @@ button{transition:transform .15s}
       if(c.l||c.w){side.append(el("span","csize",c.l?c.l+" cm":kg(c.w)));if(c.l&&c.w)side.append(el("span","cfate",kg(c.w)))}
       if(c.kept===true)side.append(el("span","cfate kept","elvitt"));else if(c.kept===false)side.append(el("span","cfate","elengedve"));
       if(!side.children.length)side.append(el("span","chev","›"));
-      it.append(th,mid,side);box.append(it);
+      it.append(th,mid,side);
+      // swipe: right = edit, left = delete (6 s undo); the card keeps its tap
+      const sw=el("div","swipe"),under=el("div","swipe-under");under.append(el("span","sw-edit","Szerkesztés"),el("span","sw-del","Törlés"));
+      sw.append(under,it);box.append(sw);swipeable(it,sw,{right:()=>openEditor({mode:"edit",id:c.id}),left:()=>deleteWithUndo(c.id,spName(c.sp)+": fogás törölve")});
     });
+  }
+  function swipeable(card,wrap,act){
+    let x0=null,y0=0,dx=0,lock=null,id=null;const TH=84;
+    const set=v=>{card.style.transform=v?"translateX("+v+"px)":"";wrap.classList.toggle("to-right",v>0);wrap.classList.toggle("to-left",v<0);wrap.classList.toggle("armed",Math.abs(v)>=TH)};
+    card.addEventListener("pointerdown",e=>{if(e.button!==0)return;x0=e.clientX;y0=e.clientY;dx=0;lock=null;id=e.pointerId;card.style.transition="none"});
+    card.addEventListener("pointermove",e=>{if(x0==null||e.pointerId!==id)return;const mx=e.clientX-x0,my=e.clientY-y0;
+      if(lock==null&&(Math.abs(mx)>8||Math.abs(my)>8)){lock=Math.abs(mx)>Math.abs(my)?"x":"y";if(lock==="x")try{card.setPointerCapture(id)}catch(_){}}
+      if(lock!=="x")return;dx=Math.max(-140,Math.min(140,mx));const was=wrap.classList.contains("armed");set(dx);if(!was&&Math.abs(dx)>=TH)buzz("tap")});
+    const end=()=>{if(x0==null)return;const d=dx,l=lock;x0=null;card.style.transition="";set(0);
+      if(l==="x"){card.dataset.swiped="1";setTimeout(()=>delete card.dataset.swiped,0);if(d>=TH)act.right();else if(d<=-TH)act.left()}};
+    card.addEventListener("pointerup",end);card.addEventListener("pointercancel",()=>{x0=null;card.style.transition="";set(0)});
+    card.addEventListener("click",e=>{if(card.dataset.swiped){e.stopImmediatePropagation();e.preventDefault()}},true);
   }
 
   /* ---------- statistics tab ---------- */
@@ -1495,7 +1528,7 @@ button{transition:transform .15s}
     if(view){btn("btn-main","Mentés",()=>{store.updateTrip(t.id,{note:S.note.trim()||undefined});closeTripSheet()});
       btn("no","Horgászat törlése",()=>{if(confirm("Törlöd ezt a horgászatot? A fogásaid megmaradnak.")){store.deleteTrip(t.id);closeTripSheet()}});
       btn("btn-ghost","Bezárás",closeTripSheet)}
-    else{btn("btn-main","Befejezés és mentés",()=>{store.updateTrip(t.id,{end:endAt.toISOString(),...(S.note.trim()?{note:S.note.trim()}:{})});closeTripSheet();
+    else{btn("btn-main","Befejezés és mentés",()=>{store.updateTrip(t.id,{end:endAt.toISOString(),...(S.note.trim()?{note:S.note.trim()}:{})});closeTripSheet();buzz("success");
         toast(cs.length?"Horgászat mentve: "+cs.length+" fogás":"Horgászat mentve. Legközelebb jobb lesz!")});
       btn("btn-ghost","Folytatom",closeTripSheet)}
     box.append(act);
@@ -1509,7 +1542,7 @@ button{transition:transform .15s}
   function startTrip(){
     const S=tripSheet;if(!S)return;
     const id=store.startTrip({start:new Date().toISOString(),...(S.place?{place:S.place}:{}),...(S.sp.length?{sp:S.sp}:{})});
-    const gps=S.gps;closeTripSheet();toast("Jó horgászatot!");
+    const gps=S.gps;closeTripSheet();buzz("confirm");toast("Jó horgászatot!");
     if(ANDROID&&ANDROID.canNotify&&!ANDROID.canNotify()&&ANDROID.askNotifyPermission)try{ANDROID.askNotifyPermission()}catch(e){}
     const withWx=()=>{const t=tripList().find(x=>x.id===id);if(!t)return;
       fetchWx({at:t.start,t:true,...(t.place?{place:t.place}:{})}).then(w=>{if(w)store.updateTrip(id,{wx:w})}).catch(()=>{})};
@@ -1753,6 +1786,7 @@ button{transition:transform .15s}
   /* ---------- actions ---------- */
   let bumpId=null;
   function quickCatch(sp,lure){
+    buzz("confirm");
     const y=state.year,now=new Date();
     const at=y===NOW_Y?now:new Date(y,11,31,12);
     bumpId=sp;
@@ -1943,6 +1977,9 @@ button{transition:transform .15s}
   }
   function saveEditor(){
     const d=ed.draft;const {id,...rest}=d;
+    // the species' best so far (without this catch): beating it is a record worth celebrating
+    let prevBest=null;state.catches.forEach(c=>{if(c.sp===d.sp&&c.id!==ed.id&&(c.w||c.l)&&better(c,prevBest))prevBest=c});
+    const isRecord=!!(prevBest&&(d.w||d.l)&&better(d,prevBest));
     let sid;
     if(ed.mode==="edit"){
       const old=state.catches.find(c=>c.id===ed.id);
@@ -1951,7 +1988,8 @@ button{transition:transform .15s}
     }else sid=store.addCatch(rest);
     setTimeout(()=>ensureWx(sid),0);
     if(d.y!==state.year&&ed.mode!=="edit")state.year=d.y;
-    ed.added=[];toast("Mentve");closeEditor();
+    ed.added=[];closeEditor();
+    if(isRecord)celebrate("Új rekord! "+spName(d.sp)+", "+(d.w&&prevBest.w?kg(d.w):d.l?d.l+" cm":kg(d.w)));else{buzz("confirm");toast("Mentve")}
   }
 
   /* ---------- photo ---------- */
@@ -2374,7 +2412,8 @@ button{transition:transform .15s}
     const seen=new Set(prev.badges||[]),msg=["+"+(cur.xp-prev.xp)+" XP"];
     if(cur.level>prev.level)msg.push("Szintlépés: "+G.name+"!");
     G.badges.filter(b=>b.tier&&!seen.has(b.id+":"+b.tier)).forEach(b=>msg.push("Új jelvény: "+b.name+" ("+TIER_NAMES[b.tier-1].toLowerCase()+")"));
-    clearTimeout(checkGame._t);checkGame._t=setTimeout(()=>{const t=$("toast");if(!t.hidden&&t.querySelector("button"))return;toast(msg.join(" · "))},900);
+    const big=cur.level>prev.level||msg.length>1;
+    clearTimeout(checkGame._t);checkGame._t=setTimeout(()=>{const t=$("toast");if(!t.hidden&&t.querySelector("button"))return;if(big)celebrate(msg.join(" · "));else toast(msg.join(" · "))},900);
   }
 
   /* ---------- map picker ---------- */
@@ -2853,7 +2892,9 @@ button{transition:transform .15s}
     if(wxPick)box.append(placePickerEl());
     const T=today.data;
     const fresh=T&&Math.abs(T.lat-loc.lat)<0.05&&Math.abs(T.lng-loc.lng)<0.05;
-    if(!T||!fresh){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
+    if(!T||!fresh){const e=el("div","today"+(today.loading?" skel":""));
+      if(today.loading){e.setAttribute("aria-busy","true");const k=el("div","sk-wrap");["sk-a","sk-b","sk-c","sk-d"].forEach(c=>k.append(el("i","sk "+c)));e.append(k)}
+      e.append(el("div","sub",today.loading?"Előrejelzés betöltése…":(today.err||"")));box.append(e);return}
     const H=T.h,D=T.d,now=new Date(),key=ymd(now)+"T"+pad(now.getHours())+":00";let i=H.time.indexOf(key);
     if(i<0){const e=el("div","today");e.append(el("div","sub",today.loading?"Előrejelzés frissítése…":"Az előrejelzés elavult, internetkapcsolatnál frissítem."));box.append(e);return}
     const sc=scoreToday(H,i,now);pushWidget();pushReminders();
