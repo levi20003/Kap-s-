@@ -17,7 +17,7 @@ on:
 
 jobs:
   bundle:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to Ubuntu 26, the build was tested on 24.04
     env:
       VC: ${{ inputs.versionCode }}
       VN: ${{ inputs.versionName }}
@@ -26,8 +26,8 @@ jobs:
         run: |
           [[ "$VC" =~ ^[0-9]+$ ]] || { echo "A versionCode csak szám lehet."; exit 1; }
           [[ "$VN" =~ ^[0-9A-Za-z.\-]+$ ]] || { echo "A versionName csak számot, betűt, pontot és kötőjelet tartalmazhat."; exit 1; }
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -61,7 +61,7 @@ jobs:
       - name: Remove the key
         if: always()
         run: rm -f fogasnaplo.keystore keystore-jelszo.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Kapas-${{ inputs.versionName }}-play
           path: |

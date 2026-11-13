@@ -15,8 +15,8 @@ jobs:
       run:
         working-directory: tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm ci
@@ -24,12 +24,12 @@ jobs:
       - run: npm test
 
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to Ubuntu 26, the build was tested on 24.04
     permissions:
       contents: write # publish the test build to the "teszt" release
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -45,7 +45,7 @@ jobs:
         run: |
           if [ -n "$SEED" ]; then echo "set=1" >> "$GITHUB_OUTPUT"
           else echo "::warning::FOGASNAPLO_TESZT_SEED secret missing - the test key lives in the Actions cache and is lost after 7 idle days (store/KIADAS.md)"; fi
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: steps.seed.outputs.set != '1'
         with:
           path: ci-key
@@ -89,7 +89,7 @@ jobs:
           echo "signing cert: $(cat out/cert.txt)"; test -s out/cert.txt
           # for the Google sign-in OAuth client (Google Cloud → Credentials → Android, package hu.fogasnaplo.app.teszt)
           echo "::notice title=Tesztapp SHA-1 - Google Cloud OAuth-kliens - hu.fogasnaplo.app.teszt::$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs out/Fogasnaplo-TESZT.apk | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | sed 's/../&:/g;s/:$//' | tr a-f A-F)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Fogasnaplo-TESZT-telefonra
           path: out/Fogasnaplo-TESZT.apk
