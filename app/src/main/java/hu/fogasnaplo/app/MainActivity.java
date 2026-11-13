@@ -1070,7 +1070,7 @@ public class MainActivity extends Activity {
                 if (!uris.isEmpty()) processMedia(uris);
             }
         } else if (req == REQ_GAUTH) {
-            if (res != RESULT_OK) { try { js("__fnDrive", new JSONObject().put("state", "out")); } catch (Exception ignored) {} return; }
+            if (res != RESULT_OK) { try { js("__fnDrive", new JSONObject().put("state", keepPrevAccount() ? "needsLogin" : "out")); } catch (Exception ignored) {} return; }
             try {
                 signedIn(com.google.android.gms.auth.api.identity.Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data).getAccessToken());
             } catch (Exception e) { driveFail(e); }
@@ -1105,6 +1105,8 @@ public class MainActivity extends Activity {
     private final Object driveLock = new Object();
     private volatile boolean driveBusy, driveAgain, driveVideosOnMobile;
     private String lastToken;
+    private final Object driveRun = new Object(); // a sync and a restore never run at the same time
+    private String prevEmail; // the account before "sign in again": a cancelled picker must not sign the user out
 
     private com.google.android.gms.auth.api.identity.AuthorizationRequest authRequest() {
         com.google.android.gms.auth.api.identity.AuthorizationRequest.Builder b = com.google.android.gms.auth.api.identity.AuthorizationRequest.builder()
@@ -1169,6 +1171,7 @@ public class MainActivity extends Activity {
     /** "Bejelentkezés Google-fiókkal": the account picker and the consent screen, then who it is, then a first backup. */
     private void googleSignIn() {
         if (!playServicesOk()) return;
+        prevEmail = prefs().getString("gEmail", null);
         prefs().edit().remove("gEmail").apply(); // let the user pick the account
         com.google.android.gms.auth.api.identity.Identity.getAuthorizationClient(this).authorize(authRequest())
                 .addOnSuccessListener(r -> {
@@ -1176,20 +1179,29 @@ public class MainActivity extends Activity {
                         try {
                             startIntentSenderForResult(r.getPendingIntent().getIntentSender(), REQ_GAUTH, null, 0, 0, 0);
                             awaitingResult = true;
-                        } catch (Exception e) { driveFail(e); }
+                        } catch (Exception e) { keepPrevAccount(); driveFail(e); }
                     } else signedIn(r.getAccessToken());
                 })
-                .addOnFailureListener(this::driveFail);
+                .addOnFailureListener(e -> { keepPrevAccount(); driveFail(e); });
+    }
+
+    /** The picker was cancelled or failed: someone who was signed in stays signed in (and is asked again later). */
+    private boolean keepPrevAccount() {
+        if (prevEmail == null || prefs().getString("gEmail", null) != null) return false;
+        prefs().edit().putString("gEmail", prevEmail).apply();
+        prevEmail = null;
+        return true;
     }
 
     private void signedIn(String token) {
         lastToken = token;
         new Thread(() -> {
             try {
-                JSONObject u = drive.about();
+                JSONObject u = drive.about(token);
                 prefs().edit().putString("gEmail", u.optString("emailAddress")).putString("gName", u.optString("displayName")).apply();
+                prevEmail = null;
                 js("__fnDrive", new JSONObject().put("state", "in").put("email", u.optString("emailAddress")).put("name", u.optString("displayName")));
-            } catch (Exception e) { driveFail(e); }
+            } catch (Exception e) { keepPrevAccount(); driveFail(e); }
         }).start();
     }
 
@@ -1200,7 +1212,7 @@ public class MainActivity extends Activity {
             try {
                 do {
                     driveAgain = false;
-                    try { drive.sync(driveVideosOnMobile); } catch (Exception e) { driveFail(e); break; }
+                    try { synchronized (driveRun) { drive.sync(driveVideosOnMobile); } } catch (Exception e) { driveFail(e); break; }
                 } while (driveAgain);
             } finally { synchronized (driveLock) { driveBusy = false; } }
         }).start();
@@ -1722,7 +1734,7 @@ public class MainActivity extends Activity {
         /** Downloads the Drive backup and hands it to the page's merge (__fnZipIn), like a ZIP restore. */
         @JavascriptInterface
         public void driveRestore() {
-            new Thread(() -> { try { drive.restore(); } catch (Exception e) { driveFail(e); } }).start();
+            new Thread(() -> { try { synchronized (driveRun) { drive.restore(); } } catch (Exception e) { driveFail(e); } }).start();
         }
 
         @JavascriptInterface

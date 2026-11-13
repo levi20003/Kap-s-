@@ -255,8 +255,8 @@ final class DriveSync {
     }
 
     /** Who is signed in: Drive's about.user (works with drive.file). */
-    JSONObject about() throws Exception {
-        token = host.token(false);
+    JSONObject about(String fresh) throws Exception {
+        token = fresh != null ? fresh : host.token(false); // right after the picker: that account's token (the account is not stored yet)
         if (token == null) throw new NeedsLogin();
         JSONObject u = call("GET", API + "about?fields=user(emailAddress,displayName)", null).optJSONObject("user");
         return u != null ? u : new JSONObject();
@@ -293,8 +293,9 @@ final class DriveSync {
             boolean video = f.getName().endsWith(".mp4");
             if (video && metered && !videosOnMobile) { waiting++; continue; }
             state("syncing", new JSONObject().put("done", done).put("total", total));
-            upload(folder, r != null ? r.getString("id") : null, e.getKey(), video ? "video/mp4" : "image/jpeg",
-                    new FileInputStream(f), f.length(), null);
+            try (InputStream in = new FileInputStream(f)) { // closed even when the upload fails before reading it
+                upload(folder, r != null ? r.getString("id") : null, e.getKey(), video ? "video/mp4" : "image/jpeg", in, f.length(), null);
+            }
             done++;
             uploaded++;
         }
