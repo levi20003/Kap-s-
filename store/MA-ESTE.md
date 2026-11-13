@@ -4,9 +4,10 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 
 ## A. Telefonon (tesztapp, kb. 30 perc)
 
-- [ ] **Frissült-e:** Beállítások → Az appról → Verzió: `…-7e51aa8` vagy újabb.
+- [ ] **Frissült-e:** Beállítások → Az appról → Verzió: `…-605f81a` vagy újabb.
 - [ ] **Üdvözlő:** egy másik (üres) telefonon vagy az app adatainak törlése után: 3 lépés (halfajok + víz, Google-mentés, értesítések). Meglévő naplónál nem jön elő.
 - [ ] **Google Drive:** Beállítások → Biztonsági mentés: a neved, „Minden fent van a Drive-on (x/x fájl)”. drive.google.com → Kapás mentés mappa.
+- [ ] **Fiókválasztó bezárása:** bejelentkezve Bejelentkezés gomb → a választót Vissza gombbal bezárni → a fiók megmarad.
 - [ ] **Videó:** egy rövid videós fogás wifin felmegy (a Drive-on `….mp4`).
 - [ ] **Visszaállítás próbája:** második telefon (vagy az app törlése, újratelepítés), bejelentkezés ugyanazzal a fiókkal → rákérdez → minden fogás, fotó és videó visszajön.
 - [ ] **Visszajelzés gomb:** Beállítások → Az appról → Visszajelzés küldése: a levél végén „Hibák: nincs” (vagy a hibák listája).
@@ -47,7 +48,7 @@ Sorrendben. Ami pipát kap, az kész. A részletek a hivatkozott fájlokban vann
 ## D. A kiadás után (fejlesztés, nem sürgős)
 
 - [ ] Angol nyelvű változat (a szövegek kiemelése egy fordítótáblába, aztán az angol áruházi adatlap).
-- [ ] A CI-akciók frissítése (Node 24-es verziók, `setup-java` v5), mielőtt a GitHub kikapcsolja a régieket.
+- [x] A CI-akciók frissítése (Node 24-es verziók, `setup-java` v5, Ubuntu 24.04 rögzítve) – kész.
 - [ ] `BRIDGE_DAYS`: a 2027-es áthelyezett munkanapok, amikor a rendelet megjelenik (évente).
 - [ ] Az első visszajelzések és a Play Console összeomlás-jelentései alapján javítások.
 
