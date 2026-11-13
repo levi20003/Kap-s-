@@ -129,7 +129,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(await q.locator('#sheet .note.warn').count() === 0, 'visszaengedett halra nincs figyelmeztetés');
     await q.locator('#sheet .btn-main').click();
     const t = await q.locator('#listTitle').textContent();
-    ok(t.includes('ebből 5 elvitt') && (await q.locator('#catchList').innerText()).includes('elengedve'), 'lista: ' + t);
+    ok(t.includes('ebből 5 elvitt') && (await q.locator('#catchList').textContent()).includes('elengedve'), 'lista: ' + t);
     await ctx2.close();
   }
   // backup with photos: folder setup, weekly auto backup, zip restore
@@ -296,6 +296,9 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
 
     await q.locator('.tabbar button[data-tab="map"]').click(); await q.waitForTimeout(800);
     ok(await q.locator('#bigMap .pin.gps').count() === 1 && (await q.locator('#mapHint').innerText()).includes('GPS'), 'térkép: GPS-es fogás kék jelölővel látszik');
+    await q.route('https://tile.openstreetmap.org/**', r => r.abort()); await q.evaluate(() => window.dispatchEvent(new Event('resize')));
+    await q.locator('#bigMap .leaflet-control-zoom-in').click(); await q.waitForTimeout(600);
+    ok(await q.locator('#bigMap .map-offline').isVisible(), 'térkép internet nélkül: jelzi, miért üres a háttér');
 
     await q.locator('.tabbar button[data-tab="list"]').click(); await q.locator('.citem').first().click(); await q.waitForTimeout(150);
     await q.locator('#sheet .btn-main', { hasText: 'Szerkesztés' }).click();
@@ -381,7 +384,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const sh = await q.evaluate(() => window.__m.share);
     ok(sh && sh.u.startsWith('data:image/jpeg') && sh.u.length > 5000 && sh.t.includes('Csuka') && sh.t.includes('62 cm'), 'megosztás: fogáskártya kép + szöveg');
     ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#sheetWrap').isHidden(), 'vissza gomb: bezárja a kártyát');
-    ok((await q.locator('.citem .mcount').innerText()) === '2', 'listában: a bélyegképen a darabszám');
+    ok((await q.locator('.citem .mcount').textContent()) === '2', 'listában: a bélyegképen a darabszám');
     await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
     const yc = await q.locator('#yearCard').innerText();
     ok(await q.locator('#yearCard').isVisible() && yc.includes('Az idei éved') && yc.includes('Csuka, 62 cm'), 'statisztika: év összefoglaló kártya (rekorddal)');
@@ -422,7 +425,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Csuka' }], catches }));
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
     }, { catches });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(400);
     await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(200);
     const sp = await q.locator('#speciesList').innerText();
@@ -454,7 +457,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches })); }
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
     }, { catches });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(1300);
     ok(await q.locator('#toast').isHidden(), 'kihívások: első indításkor nincs XP-értesítés (a meglévő fogások csendben számítanak)');
     ok(await q.evaluate(() => !!JSON.parse(localStorage.getItem('fogasnaplo.kihivasok')).xp), 'kihívások: a már bejelentett állás külön kulcsban, a napló nem változik');
@@ -484,7 +487,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {}, appVersion() { return '1.8-abc1234 (1042)'; }, isTestBuild() { return true; },
         sendFeedback(to, subject, body) { window.__fb = { to, subject, body }; } };
     });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(200);
     ok(await q.locator('#feedbackBtn').isVisible(), 'visszajelzés: a gomb látszik a Beállításokban');
@@ -505,7 +508,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, takeCrashes() { const c = window.__crash; window.__crash = ''; return c; },
         sendFeedback(to, subject, body) { window.__fb = body; } };
     });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#feedbackBtn').click(); await q.waitForTimeout(100);
     let fb = await q.evaluate(() => window.__fb);
@@ -539,7 +542,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       localStorage.setItem('fogasnaplo.terv', JSON.stringify({ sp: ['s1', 's2'], day: 0, parts: ['alkony', 'ejjel'] }));
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, pickPhoto() {} };
     }, { lures, Y });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(400);
     ok(await q.locator('#plan .plan-res').count() === 2 && await q.locator('#plan .plan-res').first().innerText().then(t => t.includes('Balin')), 'csaliajánló: a kiválasztott két halra külön lista');
     const sullo = q.locator('#plan .plan-res', { hasText: 'Süllő' });
@@ -589,7 +592,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         saveThumb(d) { window.__lp.saved++; return 'file:///data/thumbs/imp' + window.__lp.saved + '.jpg'; },
         pickPhoto() { setTimeout(() => window.__fnPhoto({ src: 'file:///data/photos/lure1.jpg', thumb: 'file:///data/thumbs/lure1.jpg' })); } };
     }, { PX });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
     await q.locator('#lureBoxList .lthumb-btn').first().click();
@@ -618,7 +621,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       q.on('pageerror', e => errs.push(e.message)); if (init.clock) await q.clock.setFixedTime(new Date(init.clock));
       await q.addInitScript(i => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [] }));
         if (i.season) localStorage.setItem('fogasnaplo.season', i.season); if (i.theme) localStorage.setItem('fogasnaplo.theme', i.theme); }, init);
-      await q.route('https://**', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
+      await q.route('https://**/*', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
     const bgOf = q => q.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
     let { ctx, q } = await open({}, { clock: '2026-01-15T12:00:00' });
     ok(await q.evaluate(() => document.documentElement.dataset.season) === 'tel', 'évszak: januárban magától tél');
@@ -749,7 +752,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         lures: [{ id: 'l1', name: 'Spintail', type: 'spintail', photo: { src: 'file:///data/files/photos/lure.jpg', thumb: '' } }] }));
       window.__bk = null; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
         syncBackupPhotos(j) { window.__bk = JSON.parse(j); setTimeout(() => window.__fnBkPhotos({ n: 3, total: 4, bytes: 3.2 * 1048576 })); } }; }, cs);
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForFunction(() => window.__bk, null, { timeout: 8000 }).catch(() => {});
     const list = await q.evaluate(() => window.__bk);
     ok(JSON.stringify(list) === JSON.stringify([f('new1.jpg'), f('new2.jpg'), f('old.jpg'), 'file:///data/files/photos/lure.jpg']),
@@ -768,7 +771,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         catches: [{ id: 'old', sp: 's1', at: new Date(Y, 0, 3, 9).toISOString(), y: Y, place: { name: 'Bertalan híd', lat: 46.25, lng: 20.15 } }] })); }, Y);
     await q.addInitScript(() => { window.__t = { notif: [], asked: 0 }; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
       setTripNotification(j) { window.__t.notif.push(j); }, canNotify() { return false; }, askNotifyPermission() { window.__t.asked++; } }; });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     ok((await q.locator('#tripSec .trip-start').innerText()).includes('Horgászat indítása'), 'horgászat: a Kezdőlapon indító sor');
     await q.locator('#tripSec .trip-start').click(); await q.waitForTimeout(100);
@@ -809,7 +812,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await ctx.close();
     // a backup brings finished trips back (and never a running one)
     const c2 = await b.newContext(); const q2 = await c2.newPage(); q2.on('pageerror', e => errs.push(e.message));
-    await q2.route('https://**', r => r.abort());
+    await q2.route('https://**/*', r => r.abort());
     await q2.goto(PAGE); await q2.waitForTimeout(200);
     const f = path.join(TMP, 'trips.json');
     fs.writeFileSync(f, JSON.stringify({ app: 'fogasnaplo', version: 2, species: [{ id: 's1', name: 'Balin' }], catches: [], trips: [
@@ -826,7 +829,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       await q.addInitScript(Y => { if (!sessionStorage.getItem('s')) { sessionStorage.setItem('s', 1); localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
         catches: [{ id: 'a', sp: 's1', at: new Date(Y, 4, 2, 9).toISOString(), y: Y, l: 40 }, { id: 'b', sp: 's1', at: new Date(Y, 4, 3, 9).toISOString(), y: Y, l: 45 }] })); }
         window.__h = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, haptic(k) { window.__h.push(k); } }; }, Y);
-      await q.route('https://**', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
+      await q.route('https://**/*', r => r.abort()); await q.goto(PAGE); await q.waitForTimeout(250); return { ctx, q }; };
     let { ctx, q } = await mk({});
     await q.locator('#list .row .plus').first().click(); await q.waitForTimeout(150);
     ok((await q.evaluate(() => window.__h)).join() === 'confirm', 'rezgés: gyors fogásnál egy rövid jelzés');
@@ -877,7 +880,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
         catches: [{ id: 'a', sp: 's1', at: '2026-05-01T10:00:00.000Z', y: 2026, lure: 'Spintail' }, { id: 'b', sp: 's1', at: '2026-05-02T10:00:00.000Z', y: 2026, lure: 'spintail' }],
         lures: [{ id: 'l1', name: 'Spintail', type: 'spintail', color: 'ezust', size: 5 }, { id: 'l2', name: 'Popper', type: 'popper' }] })); });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(250);
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
     await q.locator('#lureBoxList .lure-edit-btn').first().click(); await q.waitForTimeout(100);
@@ -901,7 +904,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.addInitScript(() => { window.__w = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders() {},
       googleAccount() { return '{}'; }, googleSignIn() { window.__w.push('google'); setTimeout(() => window.__fnDrive({ state: 'out' })); },
       enableNotifications() { window.__w.push('notify'); setTimeout(() => window.__fnNotify({})); } }; });
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     ok(await q.locator('#welcomeWrap').isVisible() && (await q.locator('#welcome h3').innerText()) === 'Üdv a Kapásban!' && await q.locator('#welcome .w-dots i').count() === 3,
       'üdvözlő: új naplónál megjelenik, 3 lépés');
@@ -925,12 +928,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     // an existing log never sees it; the back button skips a step
     ctx = await b.newContext({ welcome: true }); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
     await q.addInitScript(() => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Csuka' }], catches: [] })));
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     ok(await q.locator('#welcomeWrap').isHidden(), 'üdvözlő: meglévő naplónál nem jelenik meg');
     await ctx.close();
     ctx = await b.newContext({ welcome: true }); q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     ok(await q.locator('#welcome .w-dots i').count() === 1, 'üdvözlő: böngészőben (Google és értesítés nélkül) csak az első lépés');
     ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#welcomeWrap').isHidden(), 'üdvözlő: a Vissza gomb továbblép / bezár');
@@ -953,7 +956,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     // a new phone: empty log -> the Kezdőlap offers Google; signing in restores straight away (the merge still asks)
     let ctx = await b.newContext(); let q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message)); q.on('dialog', d => d.accept());
     await q.addInitScript(mkBridge());
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     const offer = q.locator('.restore-offer .btn-main');
     ok(await offer.isVisible() && (await offer.innerText()) === 'Bejelentkezés Google-fiókkal', 'Google: üres naplónál a Kezdőlap Google-bejelentkezést kínál');
@@ -977,7 +980,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.addInitScript(() => { sessionStorage.setItem('acct', JSON.stringify({ email: 'h@example.com' }));
       localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [{ id: 'x', sp: 's1', at: new Date().toISOString(), y: 2026 }] })); });
     await q.addInitScript(mkBridge());
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.evaluate(() => window.__fnDrive({ state: 'remote', catches: 16, newer: true }));
     await q.locator('.tabbar button[data-tab="more"]').click(); await q.waitForTimeout(100);
@@ -1018,7 +1021,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
           catches: [{ id: 'x', sp: 's2', at: new Date(Date.now() - 864e5 * 3).toISOString(), y: new Date().getFullYear() }] }));
         localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
         window.__wg = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setWidget(j) { window.__wg.push(j); } }; }, { H, D });
-      await q.route('https://**', r => r.abort());
+      await q.route('https://**/*', r => r.abort());
       await q.goto(PAGE); await q.waitForTimeout(400);
       let w = JSON.parse(await q.evaluate(() => window.__wg[window.__wg.length - 1]));
       const td = fmt(new Date());
@@ -1045,7 +1048,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
         localStorage.setItem('fogasnaplo.today', JSON.stringify({ fetched: Date.now(), lat: 46.253, lng: 20.148, h: H, d: D }));
         window.__rm = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders(j) { window.__rm.push(j); }, canNotify() { return true; } }; },
         { H, D, lw: lastWeek.toISOString() });
-      await q.route('https://**', r => r.abort());
+      await q.route('https://**/*', r => r.abort());
       await q.goto(PAGE); await q.waitForTimeout(300);
       ok((await q.evaluate(() => window.__rm.length ? JSON.parse(window.__rm[window.__rm.length - 1]).length : 0)) === 0, 'okos értesítés: alapból kikapcsolva, nem ütemez');
       await q.locator('.tabbar button[data-tab="more"]').click(); await q.locator('#smartBox .switch').click(); await q.waitForTimeout(150);
@@ -1078,7 +1081,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       await q.addInitScript(() => { window.__pin = []; window.__asked = 0; window.__can = false;
         window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setReminders() {}, setWidget() {},
           setPinned(on) { window.__pin.push(on); }, canNotify() { return window.__can; }, askNotifyPermission() { window.__asked++; } }; });
-      await q.route('https://**', r => r.abort());
+      await q.route('https://**/*', r => r.abort());
       await q.goto(PAGE); await q.waitForTimeout(200);
       ok((await q.evaluate(() => window.__pin)).join() === 'false', 'állandó kártya: alapból kikapcsolva, induláskor szinkronizál');
       await q.locator('.tabbar button[data-tab="more"]').click();
@@ -1177,7 +1180,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.addInitScript(cs => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }], catches: cs }));
       localStorage.setItem('fogasnaplo.notify', '1'); window.__x = { clip: null, rem: null };
       window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, copyText(l, t) { window.__x.clip = t; return true; }, setReminders(j) { window.__x.rem = j; } }; }, cs);
-    await q.route('https://**', r => r.abort());
+    await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
     await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
     const sec = q.locator('#offSec'), txt = async () => (await sec.innerText()).replace(/\s+/g, ' ');

@@ -57,7 +57,7 @@
     @apply border-emerald-900/30 bg-transparent text-zinc-200 light:border-zinc-200 light:text-zinc-700;
   }
   .pill.on {
-    @apply border-emerald-500 bg-emerald-500/20 text-emerald-300 light:text-emerald-700;
+    @apply border-emerald-500 bg-emerald-500/20 text-emerald-300 light:text-emerald-800;
   }
   .pill.species {
     @apply text-base px-5 py-2.5;
@@ -98,7 +98,7 @@
   .gm-title { font-family: var(--f-display); @apply text-2xl font-semibold leading-tight text-sand-200 light:text-olive-700; }
   .gm-xprow { @apply flex items-baseline gap-1.5; }
   .gm-num { @apply text-3xl font-extrabold leading-none text-zinc-100 light:text-zinc-900; }
-  .gm-unit { @apply text-sm font-semibold text-olive-400 light:text-olive-600; }
+  .gm-unit { @apply text-sm font-semibold text-olive-400 light:text-olive-700; }
   .gm-sub { @apply text-xs leading-snug text-zinc-400 light:text-zinc-500; }
   .gm-bar { @apply h-2 w-full overflow-hidden rounded-full bg-zinc-800 light:bg-zinc-200; }
   .gm-bar.sm { @apply h-1.5; }
@@ -120,7 +120,8 @@
     @apply border-emerald-900/30 bg-zinc-950/50 light:border-zinc-200 light:bg-zinc-50;
   }
   .gm-badge b { @apply text-sm font-semibold; }
-  .gm-badge.locked .gm-bic, .gm-badge.locked b { @apply opacity-60; }
+  .gm-badge.locked .gm-bic { @apply opacity-60; }
+  .gm-badge.locked b { @apply opacity-80; } /* the name stays readable (4.5:1) */
   .gm-bk { @apply text-xs text-zinc-400 light:text-zinc-500; }
   .gm-bic { @apply mb-1 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-zinc-500 light:bg-zinc-200 light:text-zinc-500; }
   .gm-bic svg { @apply h-5 w-5; }
@@ -212,7 +213,8 @@
   .fy-more { @apply m-0 text-xs text-zinc-400 light:text-zinc-500; }
 
   /* Érzés: húzás a fogáslistán, konfetti, vázas töltés */
-  .swipe { @apply relative overflow-hidden rounded-2xl; }
+  .map-offline { @apply absolute bottom-7 left-2 right-2 rounded-xl px-3 py-2 text-sm leading-snug; z-index: 900; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-pop); pointer-events: none; }
+  .swipe { @apply relative overflow-hidden rounded-2xl; content-visibility: auto; contain-intrinsic-size: auto 92px; } /* a long list: off-screen rows skip layout */
   .swipe .citem { @apply relative w-full; touch-action: pan-y; transition: transform .22s cubic-bezier(.2,.8,.2,1); }
   .swipe-under { @apply absolute inset-0 flex items-center justify-between rounded-2xl px-5 text-sm font-bold opacity-0; }
   .swipe.to-right .swipe-under, .swipe.to-left .swipe-under { @apply opacity-100; }

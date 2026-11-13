@@ -623,7 +623,7 @@ button{transition:transform .15s}
   <div class="autobk" id="updBar" role="status" hidden></div>
 
   <!-- ===== Kezdőlap ===== -->
-  <div id="tab-home" class="wrap" style="gap:22px">
+  <div id="tab-home" class="wrap" role="main" style="gap:22px">
     <div class="greet"><h1 id="greetT">Szép napot!</h1><p id="greetS"></p></div>
     <section class="bknudge" id="bkNudge" role="status" hidden></section>
     <section class="trip" id="tripSec" aria-live="polite" hidden></section>
@@ -677,7 +677,7 @@ button{transition:transform .15s}
   </div>
 
   <!-- ===== Fogások ===== -->
-  <div id="tab-list" class="wrap" style="gap:16px" hidden>
+  <div id="tab-list" class="wrap" role="main" style="gap:16px" hidden>
     <section>
       <div class="sechead">
         <h2><span class="ic" data-ic="list"></span><span id="listTitle">Fogások</span></h2>
@@ -691,7 +691,7 @@ button{transition:transform .15s}
   </div>
 
   <!-- ===== Statisztika ===== -->
-  <div id="tab-stats" class="wrap" style="gap:22px" hidden>
+  <div id="tab-stats" class="wrap" role="main" style="gap:22px" hidden>
     <section class="yearcard" id="yearCard" hidden></section>
     <section id="gameSec" aria-label="Kap-ás Kihívások"></section>
     <div class="kpis" id="kpis"></div>
@@ -740,7 +740,7 @@ button{transition:transform .15s}
   </div>
 
   <!-- ===== Térkép ===== -->
-  <div id="tab-map" class="wrap" style="gap:12px" hidden>
+  <div id="tab-map" class="wrap" role="main" style="gap:12px" hidden>
     <section id="spotsSec" hidden>
       <div class="sechead"><h2><span class="ic" data-ic="pin"></span>Helyeim</h2></div>
       <div class="spots" id="spots"></div>
@@ -751,7 +751,7 @@ button{transition:transform .15s}
   </div>
 
   <!-- ===== Beállítások ===== -->
-  <div id="tab-more" class="wrap" style="gap:22px" hidden>
+  <div id="tab-more" class="wrap" role="main" style="gap:22px" hidden>
     <section>
       <div class="sechead"><h2><span class="ic" data-ic="fish"></span>Halfajaim</h2></div>
       <div class="panel">
@@ -798,7 +798,7 @@ button{transition:transform .15s}
         <div class="btnrow">
           <button class="btn-main" id="saveBtn" type="button">Mentés most</button>
           <button class="btn-ghost" id="restoreBtn" type="button">Visszaállítás</button>
-          <input type="file" id="importFile" class="vh" accept="application/json,.json">
+          <input type="file" id="importFile" class="vh" accept="application/json,.json" aria-label="Mentésfájl kiválasztása">
         </div>
         <div class="confirm" id="importAsk" hidden></div>
         <p class="hint" id="backupMsg"></p>
@@ -896,11 +896,15 @@ button{transition:transform .15s}
   const state={species:[],catches:[],year:NOW_Y,tab:"home",edit:false,confirmId:null,region:"orszagos",filterSp:null,q:"",month:null};
   try{const r=localStorage.getItem("fogasnaplo.region");if(r==="orszagos"||OVERRIDES[r])state.region=r}catch(e){}
   const $=id=>document.getElementById(id);
-  const norm=s=>String(s||"").trim().toLocaleLowerCase("hu").replace(/\s+/g," ");
-  const fmtDM=d=>d.toLocaleDateString("hu-HU",{month:"short",day:"numeric"});
-  const fmtDate=iso=>new Date(iso).toLocaleDateString("hu-HU",{year:"numeric",month:"short",day:"numeric"});
-  const fmtShort=iso=>new Date(iso).toLocaleDateString("hu-HU",{month:"short",day:"numeric"});
-  const fmtTime=iso=>new Date(iso).toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"});
+  // norm and the date formats run thousands of times per screen with a long log: cached (a new Intl formatter per call is slow on a phone)
+  const normCache=new Map();
+  const norm=s=>{const k=String(s||"");let v=normCache.get(k);if(v===undefined){if(normCache.size>5000)normCache.clear();v=k.trim().toLocaleLowerCase("hu").replace(/\s+/g," ");normCache.set(k,v)}return v};
+  const DTF={dm:new Intl.DateTimeFormat("hu-HU",{month:"short",day:"numeric"}),ymd:new Intl.DateTimeFormat("hu-HU",{year:"numeric",month:"short",day:"numeric"}),
+    hm:new Intl.DateTimeFormat("hu-HU",{hour:"2-digit",minute:"2-digit"})};
+  const fmtDM=d=>DTF.dm.format(d);
+  const fmtDate=iso=>DTF.ymd.format(new Date(iso));
+  const fmtShort=iso=>DTF.dm.format(new Date(iso));
+  const fmtTime=iso=>DTF.hm.format(new Date(iso));
   const kg=w=>w.toLocaleString("hu-HU",{maximumFractionDigits:2})+" kg";
   const pad=n=>String(n).padStart(2,"0");
   const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
@@ -1516,7 +1520,16 @@ button{transition:transform .15s}
   const tripList=()=>Array.isArray(data.trips)?data.trips:[];
   const activeTrip=()=>tripList().find(t=>!t.end)||null;
   const tripEndMs=t=>t.end?new Date(t.end).getTime():Date.now();
-  const tripCatches=t=>{const a=new Date(t.start).getTime(),b=tripEndMs(t);return state.catches.filter(c=>{const x=new Date(c.at).getTime();return x>=a&&x<=b})};
+  // catches by time, built once per catch list: a trip's catches by binary search, in the list's own order
+  let tcIdx={ref:null,ts:null,ix:null};
+  const tripCatches=t=>{
+    const a=new Date(t.start).getTime(),b=tripEndMs(t),cs=state.catches;
+    if(tcIdx.ref!==cs){const ix=cs.map((c,i)=>i).filter(i=>!isNaN(new Date(cs[i].at).getTime())),tm=i=>new Date(cs[i].at).getTime();
+      ix.sort((x,y)=>tm(x)-tm(y));tcIdx={ref:cs,ts:ix.map(tm),ix}}
+    const {ts,ix}=tcIdx;let lo=0,hi=ts.length;while(lo<hi){const m=lo+hi>>1;if(ts[m]<a)lo=m+1;else hi=m}
+    const out=[];for(let k=lo;k<ts.length&&ts[k]<=b;k++)out.push(ix[k]);
+    return out.sort((x,y)=>x-y).map(i=>cs[i]);
+  };
   const durText=ms=>{const m=Math.max(0,Math.round(ms/6e4)),h=Math.floor(m/60);return h?h+" ó "+String(m%60).padStart(2,"0")+" p":m+" perc"};
   const clockText=ms=>{const m=Math.max(0,Math.floor(ms/6e4));return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")};
   let tripSheet=null,tripTick=null;
@@ -1869,7 +1882,15 @@ button{transition:transform .15s}
       sc.onerror=()=>{withLeaflet.q=null;sc.remove();toast("A térkép nem töltött be.")};document.head.append(sc)}
     withLeaflet.q.push(cb);
   }
-  function tiles(){return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"})}
+  // without internet the map background stays empty: say why (the pins still work), and take it back when tiles load again
+  function tiles(){
+    const t=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"});
+    const note=on=>{const m=t._map;if(!m)return;const box=m.getContainer();let n=box.querySelector(".map-offline");
+      if(on&&!n){n=el("div","map-offline","Nincs internet, ezért a térkép háttere nem töltődik be. A jelölők és a helyek így is működnek.");n.setAttribute("role","status");box.append(n)}
+      else if(!on&&n)n.remove()};
+    t.on("tileerror",()=>note(true));t.on("tileload",()=>note(false));
+    return t;
+  }
   function pinIcon(cls){return L.divIcon({className:"",html:'<div class="pin '+(cls||"")+'"></div>',iconSize:[22,22],iconAnchor:[11,22],popupAnchor:[0,-20]})}
   function renderMap(){
     renderSpots();
@@ -1885,7 +1906,7 @@ button{transition:transform .15s}
     const ll=[];
     pts.forEach(c=>{
       const co=coordsOf(c),gpsOnly=!(c.place&&c.place.lat!=null);
-      const m=L.marker([co.lat,co.lng],{icon:pinIcon(gpsOnly?"gps":"")}).addTo(bigLayer);ll.push([co.lat,co.lng]);
+      const m=L.marker([co.lat,co.lng],{icon:pinIcon(gpsOnly?"gps":""),title:spName(c.sp)+", "+fmtDate(c.at)}).addTo(bigLayer);ll.push([co.lat,co.lng]);
       const box=el("div");
       const cv=coverOf(c);if(cv){const im=document.createElement("img");im.src=cv;box.append(im)}
       const b=el("b",null,spName(c.sp));box.append(b);const sz=sizeText(c);if(sz)box.append(" · "+sz);
@@ -2467,7 +2488,9 @@ button{transition:transform .15s}
   function seeded(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}
     return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
   // three quests a week, the same all week; a species quest only for a fish that is not in its closed season
-  function weekQuests(ws){
+  const questCache=new Map();
+  function weekQuests(ws){const k=ymd(ws);if(!questCache.has(k))questCache.set(k,weekQuestsOf(ws));return questCache.get(k)}
+  function weekQuestsOf(ws){
     const rnd=seeded("kapas"+ymd(ws)),mid=new Date(ws);mid.setDate(mid.getDate()+3);
     const pick=a=>a[Math.floor(rnd()*a.length)];
     const open=GAME_SPECIES.filter(n=>{const st=ruleStatus(ruleFor(n),mid);return!st||st.kind!=="closed"});
@@ -2918,7 +2941,7 @@ button{transition:transform .15s}
   function dayName(date,now,short){const diff=Math.round((new Date(date).setHours(0,0,0,0)-new Date(now).setHours(0,0,0,0))/864e5);
     return diff===0?"Ma":diff===1?"Holnap":short?WDAY_S[date.getDay()]:WDAY[date.getDay()][0].toUpperCase()+WDAY[date.getDay()].slice(1)}
   function hoursEl(H,from,to,now){
-    const box=el("div","hours");box.setAttribute("role","list");
+    const box=el("div","hours");box.setAttribute("role","list");box.tabIndex=0;box.setAttribute("aria-label","Óránkénti előrejelzés");
     for(let k=from;k<=to&&k<H.time.length;k++){
       const t=parseLocal(H.time[k]),mid=t.getHours()===0&&k!==from,c=el("div","hr"+(mid?" newday":"")+(k===from&&now?" now":""));c.setAttribute("role","listitem");
       if(mid)c.append(el("span","h-day",dayName(t,new Date(),true).toLowerCase()));

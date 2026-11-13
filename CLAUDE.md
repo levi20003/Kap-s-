@@ -136,6 +136,11 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   és a kártyák kilógnának a képernyőből). A tesztek minden fülön ellenőrzik, hogy 360 és 412 px-en nincs vízszintes túlcsordulás.
 - Animáció: `playEnter` a fülváltáskor `.enter` osztályt ad a konténernek (kártyák felcsúsznak, sávok nőnek), `countTo` számlál a hős-számnál.
   Minden `prefers-reduced-motion` alatt kikapcsol (a tesztek is ezzel futnak, hogy determinisztikusak legyenek).
+- **Hosszú napló (1000+ fogás)**: `norm` és a dátumformázók gyorsítótárazva (`normCache`, `DTF`: egy `Intl.DateTimeFormat` példány; ne hívj
+  `toLocaleDateString(…, {opciók})`-t ciklusban), `weekQuests` hetenként memoizált, `tripCatches` időrendi indexszel (bináris keresés, a
+  `state.catches` hivatkozása szerint újraépül), a Fogások sorai `content-visibility:auto` (`.swipe`): a képernyőn kívüli sor `innerText`-je üres,
+  tesztben `textContent`. Mérés: 1000 fogás, 4× lassított CPU mellett fülváltás 0,15–0,4 mp.
+- Internet nélkül: időjárás „Nincs internet…” (15 mp-es `fetchT` után is), a térkép üres hátterénél `.map-offline` jelzés (`tileerror`/`tileload`).
 - Ha a WebView renderelője összeomlik, a `MainActivity` újraindítja magát (`onRenderProcessGone`).
 
 ## Tesztek és CI
@@ -143,6 +148,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - `cd tests && npm ci && npx playwright install chromium && npm test`: tilalmi számítás (`rules.test.js`) és böngészős tesztek ál-Android híddal (`browser.test.js`).
   A böngészős tesztek egy helyi HTTP-szerverről (127.0.0.1:47821) töltik az oldalt, mert a fej nélküli Chromium `file://` alatt újratöltéskor
   elveszíti a localStorage-ot (a telefon WebView-ja nem); `TEST_FILE_URL=1` a régi módra vált.
+- Hálózat tiltása tesztben: `route('https://**/*', …)`. A `'https://**'` minta a Playwright 1.56-ban **semmit nem fog meg** (a tesztek egy része emiatt
+  korábban a valódi Open-Meteót hívta).
 - Új funkcióhoz tegyél tesztet a `browser.test.js`-be. A GitHub Actions (`.github/workflows/ci.yml`) minden pushnál lefuttatja, és a `build.sh`-val egy eldobható CI-kulccsal megépíti az APK-t.
 
 ## Adattárolás
