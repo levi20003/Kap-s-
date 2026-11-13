@@ -35,7 +35,7 @@ Rögzítsd a fogásaidat egy koppintással, nézd meg, jó horgászidő van-e ma
 📍 HOVÁ MENJ MA?
 • A gyakori helyeid kártyákon: mai horgászidő, legjobb órák, a víz iránya, ott bevált csali.
 • „Ma neked”: a ma legjobb helyed egy pillantásra.
-• Widget a kezdőképernyőre, és értesítés, ha kiemelkedő horgászidő jön.
+• Widget a kezdőképernyőre, kérésre állandó kártya az értesítési sávban (a mai horgászidő, „+ hal”), és értesítés, ha kiemelkedő horgászidő jön.
 
 🪝 MIVEL HORGÁSSZ MA?
 • Vedd fel a csalijaidat (akár fotóval, bármikor szerkeszthetők), és az app halra, napra és napszakra összeállítja a legjobb 3-at a saját dobozodból.
