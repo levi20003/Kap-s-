@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
     static final String ACTION_TRIP_END = "hu.fogasnaplo.app.TRIP_END";
     private static final String TRIP_CHANNEL = "trip";
     private static final int TRIP_NOTIF = 4242;
-    private boolean pendingTripEnd, pendingTripStart;
+    private boolean pendingTripEnd, pendingTripStart, pendingWidgetSettings;
     // test build self-update: CI publishes the latest test APK and its version here
     private static final String UPDATE_BASE = "https://github.com/levi20003/Kap-s-/releases/download/teszt/";
     private static final String UA = "Kapas/1.8 (hu.fogasnaplo.app; Android personal fishing log)";
@@ -522,6 +522,12 @@ public class MainActivity extends Activity {
             deliverQuick();
             return;
         }
+        if (i != null && WidgetConfig.ACTION_SETTINGS.equals(i.getAction())) { // the widget's "edit" (long press → settings)
+            pendingWidgetSettings = true;
+            setIntent(new Intent(this, MainActivity.class));
+            deliverQuick();
+            return;
+        }
         if (i != null && ACTION_TRIP_END.equals(i.getAction())) {
             pendingTripEnd = true;
             setIntent(new Intent(this, MainActivity.class));
@@ -537,6 +543,7 @@ public class MainActivity extends Activity {
     private void deliverQuick() {
         if (pageReady && pendingTripEnd) { pendingTripEnd = false; js("__fnTripEnd", new JSONObject()); }
         if (pageReady && pendingTripStart) { pendingTripStart = false; js("__fnTripStart", new JSONObject()); }
+        if (pageReady && pendingWidgetSettings) { pendingWidgetSettings = false; js("__fnWidgetSettings", new JSONObject()); }
         if (!pageReady || pendingQuick == null) return;
         JSONObject o = new JSONObject();
         try { o.put("sp", pendingQuick); } catch (Exception ignored) {}

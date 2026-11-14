@@ -18,9 +18,22 @@
         <TextView android:id="@+id/w_trip_txt" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
             android:paddingStart="8dp" android:textColor="#FFDFE8DA" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
     </LinearLayout>
-    <TextView android:id="@+id/w_line" android:layout_width="match_parent" android:layout_height="wrap_content"
+    <!-- the day's weather: temperature, wind, rain (each can be switched off in the app: Beállítások → Kezdőképernyő-widget) -->
+    <LinearLayout android:id="@+id/w_wx" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:layout_marginTop="6dp" android:visibility="gone">
+        <TextView android:id="@+id/w_temp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:paddingTop="5dp" android:paddingBottom="5dp" android:paddingStart="8dp" android:paddingEnd="6dp" android:background="@drawable/widget_btn"
+            android:textColor="#FFF1F4EE" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="1dp" />
+        <TextView android:id="@+id/w_wind" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="5dp"
+            android:paddingTop="5dp" android:paddingBottom="5dp" android:paddingStart="8dp" android:paddingEnd="6dp" android:background="@drawable/widget_btn"
+            android:textColor="#FFF1F4EE" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="1dp" />
+        <TextView android:id="@+id/w_rain" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="5dp"
+            android:paddingTop="5dp" android:paddingBottom="5dp" android:paddingStart="8dp" android:paddingEnd="6dp" android:background="@drawable/widget_btn"
+            android:textColor="#FFF1F4EE" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="1dp" />
+    </LinearLayout>
+    <TextView android:id="@+id/w_line" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp"
         android:textColor="#FFDFE8DA" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+    <LinearLayout android:id="@+id/w_btns" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
         <TextView android:id="@+id/w_b1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:gravity="center"
             android:background="@drawable/widget_btn" android:textColor="#FFF1F4EE" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
         <TextView android:id="@+id/w_b2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:gravity="center"

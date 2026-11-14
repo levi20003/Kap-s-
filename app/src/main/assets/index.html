@@ -788,6 +788,11 @@ button{transition:transform .15s}
       <div class="autobk" id="notifyBox"></div>
     </section>
 
+    <section id="widgetSec" hidden>
+      <div class="sechead"><h2><span class="ic" data-ic="sunny"></span>Kezdőképernyő-widget</h2></div>
+      <div class="autobk smart" id="widgetBox"></div>
+    </section>
+
     <section>
       <div class="sechead"><h2><span class="ic" data-ic="shield"></span>Biztonsági mentés</h2></div>
       <div class="panel">
@@ -1570,12 +1575,55 @@ button{transition:transform .15s}
       const D=T.d,now=new Date();
       D.time.forEach((t,k)=>{const date=parseLocal(t);if(ymd(date)<ymd(now))return;const lv=dayLevel(T.h,date);if(!lv)return;
         const set=D.sunset&&D.sunset[k]?parseLocal(D.sunset[k]):null;
-        days.push({d:ymd(date),lv,label:LEVELS[lv],win:set?"Esti rablás "+fmtHM(set)+"–"+fmtHM(new Date(set.getTime()+twilightMs(set,loc.lat))):""})});
+        const e={d:ymd(date),lv,label:LEVELS[lv],win:set?"Esti rablás "+fmtHM(set)+"–"+fmtHM(new Date(set.getTime()+twilightMs(set,loc.lat))):""};
+        try{widgetWx(e,T,k,date,set,now)}catch(_){}
+        days.push(e)});
     }
     const t=activeTrip();
-    const j=JSON.stringify({place:loc.name,days,sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)})),trip:t?{start:new Date(t.start).getTime(),n:tripCatches(t).length}:null});
+    const j=JSON.stringify({place:loc.name,days,sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)})),trip:t?{start:new Date(t.start).getTime(),n:tripCatches(t).length}:null,cfg:widgetCfg()});
     if(j===lastWidget)return;lastWidget=j;try{ANDROID.setWidget(j)}catch(e){}
   }
+  // the day's weather for the widget (temperature, wind, rain, sunset, river); only the fields that have a value
+  function widgetWx(e,T,k,date,set,now){
+    const D=T.d,H=T.h,put=(key,v)=>{if(v!=null&&v!==""&&!(typeof v==="number"&&isNaN(v)))e[key]=v};
+    put("tx",D.temperature_2m_max&&D.temperature_2m_max[k]);put("tn",D.temperature_2m_min&&D.temperature_2m_min[k]);
+    put("sky",D.weather_code?WMO[D.weather_code[k]]||"":"");
+    put("w",D.wind_speed_10m_max&&D.wind_speed_10m_max[k]);put("g",D.wind_gusts_10m_max&&D.wind_gusts_10m_max[k]);
+    put("r",D.precipitation_sum&&D.precipitation_sum[k]);put("rp",D.precipitation_probability_max&&D.precipitation_probability_max[k]);
+    if(set)put("sun",fmtHM(set));
+    if(ymd(date)===ymd(now)){const i=H.time.indexOf(ymd(now)+"T"+pad(now.getHours())+":00");if(i>=0)put("now",H.temperature_2m[i])}
+    const w=waterOn(date);if(w)put("wat",WATER_TXT[w.k]);
+  }
+  /* what the widget shows: fogasnaplo.widget = {rating, temp, wind, rain, sun, water, btns} (all on unless switched off) */
+  const WIDGET_KEY="fogasnaplo.widget";
+  const WIDGET_OPTS=[["rating","Horgászidő-értékelés"],["temp","Hőmérséklet"],["wind","Szél és lökés"],["rain","Eső"],["sun","Esti rablás"],["water","Folyó vízállása"],["btns","Gombok (+ hal, Horgászat)"]];
+  function widgetCfg(){let c={};try{c=JSON.parse(localStorage.getItem(WIDGET_KEY)||"{}")||{}}catch(e){}
+    const o={};WIDGET_OPTS.forEach(([k])=>o[k]=c[k]!==false);return o}
+  function setWidgetCfg(k,v){const c=widgetCfg();c[k]=v;try{localStorage.setItem(WIDGET_KEY,JSON.stringify(c))}catch(e){}
+    lastWidget=null;pushWidget();renderWidgetBox()}
+  // Beállítások → Kezdőképernyő-widget: switches and a live preview of today's widget
+  function renderWidgetBox(){
+    const sec=$("widgetSec");if(!sec)return;sec.hidden=!(ANDROID&&ANDROID.setWidget);if(sec.hidden)return;
+    const box=$("widgetBox");box.replaceChildren();const c=widgetCfg();
+    let day=null;try{day=JSON.parse(lastWidget||"{}").days||[]}catch(e){day=[]}day=day.find(d=>d.d===ymd(new Date()))||null;
+    const pv=el("div","wpv");pv.setAttribute("aria-label","A widget előnézete");
+    const top=el("div","wpv-top");top.append(el("span",null,"Horgászidő ma · "+wxPlace().name));if(c.rating&&day)top.append(el("span","wpv-dots","●".repeat(day.lv)+"○".repeat(5-day.lv)));pv.append(top);
+    if(c.rating)pv.append(el("b","wpv-lv",day?day.label:"Kapás"));
+    const n=v=>Math.round(v),chips=el("div","wpv-wx");
+    if(day&&c.temp&&day.tx!=null)chips.append(el("span",null,(day.now!=null?n(day.now)+"°":n(day.tx)+"° / "+n(day.tn)+"°")));
+    if(day&&c.wind&&day.w!=null)chips.append(el("span",null,n(day.w)+" km/h"));
+    if(day&&c.rain&&day.r!=null)chips.append(el("span",null,day.r<0.1?"Száraz":String(Math.round(day.r*10)/10).replace(".",",")+" mm"));
+    if(chips.children.length)pv.append(chips);
+    const line=[];if(day&&c.sun&&day.win)line.push(day.win);if(day&&c.water&&day.wat)line.push("Víz: "+day.wat);if(line.length)pv.append(el("div","wpv-line",line.join(" · ")));
+    if(c.btns){const bt=el("div","wpv-btns");["+ hal","+ hal","Horgászat"].forEach((x,i)=>bt.append(el("span",i===2?"main":null,x)));pv.append(bt)}
+    if(!day)pv.append(el("div","wpv-line","Az előnézethez töltsd be az időjárást a Kezdőlapon."));
+    box.append(pv);
+    const opts=el("div","chips quick-pills");
+    WIDGET_OPTS.forEach(([k,l])=>{const b=el("button","pill"+(c[k]?" on":""),l);b.type="button";b.setAttribute("aria-pressed",c[k]?"true":"false");b.onclick=()=>setWidgetCfg(k,!c[k]);opts.append(b)});
+    box.append(opts);
+    box.append(el("p","hint","A widget felvétele: tartsd nyomva a kezdőképernyőt → Modulok (Widgetek) → Kapás. Rákoppintva megnyílik az app; hosszan nyomva a ceruzával ide jutsz."));
+  }
+  window.__fnWidgetSettings=function(){if(ed||view)return;go("more");setTimeout(()=>{const s=$("widgetSec");if(s)s.scrollIntoView({block:"start"})},50)};
   window.__fnTripEnd=function(){const t=activeTrip();if(t){go("home");openTripSheet("end")}};
 
   function renderTrip(){
@@ -1838,7 +1886,7 @@ button{transition:transform .15s}
     const have=new Set(state.species.map(s=>norm(s.name)));
     const chips=$("chips");chips.replaceChildren();
     COMMON.filter(n=>!have.has(norm(n))).forEach(n=>{const b=el("button","chip","+ "+n);b.type="button";b.onclick=()=>addSpecies(n);chips.append(b)});
-    renderNotify();renderAutoBk();renderLureBox();renderSeasonPills();
+    renderNotify();renderWidgetBox();renderAutoBk();renderLureBox();renderSeasonPills();
     $("verLine").textContent=appVersionText();
   }
 

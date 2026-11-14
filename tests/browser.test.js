@@ -1028,6 +1028,18 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(w.place === 'Szeged' && w.days.length >= 6 && w.days[0].d === td && w.days[0].lv >= 1 && w.days[0].label && /^Esti rablás 16:20–16:\d\d$/.test(w.days[0].win),
         'widget: a következő napok értékelése és az esti rablás ideje (' + JSON.stringify(w.days[0]) + ')');
       ok(w.sp.map(x => x.name).join() === 'Süllő,Balin' && w.trip === null, 'widget: a két „+ hal” gomb a leggyakoribb halakra, horgászat nélkül');
+      const d0 = w.days[0];
+      ok(typeof d0.tx === 'number' && typeof d0.tn === 'number' && typeof d0.w === 'number' && typeof d0.r === 'number' && d0.sun === '16:20' && w.cfg && w.cfg.temp === true && w.cfg.btns === true,
+        'widget: a nap időjárása (hőmérséklet, szél, eső, napnyugta) és a beállítás is megy (' + JSON.stringify(d0) + ')');
+      ok(!Object.values(d0).some(v => v === null), 'widget: üres mező nem megy át (a natív rész has()-sal dönt)');
+      await q.evaluate(() => window.__fnWidgetSettings()); await q.waitForTimeout(200);
+      ok(await q.locator('#widgetSec').isVisible() && await q.locator('#widgetBox .wpv').isVisible() && (await q.locator('#widgetBox .wpv').textContent()).includes('km/h'),
+        'widget szerkesztése: a widget „ceruzája” a Beállításokba visz, élő előnézettel');
+      await q.locator('#widgetBox .pill', { hasText: 'Szél és lökés' }).click(); await q.waitForTimeout(100);
+      w = JSON.parse(await q.evaluate(() => window.__wg[window.__wg.length - 1]));
+      ok(w.cfg.wind === false && w.cfg.temp === true && !(await q.locator('#widgetBox .wpv').textContent()).includes('km/h') &&
+        (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.widget')).wind)) === false, 'widget szerkesztése: a szél kikapcsolva, az előnézet és a widget is követi');
+      await q.locator('#widgetBox .pill', { hasText: 'Szél és lökés' }).click(); await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(100);
       await q.evaluate(() => window.__fnTripStart()); await q.waitForTimeout(100);
       ok(await q.locator('#tripWrap').isVisible(), 'widget: a „Horgászat” gomb az indító lapot nyitja');
       await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(150);

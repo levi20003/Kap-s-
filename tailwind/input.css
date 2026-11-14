@@ -236,6 +236,16 @@
 
   /* Értesítések: jó horgászidő kapcsoló */
   .autobk.smart { @apply mb-3 flex-col items-stretch; }
+  /* widget preview in Beállítások: the same Evergreen panel as the home-screen widget */
+  .wpv { @apply mb-3 flex flex-col gap-1.5 rounded-3xl p-4; background: linear-gradient(150deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c)); color: var(--hero-side); box-shadow: var(--shadow-pop); }
+  .wpv-top { @apply flex items-center justify-between gap-2 text-xs; color: var(--hero-lbl); }
+  .wpv-dots { letter-spacing: .1em; color: var(--hero-sun); }
+  .wpv-lv { @apply text-2xl; font-family: var(--f-display); }
+  .wpv-wx { @apply flex gap-1.5; }
+  .wpv-wx span, .wpv-btns span { @apply flex-1 rounded-xl px-2 py-1.5 text-center text-sm font-semibold; background: var(--hero-chip); border: 1px solid var(--hero-chip-line); }
+  .wpv-line { @apply text-xs; color: var(--hero-lbl); }
+  .wpv-btns { @apply mt-1 flex gap-1.5; }
+  .wpv-btns span.main { background: var(--hero-btn); color: var(--hero-btn-ink); }
   .smart-head { @apply flex items-start gap-3; }
   .smart-head > div { @apply flex min-w-0 flex-1 flex-col gap-0.5; }
   .smart-head .hint { @apply m-0; }

@@ -52,6 +52,17 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- the widget's settings entry: answers the launcher at once, then opens the app's widget settings -->
+        <activity
+            android:name=".WidgetConfig"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <!-- the optional always-on card: rebuilt every 3 hours and after midnight -->
         <receiver
             android:name=".PinnedCard"
