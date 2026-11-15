@@ -272,6 +272,19 @@
   .mo-tipic { @apply flex h-8 w-8 flex-none items-center justify-center rounded-full; background: var(--glow-accent); color: var(--accent-txt); }
   .mo-tipic .ic, .mo-tipic svg { @apply h-4 w-4; }
   @media (prefers-reduced-motion: reduce) { .mo-ring .rg-val { transition: none; } }
+  /* page headings on the four inner tabs: a big title with a coloured icon, one line of what the page is for */
+  .pagehead { @apply flex items-center gap-3; }
+  .pagehead .ic { @apply flex h-12 w-12 flex-none items-center justify-center rounded-2xl; background: linear-gradient(150deg, var(--hero-a), var(--hero-c)); color: var(--hero-side); box-shadow: var(--shadow-card); }
+  .pagehead .ic svg { @apply h-6 w-6; }
+  .pagehead h1 { @apply m-0 text-3xl font-semibold leading-tight; font-family: var(--f-display); color: var(--fg); }
+  .pagehead p { @apply m-0 text-sm; color: var(--muted); }
+  /* catch card maker (in the catch viewer) */
+  .cm-top { @apply flex items-center gap-3; }
+  .cm-top h3 { @apply m-0; }
+  .cm-preview { @apply mx-auto my-2 flex w-full items-center justify-center overflow-hidden rounded-2xl; max-width: 340px; aspect-ratio: 4 / 5; background: var(--tint-2); box-shadow: var(--shadow-pop); }
+  .cm-preview.story { aspect-ratio: 9 / 16; max-width: 260px; }
+  .cm-preview img { @apply block h-full w-full; object-fit: cover; }
+  .cm-wait { @apply p-4 text-center text-sm; color: var(--muted); }
   /* widget preview in Beállítások: the same Evergreen panel as the home-screen widget */
   .wpv { @apply mb-3 flex flex-col gap-1.5 rounded-3xl p-4; background: linear-gradient(150deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c)); color: var(--hero-side); box-shadow: var(--shadow-pop); }
   .wpv-top { @apply flex items-center justify-between gap-2 text-xs; color: var(--hero-lbl); }

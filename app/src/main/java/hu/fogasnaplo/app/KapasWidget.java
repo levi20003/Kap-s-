@@ -117,8 +117,8 @@ public class KapasWidget extends AppWidgetProvider {
             v.setViewVisibility(R.id.w_trip, View.GONE);
             v.setViewVisibility(R.id.w_line, View.VISIBLE);
             v.setChronometer(R.id.w_chrono, SystemClock.elapsedRealtime(), null, false);
-            v.setTextViewText(R.id.w_b3, "Horgászat");
-            v.setOnClickPendingIntent(R.id.w_b3, open(c, 66, new Intent(c, MainActivity.class).setAction(ACTION_TRIP_START)));
+            v.setTextViewText(R.id.w_b3, "Megnyitás"); // the Horgászat mode is gone: the third button opens the app
+            v.setOnClickPendingIntent(R.id.w_b3, open(c, 66, new Intent(c, MainActivity.class)));
         }
         return v;
     }

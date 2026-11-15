@@ -126,8 +126,6 @@ public class PinnedCard extends BroadcastReceiver {
             b.addAction(new Notification.Action.Builder(Icon.createWithResource(c, R.drawable.ic_shortcut_add),
                     "+ " + x.optString("name"), PendingIntent.getActivity(c, 72 + i, in, flags)).build());
         }
-        b.addAction(new Notification.Action.Builder(Icon.createWithResource(c, R.drawable.ic_stat_fish), "Horgászat",
-                PendingIntent.getActivity(c, 75, new Intent(c, MainActivity.class).setAction(KapasWidget.ACTION_TRIP_START), flags)).build());
         return b.build();
     }
 }

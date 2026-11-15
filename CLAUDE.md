@@ -81,9 +81,8 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Statisztika: **halfajonkénti megoszlás** (`#speciesList`, darab és %), és **csali-rangsor** (`#lures`, `.lure-row`): fogásszám és a csali
   legnagyobb hala (`better`), a csali szerinti legnagyobb hal a rangsor kártyáján.
 - **Kap-ás Kihívások** (Statisztika fül, `#gameSec`, `renderGame`): minden a naplóból számolódik (`gameState`), a napló formátuma nem változott.
-  XP: fogás 10, hossz/súly +5, csali +3, hely +3, fotó/videó +5, visszaengedett +5, teljesített heti küldetés +25, jelvényszint +20.
+  XP: fogás 10, hossz/súly +5, csali +3, hely +3, fotó/videó +5, visszaengedett +5, jelvényszint +20. **Heti küldetések nincsenek** (2026. nov.: kivéve).
   9 szint (`GAME_LEVELS`, „Novícius Pergető” → „Tiszai Helyi Legenda”). Heti sorozat (hétfő–vasárnap, a folyó héten még él).
-  Heti küldetések (`weekQuests`): 3 db, a hét dátumából seedelve (egész héten ugyanaz), halfajt csak tilalmon kívül kér.
   Jelvények: az 5 tiszai faj (1/10/25), Spintail és Salmo Thrill (1/5/15), fogd és engedd (1/10/25); bronz/ezüst/arany.
   `checkGame` (a `sync` végén) XP-növekedéskor egyszer jelzi a szintlépést és az új jelvényt (`toast`, 0,9 mp késéssel, visszavonás-sávot nem ír felül);
   a már bejelentett állás a `fogasnaplo.kihivasok` kulcsban, első induláskor csendben indul. Színek: olíva/homok (`tailwind.config.js`).
@@ -92,31 +91,25 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   vágólapra másol). A levélben csak technikai adat van (`feedbackInfo`: verzió, képernyő, UA, téma, nyelv, fogás/halfaj darabszám), a napló, a hely és a fotók nincsenek;
   ezt teszt védi. Címzett: `FEEDBACK_EMAIL` az `index.html`-ben (üresen a felhasználó írja be); a kiadási workflow megáll, ha üres vagy ha az adatvédelmi oldalon
   helyőrző e-mail maradt. A tesztapp versionName-je a CI-ban `1.8-<commit>`, így a levélben a build-azonosító is ott van.
-- **Horgászat-mód** (Kezdőlap `#tripSec`, `renderTrip`; lap `#tripWrap`, `openTripSheet(start|end|view)`; Statisztika `#tripStatSec`, `renderTripStats`):
-  `data.trips = [{id, start, end?, place?, sp?, wx?, note?}]` (opcionális). Egyszerre egy fut (`activeTrip`: nincs `end`). A horgászat fogásai
-  **időpont alapján** számolódnak (`tripCatches`), a fogás formátuma nem változott. Élő kártya órával, „+ hal” gombokkal; állandó értesítés
-  (`ANDROID.setTripNotification`: stopper `setUsesChronometer`, „+ hal” = `ACTION_QUICK`, „Befejezés” = `ACTION_TRIP_END` → `__fnTripEnd`), engedély:
-  `canNotify`/`askNotifyPermission`. Befejezéskor összefoglaló, befejezési idő (12 óránál régebbinél az utolsó fogás + 30 perc), megjegyzés.
-  Fogás nélküli alkalom is mentődik. Statisztika: siker %, hal/óra, siker helyenként és légnyomás szerint (`t.wx` induláskor), legutóbbiak.
-  Mentés (ZIP/JSON/Drive) viszi; visszaállításkor csak a befejezettek jönnek (`planImport` → `newT`).
+- **Horgászat-mód: 2026. nov. óta nincs a felületen** (a felhasználó kérésére: túl bonyolult). A `data.trips` adat marad (mentés, visszaállítás `newT`,
+  a helyek `spotsOf` még olvassa); induláskor `closeOldTrip` lezárja a régi verzióból futva maradtat (utolsó fogás + 30 perc), `pushTripNotif` csak
+  eltünteti a régi stopperes értesítést, `__fnTripStart`/`__fnTripEnd` (régi widget-gomb) csak megnyitja az appot. A `tripSheet` kód még bent van, de nem hívja semmi.
 - **Kezdőképernyő-widget** (`KapasWidget.java`, `res/layout/widget.xml`, `res/xml/widget_info.xml`): a JS `pushWidget` → `ANDROID.setWidget(json)`
   a következő 7 nap értékelését adja (`days:[{d,lv,label,win}]`), így a widget egy hétig az app megnyitása nélkül is a jó napot mutatja; ezen kívül
-  a hely, a 2 „+ hal” (a gyorsrögzítés útján) és a futó horgászat (stopper `setChronometer`, „Befejezés”). Gombok: „Horgászat” → `TRIP_START`
-  → `__fnTripStart`. A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
+  a hely és a 2 „+ hal” (a gyorsrögzítés útján); a harmadik gomb „Megnyitás” (a `trip` mindig null). A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
 - Widget-tartalom (`fogasnaplo.widget` = `{rating, temp, wind, rain, sun, water, btns}`, alapból mind be; Beállítások → Kezdőképernyő-widget
   `#widgetSec`, `renderWidgetBox`, élő előnézet `.wpv`): a napokhoz `widgetWx` adja a `tx, tn, now, sky, w, g, r, rp, sun, wat` mezőket (null nem megy át).
   Szerkesztés a widgetről: `WidgetConfig` activity (azonnal OK, majd `WIDGET_SETTINGS` → `__fnWidgetSettings`), Android 12+ `reconfigurable`. Alapméret 4×3.
 - **Állandó kártya** (Beállítások → Értesítések `#pinBox`, `renderPin`; `fogasnaplo.pinned` = "1"; natív: `PinnedCard.java`): opcionális, csendes,
-  folyamatos értesítés (csatorna `allando`, IMPORTANCE_LOW): mai értékelés pöttyökkel, esti rablás, hely, holnap; gombok „+ hal” ×2 és „Horgászat”.
+  folyamatos értesítés (csatorna `allando`, IMPORTANCE_LOW): mai értékelés pöttyökkel, esti rablás, hely, holnap; gombok „+ hal” ×2.
   A widget adatából dolgozik (`KapasWidget.push` → `PinnedCard.refresh`), riasztás 3 óránként és éjfél után, újraindítás/frissítés után a
-  `ReminderReceiver` hozza vissza. Futó horgászatnál eltűnik (a horgászat-értesítés van helyette). Induláskor a JS `ANDROID.setPinned(pinOn())`-nal szinkronizál.
+  `ReminderReceiver` hozza vissza. Induláskor a JS `ANDROID.setPinned(pinOn())`-nal szinkronizál.
 - **Lendület-kártya** (Kezdőlap `#momentumSec`, `renderMomentum`, a köszöntés alatt; csak az idei nézetben, ha van fogás/horgászat): heti sorozat lánggal,
-  szintgyűrű (`ringSvg`), a következő heti küldetés sávval, „Napi tipp” (`DAILY_TIPS`, az év napja szerint); koppintásra a Kihívások.
+  szintgyűrű (`ringSvg`), „Napi tipp” (`DAILY_TIPS`, az év napja szerint); koppintásra a Kihívások.
 - **Okos értesítés** (Beállítások → Értesítések `#smartBox`, `renderSmart`; `fogasnaplo.smart` = `{on, h, streak}`): `smartEvents` a betöltött
   előrejelzésből a „Nagyon jó”/„Kiváló” napokra (`dayLevel` ≥ 4), naponta egyet, legfeljebb ~3 nappal előre, a választott órában (7/12/15/18);
   szöveg: a napnyugta órájának pozitív okai (`scoreToday`), esti rablás, a csalitár legjobb csalija (`rankLures`, nyitott halra). `streakEvents`:
-  vasárnap 17:00, ha a heti sorozat élne, de a héten még nem volt fogás vagy horgászat. A tilalmi emlékeztetőkkel együtt megy a `setReminders`-be.
-  A heti sorozat (`gameState`) a horgászatokat is számolja (fogás nélkül is).
+  vasárnap 17:00, ha a heti sorozat élne, de a héten még nem volt fogás. A tilalmi emlékeztetőkkel együtt megy a `setReminders`-be.
 - **Érzés**: `buzz(kind)` → `ANDROID.haptic` (`performHapticFeedback`, engedély nélkül; tap/confirm/reject/success) gyors fogásnál, mentésnél,
   törlésnél, horgászat indításánál/befejezésénél. `celebrate(msg)`: konfetti-vászon (`canvas.confetti`, 1,4 mp, az évszak színeivel) + dupla rezgés,
   ha a mentés megdönti a faj rekordját (`saveEditor`: előtte számolt `prevBest`), és szintlépésnél / új jelvénynél (`checkGame`);
@@ -137,6 +130,7 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   „Évösszefoglaló megosztása” → `yearCardImage` 1080×1920-as sztori-kép (`shareDataUrl`, ugyanaz az út, mint a fogáskártyánál).
 - Statisztika: havi oszlopra koppintva a Fogások fülre ugrik, arra a hónapra szűrve (`state.month`, a Fogások fülön chip törli).
 - Beállítások → halfaj törlése megerősítéssel (a hozzá tartozó fogások is törlődnek).
+- Oldalfejléc a 4 belső fülön (`.pagehead`: nagy cím, színes ikon, egy sor arról, mire való az oldal); a Kezdőlapon a köszöntés.
 - Elrendezés: a tab-konténerek `.wrap` elemek egymásban, ezért `.wrap .wrap{width:100%}` kell (a `margin:auto` különben a tartalom szélességére zsugorítaná,
   és a kártyák kilógnának a képernyőből). A tesztek minden fülön ellenőrzik, hogy 360 és 412 px-en nincs vízszintes túlcsordulás.
 - Animáció: `playEnter` a fülváltáskor `.enter` osztályt ad a konténernek (kártyák felcsúsznak, sávok nőnek), `countTo` számlál a hős-számnál.
@@ -204,7 +198,9 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
 - Törlés (− gomb, „Fogás törlése”) 6 mp-ig visszavonható (`deleteWithUndo`); a fotó csak utána törlődik.
 - Fogásra koppintva (lista, rekord, térkép-buborék „Részletek”) **megtekintő kártya** nyílik (`openViewer`: lapozható fotók/videók, adatok);
   szerkeszteni a „Szerkesztés” gombbal lehet (`openEditor({fromView:true})`, mentés/mégse után vissza a kártyára). A gyors „+” rögzítés közvetlenül a szerkesztőt nyitja.
-- „Megosztás”: `catchCardImage` 1080×1350-es képet rajzol (fotó + zöld sáv: faj, méret, dátum, hely, csali, idő), Androidon `shareImage` → megosztás-menü.
+- **Fogáskártya** (a megtekintőben „Kártya megosztása” → `view.card`, `renderCardMaker`): 3 stílus (`CARD_STYLES`: Fotó, Trófea, Napló) × 2 formátum
+  (poszt 1080×1350, sztori 1080×1920), élő előnézet, a választás a `fogasnaplo.kartya` kulcsban; a faj rekordja „ÚJ REKORD” szalagot kap (`isSpeciesRecord`),
+  a visszaengedett hal jelölést. `catchCardImage(c,{style,fmt})`, a szöveg függőlegesen középre igazítva (`block`); Androidon `shareImage` → megosztás-menü.
   A helyi fotót a WebView nem engedi vászonra rajzolni, ezért `ANDROID.readPhoto` adja át data url-ként.
 - **Folyó vízhozama** (Open-Meteo Flood API, GloFAS, m³/s; `floodNear`: a 3×3 környező rácscellából a legnagyobb folyó, mert a part menti pont
   mellékágba eshet). Időjárás-kártya: `loadWater` (`fogasnaplo.water`, 3 óránként), `waterOn(date)` 3 napos irány (`waterTrend`: ±10% stagnál, ±30% gyorsan),

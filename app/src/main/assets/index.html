@@ -641,7 +641,6 @@ button{transition:transform .15s}
     <div class="greet"><h1 id="greetT">Szép napot!</h1><p id="greetS"></p></div>
     <section class="momentum" id="momentumSec" hidden></section>
     <section class="bknudge" id="bkNudge" role="status" hidden></section>
-    <section class="trip" id="tripSec" aria-live="polite" hidden></section>
     <section class="total" aria-live="polite">
       <svg class="scene" viewBox="0 0 360 210" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
         <circle class="sun" cx="282" cy="86" r="24"/>
@@ -693,6 +692,7 @@ button{transition:transform .15s}
 
   <!-- ===== Fogások ===== -->
   <div id="tab-list" class="wrap" role="main" style="gap:16px" hidden>
+    <div class="pagehead"><span class="ic" data-ic="list"></span><div><h1>Fogásaid</h1><p>Minden fogás egy helyen: keresés, szűrés, megosztás</p></div></div>
     <section>
       <div class="sechead">
         <h2><span class="ic" data-ic="list"></span><span id="listTitle">Fogások</span></h2>
@@ -707,14 +707,11 @@ button{transition:transform .15s}
 
   <!-- ===== Statisztika ===== -->
   <div id="tab-stats" class="wrap" role="main" style="gap:22px" hidden>
+    <div class="pagehead"><span class="ic" data-ic="stats"></span><div><h1>Statisztika</h1><p>Mi, mikor, mivel: a számaid és a kihívásaid</p></div></div>
     <section class="yearcard" id="yearCard" hidden></section>
     <section id="gameSec" aria-label="Kap-ás Kihívások"></section>
     <div class="kpis" id="kpis"></div>
     <div class="empty-card" id="statsEmpty" hidden><b>Még nincs mit elemezni.</b><p class="hint">Ahogy gyűlnek a fogások, itt látod, mikor, mivel és hol fogtál a legtöbbet.</p></div>
-    <section id="tripStatSec" hidden>
-      <div class="sechead"><h2><span class="ic" data-ic="timer"></span>Horgászataid</h2></div>
-      <div class="panel" id="tripStats"></div>
-    </section>
     <section id="offSec" hidden>
       <div class="sechead"><h2><span class="ic" data-ic="notebook"></span>Hivatalos fogási napló</h2></div>
       <div class="panel" id="offBox"></div>
@@ -756,6 +753,7 @@ button{transition:transform .15s}
 
   <!-- ===== Térkép ===== -->
   <div id="tab-map" class="wrap" role="main" style="gap:12px" hidden>
+    <div class="pagehead"><span class="ic" data-ic="pin"></span><div><h1>Térkép</h1><p>A helyeid és a fogásaid a térképen</p></div></div>
     <section id="spotsSec" hidden>
       <div class="sechead"><h2><span class="ic" data-ic="pin"></span>Helyeim</h2></div>
       <div class="spots" id="spots"></div>
@@ -767,6 +765,7 @@ button{transition:transform .15s}
 
   <!-- ===== Beállítások ===== -->
   <div id="tab-more" class="wrap" role="main" style="gap:22px" hidden>
+    <div class="pagehead"><span class="ic" data-ic="more"></span><div><h1>Beállítások</h1><p>Halfajok, értesítések, widget, mentés</p></div></div>
     <section>
       <div class="sechead"><h2><span class="ic" data-ic="fish"></span>Halfajaim</h2></div>
       <div class="panel">
@@ -1046,6 +1045,9 @@ button{transition:transform .15s}
   // leaving the app (or the page) writes the pending copy right away
   document.addEventListener("visibilitychange",()=>{if(document.hidden&&mirrorPending())mirrorNow()});
   window.addEventListener("pagehide",()=>{if(mirrorPending())mirrorNow()});
+  // a trip an older version left running: finish it at its last catch + 30 min (or its start + 1 h), so the log stays clean
+  function closeOldTrip(){const t=activeTrip();if(!t)return;const a=new Date(t.start).getTime(),cs=tripCatches(t);
+    const last=cs.length?Math.max(...cs.map(c=>new Date(c.at).getTime()))+30*6e4:a+36e5;store.updateTrip(t.id,{end:new Date(Math.min(Date.now(),last)).toISOString()})}
   function sync(){state.species=data.species.slice();state.catches=data.catches.slice();render();pushReminders();pushShortcuts();checkGame();pushTripNotif();pushWidget()}
   const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const store={
@@ -1230,7 +1232,7 @@ button{transition:transform .15s}
     if(wxLv&&state.year===NOW_Y){p.append(" · Ma ");p.append(el("b",null,LEVELS[wxLv].toLowerCase()));p.append(" horgászidő")}
   }
   function renderHome(st){
-    const y=state.year;renderGreet();renderMomentum();renderBkNudge();renderTrip();
+    const y=state.year;renderGreet();renderMomentum();renderBkNudge();
     $("todaySec").hidden=y!==NOW_Y;if(y===NOW_Y)renderToday();
     $("planSec").hidden=y!==NOW_Y;if(y===NOW_Y)renderPlan();
     renderForYou();
@@ -1417,7 +1419,6 @@ button{transition:transform .15s}
     }
     renderMonths(yearCatches);
     renderOfficial(y,yearCatches);
-    renderTripStats(y);
     renderPatterns();
     renderBest(yearCatches);
     renderYearCard();
@@ -1496,14 +1497,13 @@ button{transition:transform .15s}
       card.append(h);
       const facts=el("div","spot-facts");const f=t=>facts.append(el("span","spec",t));
       if(td&&td.best)f("Ma "+td.best.from+"–"+td.best.to+" óra");if(td&&td.water)f("Víz "+WATER_ARROW[td.water.k]+" "+WATER_TXT[td.water.k]);
-      f(s.catches.length+" fogás");if(st.trips)f("siker "+st.ok+"/"+st.trips);
+      f(s.catches.length+" fogás");
       card.append(facts);
       const why=[st.lure&&"legjobb csali: "+st.lure[0]+" ("+st.lure[1]+")",st.part&&st.part[1]>=2&&"leginkább "+st.part[0],s.last&&"utoljára "+fmtDate(s.last)].filter(Boolean);
       if(why.length)card.append(el("p","hint",why.join(" · ").replace(/^./,c=>c.toUpperCase())));
       const row=el("div","btnrow");
-      const go1=el("button","btn-ghost","Térképen");go1.type="button";go1.onclick=()=>{if(bigMap){bigMap.setView([s.lat,s.lng],14);$("bigMap").scrollIntoView({behavior:reducedMotion()?"auto":"smooth"})}};
-      const go2=el("button","btn-main","Horgászat itt");go2.type="button";go2.onclick=()=>{go("home");openTripSheet("start",null,{place:{name:s.name,lat:s.lat,lng:s.lng}})};
-      row.append(go1,go2);if(!activeTrip())card.append(row);else card.append(row.firstChild);
+      const go1=el("button","btn-main","Megnézem a térképen");go1.type="button";go1.onclick=()=>{if(bigMap){bigMap.setView([s.lat,s.lng],14);$("bigMap").scrollIntoView({behavior:reducedMotion()?"auto":"smooth"})}};
+      row.append(go1);card.append(row);
       box.append(card);
     });
   }
@@ -1527,7 +1527,7 @@ button{transition:transform .15s}
       const r=rankLures(sp,new Date(),parts,planWx(new Date(),parts));if(r.top&&r.top[0])bits.push("Csali "+sp.name.toLowerCase()+"ra: "+r.top[0].l.name+".")}catch(e){}}
     else if(st.lure)bits.push("Itt eddig a "+st.lure[0]+" vált be legjobban.");
     if(bits.length)card.append(el("p","hint",bits.join(" ")));
-    const b=el("button","btn-main","Horgászat indítása itt");b.type="button";b.onclick=()=>openTripSheet("start",null,{place:{name:s.name,lat:s.lat,lng:s.lng}});card.append(b);
+    const b=el("button","btn-main","Megnézem a térképen");b.type="button";b.onclick=()=>{go("map");setTimeout(()=>{if(bigMap)bigMap.setView([s.lat,s.lng],14)},300)};card.append(b);
     if(scored.length>1){const o=el("p","fy-more");o.append("Többi helyed ma: "+scored.slice(1).map(x=>x.s.name+" ("+x.td.label.toLowerCase()+")").join(", ")+". ");
       const m=el("button","linkbtn","Helyeim →");m.type="button";m.onclick=()=>go("map");o.append(m);card.append(o)}
     box.append(card);
@@ -1571,15 +1571,10 @@ button{transition:transform .15s}
     return n?n+" fogás · "+[...by].map(([id,k])=>spName(id)+" "+k).join(", "):"Még nincs fogás";
   }
   let lastTripNotif=null;
-  function pushTripNotif(){
-    if(!ANDROID||!ANDROID.setTripNotification)return;
-    const t=activeTrip();
-    const j=t?JSON.stringify({start:new Date(t.start).getTime(),title:"Horgászat"+(t.place&&t.place.name?" · "+t.place.name:""),text:tripSummaryText(t),
-      sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)}))}):"";
-    if(j===lastTripNotif)return;lastTripNotif=j;try{ANDROID.setTripNotification(j)}catch(e){}
-  }
+  // the Horgászat mode is gone from the app: this only removes a trip notification an older version left behind
+  function pushTripNotif(){if(ANDROID&&ANDROID.setTripNotification&&lastTripNotif!==""){lastTripNotif="";try{ANDROID.setTripNotification("")}catch(e){}}}
   window.__fnTripNotify=function(){lastTripNotif=null;pushTripNotif();lastWidget=null;pushWidget();if(typeof renderNotify==="function"&&state.tab==="more")renderNotify()};
-  window.__fnTripStart=function(){go("home");if(!activeTrip())openTripSheet("start")};
+  window.__fnTripStart=function(){go("home")}; // an old widget's "Horgászat" button just opens the app
 
   /* ---------- home-screen widget (KapasWidget): the next 7 days' ratings, so it stays right for a week without the app ---------- */
   let lastWidget=null;
@@ -1595,7 +1590,7 @@ button{transition:transform .15s}
         days.push(e)});
     }
     const t=activeTrip();
-    const j=JSON.stringify({place:loc.name,days,sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)})),trip:t?{start:new Date(t.start).getTime(),n:tripCatches(t).length}:null,cfg:widgetCfg()});
+    const j=JSON.stringify({place:loc.name,days,sp:tripSpecies(t).slice(0,2).map(id=>({id,name:spName(id)})),trip:null,cfg:widgetCfg()});
     if(j===lastWidget)return;lastWidget=j;try{ANDROID.setWidget(j)}catch(e){}
   }
   // the day's weather for the widget (temperature, wind, rain, sunset, river); only the fields that have a value
@@ -1611,7 +1606,7 @@ button{transition:transform .15s}
   }
   /* what the widget shows: fogasnaplo.widget = {rating, temp, wind, rain, sun, water, btns} (all on unless switched off) */
   const WIDGET_KEY="fogasnaplo.widget";
-  const WIDGET_OPTS=[["rating","Horgászidő-értékelés"],["temp","Hőmérséklet"],["wind","Szél és lökés"],["rain","Eső"],["sun","Esti rablás"],["water","Folyó vízállása"],["btns","Gombok (+ hal, Horgászat)"]];
+  const WIDGET_OPTS=[["rating","Horgászidő-értékelés"],["temp","Hőmérséklet"],["wind","Szél és lökés"],["rain","Eső"],["sun","Esti rablás"],["water","Folyó vízállása"],["btns","Gombok (+ hal)"]];
   function widgetCfg(){let c={};try{c=JSON.parse(localStorage.getItem(WIDGET_KEY)||"{}")||{}}catch(e){}
     const o={};WIDGET_OPTS.forEach(([k])=>o[k]=c[k]!==false);return o}
   function setWidgetCfg(k,v){const c=widgetCfg();c[k]=v;try{localStorage.setItem(WIDGET_KEY,JSON.stringify(c))}catch(e){}
@@ -1630,7 +1625,7 @@ button{transition:transform .15s}
     if(day&&c.rain&&day.r!=null)chips.append(el("span",null,day.r<0.1?"Száraz":String(Math.round(day.r*10)/10).replace(".",",")+" mm"));
     if(chips.children.length)pv.append(chips);
     const line=[];if(day&&c.sun&&day.win)line.push(day.win);if(day&&c.water&&day.wat)line.push("Víz: "+day.wat);if(line.length)pv.append(el("div","wpv-line",line.join(" · ")));
-    if(c.btns){const bt=el("div","wpv-btns");["+ hal","+ hal","Horgászat"].forEach((x,i)=>bt.append(el("span",i===2?"main":null,x)));pv.append(bt)}
+    if(c.btns){const bt=el("div","wpv-btns");["+ hal","+ hal","Megnyitás"].forEach((x,i)=>bt.append(el("span",i===2?"main":null,x)));pv.append(bt)}
     if(!day)pv.append(el("div","wpv-line","Az előnézethez töltsd be az időjárást a Kezdőlapon."));
     box.append(pv);
     const opts=el("div","chips quick-pills");
@@ -1639,7 +1634,7 @@ button{transition:transform .15s}
     box.append(el("p","hint","A widget felvétele: tartsd nyomva a kezdőképernyőt → Modulok (Widgetek) → Kapás. Rákoppintva megnyílik az app; hosszan nyomva a ceruzával ide jutsz."));
   }
   window.__fnWidgetSettings=function(){if(ed||view)return;go("more");setTimeout(()=>{const s=$("widgetSec");if(s)s.scrollIntoView({block:"start"})},50)};
-  window.__fnTripEnd=function(){const t=activeTrip();if(t){go("home");openTripSheet("end")}};
+  window.__fnTripEnd=function(){go("home")};
 
   function renderTrip(){
     const box=$("tripSec");if(!box)return;box.replaceChildren();clearInterval(tripTick);tripTick=null;
@@ -2035,6 +2030,7 @@ button{transition:transform .15s}
     $("sheet").querySelectorAll("video").forEach(v=>{try{v.pause()}catch(e){}});render()}
   function renderViewer(){
     const c=state.catches.find(c=>c.id===view.id);if(!c){closeViewer();return}
+    if(view.card){$("sheet").classList.add("viewing");renderCardMaker(c);return}
     const sh=$("sheet");sh.replaceChildren();sh.scrollTop=0;sh.classList.add("viewing");
     const items=mediaOf(c),name=spName(c.sp);
     const x=el("button","xbtn vclose","×");x.type="button";x.setAttribute("aria-label","Bezárás");x.onclick=closeViewer;sh.append(x);
@@ -2066,7 +2062,7 @@ button{transition:transform .15s}
     row("Megjegyzés",c.note);
     if(rows.childElementCount)sh.append(rows);
     const act=el("div","sheet-actions");
-    const share=el("button","btn-ghost","Megosztás");share.type="button";share.onclick=()=>shareCatch(c);
+    const share=el("button","btn-ghost","Kártya megosztása");share.type="button";share.onclick=()=>{view.card=cardPref();renderViewer()};
     const edit=el("button","btn-main","Szerkesztés");edit.type="button";edit.onclick=()=>{const id=c.id;view=null;sh.classList.remove("viewing");openEditor({mode:"edit",id,fromView:true})};
     act.append(share,edit);sh.append(act);
   }
@@ -2228,37 +2224,88 @@ button{transition:transform .15s}
       try{const d=m.video?ANDROID&&ANDROID.readThumb&&ANDROID.readThumb(u):ANDROID&&ANDROID.readPhoto&&ANDROID.readPhoto(u);if(d)return d}catch(e){}}
     return null;
   }
-  async function catchCardImage(c){
-    const W=1080,H=1350,PH=830,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  /* ---------- shareable catch cards: 3 styles × 2 formats, drawn on a canvas ----------
+     style: "photo" (the photo, a green band), "trophy" (the size, big and gold), "paper" (a light log page); fmt: "post" 1080×1350, "story" 1080×1920.
+     A record of its species gets a "ÚJ REKORD" ribbon, a released fish a "Visszaengedve" mark. */
+  const CARD_STYLES=[["photo","Fotó"],["trophy","Trófea"],["paper","Napló"]],CARD_FMTS=[["post","Poszt 4:5"],["story","Sztori 9:16"]];
+  function isSpeciesRecord(c){if(!(c.l||c.w))return false;let best=null;state.catches.forEach(x=>{if(x.sp===c.sp&&(x.l||x.w)&&better(x,best))best=x});return!!best&&best.id===c.id}
+  async function catchCardImage(c,opt){
+    opt=opt||{};const style=opt.style||"photo",W=1080,H=opt.fmt==="story"?1920:1350;
+    const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
     const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
-    try{await Promise.all(["600 96px Fraunces","500 40px Figtree","600 40px Figtree"].map(f=>document.fonts.load(f)))}catch(e){}
-    const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,col("--hero-a"));bg.addColorStop(.55,col("--hero-b"));bg.addColorStop(1,col("--hero-c"));g.fillStyle=bg;g.fillRect(0,0,W,H);
-    const src=mediaData(c);let drewPhoto=false;
-    if(src){try{const img=await loadImg(src),r=Math.max(W/img.width,PH/img.height),w=img.width*r,h=img.height*r;
-      g.drawImage(img,(W-w)/2,(PH-h)/2,w,h);drewPhoto=true;
-      const fade=g.createLinearGradient(0,PH-260,0,PH);fade.addColorStop(0,"rgba(0,0,0,0)");fade.addColorStop(1,col("--hero-b"));g.fillStyle=fade;g.fillRect(0,PH-260,W,260)}catch(e){}}
-    if(!drewPhoto){ // the river-valley scene of the home card
-      g.save();g.scale(W/360,PH/210);g.fillStyle=col("--hero-sun");g.beginPath();g.arc(282,86,24,0,7);g.fill();
-      [["--hero-hill1","M0 140C50 112 96 104 146 122S250 84 360 110V210H0Z"],["--hero-hill2","M0 162C66 136 124 150 186 138S300 124 360 142V210H0Z"],
-       ["--hero-river","M142 210C176 186 222 170 300 160L316 162C252 174 212 190 196 210Z"],["--hero-hill3","M0 186C58 170 112 190 172 180S282 168 360 182V210H0Z"]]
-        .forEach(([t,d])=>{g.fillStyle=col(t);g.fill(new Path2D(d))});g.restore()}
-    const pad=72,maxW=W-pad*2;
-    const fit=(txt,font,size,min)=>{let s=size;do{g.font=font.replace("$",s);if(g.measureText(txt).width<=maxW)break;s-=4}while(s>min);return txt};
-    let y=PH+120;g.textBaseline="alphabetic";
-    g.fillStyle=col("--hero-side");fit(spName(c.sp),"600 $px Fraunces",104,56);g.fillText(spName(c.sp),pad,y);
-    const sz=sizeText(c);if(sz){g.fillStyle=col("--hero-sun");g.font="600 64px Fraunces";const tw=g.measureText(sz).width;
-      const nw=(g.font="600 104px Fraunces",g.measureText(spName(c.sp)).width);g.font="600 64px Fraunces";
-      if(nw+tw+40<=maxW){g.textAlign="right";g.fillText(sz,W-pad,y);g.textAlign="left"}else{y+=80;g.fillText(sz,pad,y)}}
-    y+=72;g.fillStyle=col("--hero-lbl");
-    const lines=[fmtDate(c.at)+(c.t?", "+fmtTime(c.at):""),c.place&&c.place.name,c.lure?"Csali: "+c.lure:null,c.wx?wxLine(c.wx):null].filter(Boolean);
-    lines.slice(0,y>PH+200?3:4).forEach(t=>{fit(t,"500 $px Figtree",40,26);g.fillText(t,pad,y);y+=56});
-    g.fillStyle=col("--hero-lbl");g.globalAlpha=.75;g.font="600 34px Fraunces";g.fillText("Kapás",pad,H-56);g.font="500 28px Figtree";g.textAlign="right";g.fillText("fogásnapló",W-pad,H-58);g.textAlign="left";g.globalAlpha=1;
+    try{await Promise.all(["600 96px Fraunces","500 40px Figtree","600 40px Figtree","700 40px Figtree"].map(f=>document.fonts.load(f)))}catch(e){}
+    // the paper style keeps its own light palette whatever the app's theme is
+    const P=style==="paper"?{bg1:"#f7f1e3",bg2:"#ece3cf",ink:"#1e2a22",sub:"#4f5a51",acc:"#b0461b",line:"rgba(30,42,34,.18)"}:
+      {bg1:col("--hero-a"),bg2:col("--hero-c"),ink:col("--hero-side"),sub:col("--hero-lbl"),acc:col("--hero-sun"),line:"rgba(255,255,255,.22)"};
+    const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,P.bg1);bg.addColorStop(1,P.bg2);g.fillStyle=bg;g.fillRect(0,0,W,H);
+    const pad=72,maxW=W-pad*2,name=spName(c.sp),sz=sizeText(c),rec=isSpeciesRecord(c);
+    const fit=(txt,font,size,min,mw)=>{let q=size;do{g.font=font.replace("$",q);if(g.measureText(txt).width<=(mw||maxW))break;q-=4}while(q>min);return q};
+    const src=mediaData(c);let img=null;if(src){try{img=await loadImg(src)}catch(e){}}
+    const cover=(x,y,w,h,r)=>{g.save();g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r||0):g.rect(x,y,w,h);g.clip();
+      if(img){const k=Math.max(w/img.width,h/img.height);g.drawImage(img,x+(w-img.width*k)/2,y+(h-img.height*k)/2,img.width*k,img.height*k)}
+      else{const k=Math.max(w/360,h/210);g.fillStyle=col("--hero-c");g.fillRect(x,y,w,h);g.translate(x+(w-360*k)/2,y+(h-210*k));g.scale(k,k);g.fillRect(0,0,360,210);g.fillStyle=col("--hero-sun");g.beginPath();g.arc(282,86,24,0,7);g.fill();
+        [["--hero-hill1","M0 140C50 112 96 104 146 122S250 84 360 110V210H0Z"],["--hero-hill2","M0 162C66 136 124 150 186 138S300 124 360 142V210H0Z"],
+         ["--hero-river","M142 210C176 186 222 170 300 160L316 162C252 174 212 190 196 210Z"],["--hero-hill3","M0 186C58 170 112 190 172 180S282 168 360 182V210H0Z"]]
+          .forEach(([t,d])=>{g.fillStyle=col(t);g.fill(new Path2D(d))})}
+      g.restore()};
+    const pill=(txt,x,y,fill,ink)=>{const al=g.textAlign;g.textAlign="left";g.font="700 34px Figtree";const w=g.measureText(txt).width+56;g.fillStyle=fill;g.beginPath();g.roundRect?g.roundRect(x,y,w,64,32):g.rect(x,y,w,64);g.fill();
+      g.fillStyle=ink;g.textBaseline="middle";g.fillText(txt,x+28,y+33);g.textBaseline="alphabetic";g.textAlign=al;return w};
+    const block=(items,top,bottom)=>{const tot=items.reduce((a,i)=>a+i.h,0);let yy=top+Math.max(0,(bottom-top-tot)/2);items.forEach(i=>{i.draw(yy+i.h);yy+=i.h});return yy};
+    const facts=[fmtDate(c.at)+(c.t?", "+fmtTime(c.at):""),c.place&&c.place.name,c.lure?"Csali: "+c.lure:null,c.wx?wxLine(c.wx):null].filter(Boolean);
+    const nf=H>1500?4:3,foot=H-150;
+    if(style==="trophy"){
+      const ph=Math.round(H*.4);cover(0,0,W,ph);const fade=g.createLinearGradient(0,ph-300,0,ph);fade.addColorStop(0,"rgba(0,0,0,0)");fade.addColorStop(1,P.bg2);g.fillStyle=fade;g.fillRect(0,ph-300,W,300);
+      g.textAlign="center";const big=sz||name,it=[];
+      if(rec)it.push({h:100,draw:y=>{g.font="700 34px Figtree";const w=g.measureText("ÚJ REKORD").width+56;pill("ÚJ REKORD",(W-w)/2,y-80,P.acc,P.bg2);g.textAlign="center"}});
+      const fs=fit(big,"600 $px Fraunces",sz?280:190,96);it.push({h:fs*.95,draw:y=>{g.font="600 "+fs+"px Fraunces";g.fillStyle=P.acc;g.fillText(big,W/2,y-fs*.12)}});
+      if(sz){const n2=fit(name,"600 $px Fraunces",110,56);it.push({h:n2*1.15,draw:y=>{g.font="600 "+n2+"px Fraunces";g.fillStyle=P.ink;g.fillText(name,W/2,y-10)}})}
+      it.push({h:70,draw:y=>{g.strokeStyle=P.line;g.lineWidth=3;g.beginPath();g.moveTo(W/2-140,y-30);g.lineTo(W/2+140,y-30);g.stroke()}});
+      facts.slice(0,nf).forEach(t=>it.push({h:62,draw:y=>{fit(t,"500 $px Figtree",42,26);g.fillStyle=P.sub;g.fillText(t,W/2,y-10)}}));
+      block(it,ph,foot);g.textAlign="left";
+    }else if(style==="paper"){
+      const ph=Math.round(H*.48),m=56;g.fillStyle="rgba(0,0,0,.08)";g.fillRect(m+10,m+14,W-m*2,ph);g.fillStyle="#ffffff";g.fillRect(m,m,W-m*2,ph);cover(m+18,m+18,W-m*2-36,ph-36,0);
+      const it=[{h:70,draw:y=>{g.fillStyle=P.acc;g.font="700 30px Figtree";g.fillText("FOGÁSNAPLÓ · "+new Date(c.at).getFullYear(),pad,y-20)}}];
+      const n2=fit(name,"600 $px Fraunces",112,56,sz?maxW-300:maxW);
+      it.push({h:n2*1.1,draw:y=>{g.font="600 "+n2+"px Fraunces";g.fillStyle=P.ink;g.fillText(name,pad,y-10);if(sz){g.textAlign="right";g.font="600 84px Fraunces";g.fillStyle=P.acc;g.fillText(sz,W-pad,y-10);g.textAlign="left"}}});
+      it.push({h:56,draw:y=>{g.strokeStyle=P.line;g.lineWidth=2;g.beginPath();g.moveTo(pad,y-24);g.lineTo(W-pad,y-24);g.stroke()}});
+      facts.slice(0,nf).forEach(t=>it.push({h:62,draw:y=>{fit(t,"500 $px Figtree",42,26);g.fillStyle=P.sub;g.fillText(t,pad,y-12)}}));
+      if(rec)it.push({h:100,draw:y=>pill("ÚJ REKORD",pad,y-70,P.acc,"#ffffff")});
+      block(it,m+ph+30,foot);
+    }else{
+      const PH=Math.round(H*.6);cover(0,0,W,PH);const fade=g.createLinearGradient(0,PH-260,0,PH);fade.addColorStop(0,"rgba(0,0,0,0)");fade.addColorStop(1,P.bg2);g.fillStyle=fade;g.fillRect(0,PH-260,W,260);
+      if(rec)pill("ÚJ REKORD",pad,pad,P.acc,P.bg2);
+      const n2=fit(name,"600 $px Fraunces",120,56,sz?maxW-280:maxW),it=[];
+      it.push({h:n2*1.1,draw:y=>{g.font="600 "+n2+"px Fraunces";g.fillStyle=P.ink;g.fillText(name,pad,y-10);
+        if(sz){g.textAlign="right";g.font="600 88px Fraunces";g.fillStyle=P.acc;g.fillText(sz,W-pad,y-10);g.textAlign="left"}}});
+      it.push({h:30,draw:()=>{}});
+      facts.slice(0,nf).forEach(t=>it.push({h:62,draw:y=>{fit(t,"500 $px Figtree",42,26);g.fillStyle=P.sub;g.fillText(t,pad,y-12)}}));
+      block(it,PH,foot);
+    }
+    if(c.kept===false){g.font="600 30px Figtree";g.fillStyle=style==="paper"?P.sub:P.ink;g.globalAlpha=.85;g.textAlign="right";g.fillText("Visszaengedve ↺",W-pad,H-112);g.textAlign="left";g.globalAlpha=1}
+    g.fillStyle=P.sub;g.globalAlpha=.8;g.font="600 34px Fraunces";g.fillText("Kapás",pad,H-56);g.font="500 28px Figtree";g.textAlign="right";g.fillText("horgász fogásnapló",W-pad,H-58);g.textAlign="left";g.globalAlpha=1;
     return cv.toDataURL("image/jpeg",.9);
   }
-  async function shareCatch(c){
+  async function shareCatch(c,opt){
     toast("Kártya készítése…");
-    let url;try{url=await catchCardImage(c)}catch(e){toast("A kártyát nem sikerült elkészíteni.");return}
+    let url;try{url=await catchCardImage(c,opt)}catch(e){toast("A kártyát nem sikerült elkészíteni.");return}
     shareDataUrl(url,shareText(c),"kapas-fogas.jpg");
+  }
+  // the card maker inside the catch viewer: style and format chips, a live preview, one share button
+  const CARD_KEY="fogasnaplo.kartya";
+  function cardPref(){let p={};try{p=JSON.parse(localStorage.getItem(CARD_KEY)||"{}")||{}}catch(e){}return{style:CARD_STYLES.some(x=>x[0]===p.style)?p.style:"photo",fmt:p.fmt==="story"?"story":"post"}}
+  let cardSeq=0;
+  function renderCardMaker(c){
+    const sh=$("sheet");sh.replaceChildren();sh.scrollTop=0;const p=view.card;
+    const top=el("div","cm-top");const back=el("button","btn-ghost cm-back","← Vissza");back.type="button";back.onclick=()=>{view.card=null;renderViewer()};
+    top.append(back,el("h3",null,"Fogáskártya"));sh.append(top);
+    const chips=(list,key)=>{const r=el("div","chips quick-pills");list.forEach(([k,l])=>{const b=el("button","pill"+(p[key]===k?" on":""),l);b.type="button";b.setAttribute("aria-pressed",p[key]===k?"true":"false");
+      b.onclick=()=>{p[key]=k;try{localStorage.setItem(CARD_KEY,JSON.stringify({style:p.style,fmt:p.fmt}))}catch(e){}renderCardMaker(c)};r.append(b)});return r};
+    sh.append(el("div","flabel","Stílus"),chips(CARD_STYLES,"style"),el("div","flabel","Formátum"),chips(CARD_FMTS,"fmt"));
+    const pv=el("div","cm-preview"+(p.fmt==="story"?" story":""));const im=document.createElement("img");im.alt="A fogáskártya előnézete";pv.append(el("div","cm-wait","Készül…"));sh.append(pv);
+    const seq=++cardSeq;catchCardImage(c,p).then(u=>{if(seq!==cardSeq||!view||!view.card)return;im.src=u;pv.replaceChildren(im);p.url=u}).catch(()=>{pv.replaceChildren(el("div","cm-wait","A kártyát nem sikerült elkészíteni."))});
+    if(isSpeciesRecord(c))sh.append(el("p","hint","Ez a(z) "+spName(c.sp).toLowerCase()+" rekordod: a kártyán „ÚJ REKORD” szalag jelzi."));
+    const act=el("div","sheet-actions");const go=el("button","btn-main","Megosztás");go.type="button";
+    go.onclick=()=>{buzz("confirm");if(p.url)shareDataUrl(p.url,shareText(c),"kapas-fogas.jpg");else shareCatch(c,p)};act.append(go);sh.append(act);
   }
   async function shareDataUrl(url,text,name){
     if(ANDROID&&ANDROID.shareImage){try{ANDROID.shareImage(url,text)}catch(e){toast("A megosztás nem sikerült.")}return}
@@ -2550,34 +2597,14 @@ button{transition:transform .15s}
   const catchXp=c=>10+((c.l||c.w)?5:0)+(c.lure?3:0)+(coordsOf(c)?3:0)+(mediaOf(c).length?5:0)+(c.kept===false?5:0);
   function seeded(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}
     return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
-  // three quests a week, the same all week; a species quest only for a fish that is not in its closed season
-  const questCache=new Map();
-  function weekQuests(ws){const k=ymd(ws);if(!questCache.has(k))questCache.set(k,weekQuestsOf(ws));return questCache.get(k)}
-  function weekQuestsOf(ws){
-    const rnd=seeded("kapas"+ymd(ws)),mid=new Date(ws);mid.setDate(mid.getDate()+3);
-    const pick=a=>a[Math.floor(rnd()*a.length)];
-    const open=GAME_SPECIES.filter(n=>{const st=ruleStatus(ruleFor(n),mid);return!st||st.kind!=="closed"});
-    const qs=[];
-    if(open.length){const n=pick(open);qs.push({id:"sp",text:"Fogj egy halat: "+n,need:1,test:c=>isSp(c,n)})}
-    const l=pick(QUICK_LURES);qs.push({id:"lure",text:"Fogás ezzel a csalival: "+l,need:1,test:c=>usesLure(c,l)});
-    const extra=[{id:"rel",text:"Engedj vissza egy halat",need:1,test:c=>c.kept===false},
-      {id:"three",text:"Rögzíts 3 fogást a héten",need:3,test:()=>true},
-      {id:"size",text:"Mérd le egy fogásod (hossz vagy súly)",need:1,test:c=>!!(c.l||c.w)},
-      {id:"photo",text:"Fotózd le a fogásod",need:1,test:c=>mediaOf(c).length>0},
-      {id:"dawn",text:"Fogj halat hajnalban vagy alkonyatkor",need:1,test:c=>{const k=daypart(c);return k===0||k===2}}];
-    while(qs.length<3)qs.push(extra.splice(Math.floor(rnd()*extra.length),1)[0]);
-    return qs.map(q=>({...q,xp:25}));
-  }
   function gameState(now){
     now=now||new Date();
     const cs=state.catches.filter(c=>state.species.some(s=>s.id===c.sp)),wk=d=>ymd(d);
     const prevWeek=d=>{const x=new Date(d);x.setDate(x.getDate()-7);return x};
     const byWeek=new Map();cs.forEach(c=>{const k=wk(weekStart(new Date(c.at)));if(!byWeek.has(k))byWeek.set(k,[]);byWeek.get(k).push(c)});
     let xp=cs.reduce((a,c)=>a+catchXp(c),0);
-    byWeek.forEach((list,k)=>weekQuests(new Date(k+"T00:00")).forEach(q=>{if(list.filter(q.test).length>=q.need)xp+=q.xp}));
-    // the streak: weeks with a catch or a fishing trip (a trip without a catch counts too); still alive during the current week,
-    // it breaks when a whole week is missed
-    const wks=new Set(byWeek.keys());tripList().forEach(t=>{const d=new Date(t.start);if(!isNaN(d))wks.add(wk(weekStart(d)))});
+    // the streak: weeks with a catch; still alive during the current week, it breaks when a whole week is missed
+    const wks=new Set(byWeek.keys());
     const cur=weekStart(now),active=wks.has(wk(cur));let streak=0;
     for(let d=active?cur:prevWeek(cur);wks.has(wk(d));d=prevWeek(d))streak++;
     let best=0,run=0,last=null;[...wks].sort().forEach(k=>{run=last&&wk(prevWeek(new Date(k+"T00:00")))===last?run+1:1;best=Math.max(best,run);last=k});
@@ -2589,7 +2616,7 @@ button{transition:transform .15s}
     let li=0;GAME_LEVELS.forEach(([,t],i)=>{if(xp>=t)li=i});
     const week=byWeek.get(wk(cur))||[],next=GAME_LEVELS[li+1];
     return{xp,level:li+1,name:GAME_LEVELS[li][0],floor:GAME_LEVELS[li][1],next:next?next[1]:null,nextName:next?next[0]:null,
-      streak,best,active,weekStart:cur,week,badges,quests:weekQuests(cur).map(q=>({...q,have:Math.min(q.need,week.filter(q.test).length)}))};
+      streak,best,active,weekStart:cur,week,badges};
   }
   /* ---------- the Kezdőlap's momentum card: streak, level ring, the next weekly quest, a tip of the day ----------
      Everything comes from gameState (the log); a tap opens the Kap-ás Kihívások. Only this year's view, and only once there is something to show. */
@@ -2642,13 +2669,8 @@ button{transition:transform .15s}
     lv.append(ring,lt);
     const row=el("div","mo-row");row.append(st,lv);card.append(row);
     // the streak's message: the one place it nudges
-    card.append(el("div","mo-msg"+(G.active?"":" warn"),G.active?"Ezen a héten is horgásztál, a sorozat él. Szép!":
-      G.streak?"Ezen a héten még nincs fogás vagy horgászat: vasárnapig mentsd meg a "+G.streak+" hetes sorozatot!":"Horgássz ezen a héten, és indul a sorozatod."));
-    // the next weekly quest
-    const q=G.quests.find(x=>x.have<x.need);
-    if(q){const qr=el("div","mo-quest");const qt=el("div","mo-qtxt");qt.append(el("span",null,q.text),el("b",null,"+"+q.xp+" XP"));
-      const bar=el("div","mo-bar"),i=el("i");i.style.width=(q.have/q.need*100)+"%";bar.append(i);qr.append(qt,bar);card.append(qr)}
-    else card.append(el("div","mo-msg","A heti küldetések mind megvannak. Hétfőn jönnek az újak."));
+    card.append(el("div","mo-msg"+(G.active?"":" warn"),G.active?"Ezen a héten is fogtál, a sorozat él. Szép!":
+      G.streak?"Ezen a héten még nincs fogásod: vasárnapig mentsd meg a "+G.streak+" hetes sorozatot!":"Fogj halat ezen a héten, és indul a sorozatod."));
     box.append(card);
     const tip=el("div","mo-tip");const ti=el("span","mo-tipic");ti.append(mkIc("sparkles"));tip.append(ti);
     const tt=el("div");tt.append(el("b",null,"Napi tipp"),el("span",null,dailyTip(now)));tip.append(tt);box.append(tip);
@@ -2667,19 +2689,10 @@ button{transition:transform .15s}
     grid.append(lv);
     // streak
     const st=el("div","gm-card gm-streak");const fl=el("span","gm-flame"+(G.active?" on":""));fl.innerHTML=icoSvg("flame");st.append(fl);
-    st.append(num(G.streak,"hét"),el("div","gm-sub",G.streak?(G.active?"Heti sorozat, ezen a héten is horgásztál.":"Ezen a héten még nem horgásztál, ne szakadjon meg!"):"Horgássz ezen a héten, és indul a sorozat."));
+    st.append(num(G.streak,"hét"),el("div","gm-sub",G.streak?(G.active?"Heti sorozat, ezen a héten is fogtál.":"Ezen a héten még nincs fogásod, ne szakadjon meg!"):"Fogj halat ezen a héten, és indul a sorozat."));
     st.append(el("span","spec","Leghosszabb: "+G.best+" hét"));grid.append(st);
     // this week
-    const done=G.quests.filter(q=>q.have>=q.need).length;
-    const tw=el("div","gm-card");tw.append(el("div","gm-k","Ezen a héten"),num(G.week.length,"hal"),el("span","spec",done+"/"+G.quests.length+" küldetés"));grid.append(tw);
-    // weekly quests
-    const qc=el("div","gm-card gm-full");qc.append(el("div","gm-k","Heti küldetések"));
-    const ql=el("div","gm-quests");
-    G.quests.forEach(q=>{const ok=q.have>=q.need,r=el("div","gm-quest"+(ok?" done":""));const ck=el("span","gm-check");ck.innerHTML=icoSvg(ok?"check":"target");r.append(ck);
-      const t=el("div","gm-qt");t.append(el("span",null,q.text),bar(q.have/q.need*100,"sm"));r.append(t);
-      r.append(el("span","spec"+(ok?" big":""),(q.need>1?q.have+"/"+q.need+" · ":"")+"+"+q.xp+" XP"));ql.append(r)});
-    qc.append(ql);const nx=new Date(G.weekStart);nx.setDate(nx.getDate()+7);qc.append(el("div","gm-sub","Új küldetések hétfőn ("+fmtDM(nx)+")."));
-    grid.append(qc);
+    const tw=el("div","gm-card");tw.append(el("div","gm-k","Ezen a héten"),num(G.week.length,"hal"),el("span","spec",G.week.length?"Szép munka!":"Még nincs fogás"));grid.append(tw);
     // badges
     const bc=el("div","gm-card gm-full");bc.append(el("div","gm-k","Jelvények · "+G.badges.reduce((a,b)=>a+b.tier,0)+"/"+G.badges.length*3));
     const bg=el("div","gm-badges");
@@ -2690,8 +2703,8 @@ button{transition:transform .15s}
       c.setAttribute("aria-label",b.group+": "+b.name+(b.tier?", "+TIER_NAMES[b.tier-1]+" szint":", még zárva"));bg.append(c)});
     bc.append(bg);grid.append(bc);box.append(grid);
     const d=el("details","gm-help");d.append(el("summary",null,"Hogyan jár az XP?"));
-    d.append(el("p","hint","Fogás 10 XP; hossz vagy súly +5, csali +3, hely +3, fotó vagy videó +5, visszaengedett hal +5. Teljesített heti küldetés +25, minden jelvényszint +20. "+
-      "A heti sorozathoz hetente (hétfőtől vasárnapig) legalább egy fogás vagy egy horgászat kell (a Horgászat gombbal, akár fogás nélkül is). Tilalmi időben lévő halfajra nem kapsz küldetést."));box.append(d);
+    d.append(el("p","hint","Fogás 10 XP; hossz vagy súly +5, csali +3, hely +3, fotó vagy videó +5, visszaengedett hal +5. Minden jelvényszint +20. "+
+      "A heti sorozathoz hetente (hétfőtől vasárnapig) legalább egy fogás kell."));box.append(d);
   }
   // after a change: announce new XP, a level-up or a new badge once (nothing on the first run, and nothing over an undo toast)
   function checkGame(){
@@ -3318,7 +3331,7 @@ button{transition:transform .15s}
     const p=smartPref();if(!p.on||!p.streak)return[];
     const G=gameState();if(!G.streak||G.active)return[];
     const sun=new Date(G.weekStart);sun.setDate(sun.getDate()+6);sun.setHours(17,0,0,0);if(sun.getTime()<=Date.now())return[];
-    return[{at:sun.getTime(),title:"Ma este véget ér a "+G.streak+" hetes sorozatod",text:"Egy horgászat a héten megmenti, akár fogás nélkül is: indítsd el a Kezdőlap „Horgászat indítása” gombjával."}];
+    return[{at:sun.getTime(),title:"Ma este véget ér a "+G.streak+" hetes sorozatod",text:"Egy fogás a héten megmenti: rögzítsd a + gombbal, ha ma kint vagy a vízen."}];
   }
   let lastReminders=null;
   function pushReminders(){
@@ -3368,7 +3381,7 @@ button{transition:transform .15s}
   function renderPin(){
     const box=$("pinBox");if(!box)return;box.hidden=!hasPin();if(box.hidden)return;box.replaceChildren();const on=pinOn();
     const head=el("div","smart-head");const tx=el("div");
-    tx.append(el("b",null,"Állandó kártya"),el("span","hint","Az értesítési sávban és a zárolt képernyőn mindig ott a mai horgászidő, az esti rablás, „+ hal” és „Horgászat” gomb. Csendes, napváltáskor magától frissül; horgászat közben a stopper veszi át a helyét."));
+    tx.append(el("b",null,"Állandó kártya"),el("span","hint","Az értesítési sávban és a zárolt képernyőn mindig ott a mai horgászidő, az esti rablás, és két „+ hal” gomb. Csendes, napváltáskor magától frissül."));
     head.append(tx);const sw=el("button","switch"+(on?" on":""));sw.type="button";sw.setAttribute("role","switch");sw.setAttribute("aria-checked",on?"true":"false");sw.setAttribute("aria-label","Állandó kártya az értesítési sávban");
     sw.onclick=()=>setPinned(!on);head.append(sw);box.append(head);
     if(on&&ANDROID.canNotify&&!ANDROID.canNotify())box.append(el("p","hint","Az értesítések le vannak tiltva a telefonon, ezért a kártya nem látszik. Engedélyezd: Beállítások → Alkalmazások → Kapás → Értesítések."));
@@ -3554,6 +3567,7 @@ button{transition:transform .15s}
     if(!$("quickWrap").hidden){closeQuick();return true}
     if(!$("picker").hidden){closePicker();return true}
     if(ed){closeEditor();return true}
+    if(view&&view.card){view.card=null;renderViewer();return true}
     if(view){closeViewer();return true}
     if(state.tab!=="home"){go("home");return true}
     return false;
@@ -3814,7 +3828,7 @@ button{transition:transform .15s}
   $("catchSearch").oninput=e=>{state.q=e.target.value;render()};
   document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 
-  sync();
+  state.catches=data.catches.slice();closeOldTrip();sync();
   renderAutoBk();renderGAcct();applySeason();applyTheme();
   if(data.catches.length)driveSyncSoon(5000);
   maybeWelcome();

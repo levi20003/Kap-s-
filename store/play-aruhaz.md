@@ -27,10 +27,10 @@ Rögzítsd a fogásaidat egy koppintással, nézd meg, jó horgászidő van-e ma
 • Több fotó és rövid videó minden fogáshoz.
 • Elvitted vagy visszaengedted? Az app figyelmeztet, ha elérnéd a napi darabszám-korlátot.
 
-⏱ HORGÁSZAT INDÍTÁSA
-• Egy gomb a vízparton: futó idő, a fogásaid hozzá tartoznak, a végén összefoglaló.
-• Az értesítési sávban és a zárolt képernyőn is fut, „+ hal” gombokkal.
-• A fogás nélküli alkalom is számít: így látod, hol és mikor éri meg igazán kimenni.
+📸 MEGOSZTHATÓ FOGÁSKÁRTYÁK
+• Minden fogásból egy koppintással szép kártya: fotós, trófea (nagy méretszámmal) vagy napló stílusban.
+• Posztnak (4:5) vagy sztorinak (9:16), élő előnézettel; a rekordod „ÚJ REKORD” szalagot kap.
+• Megosztás bárhová: Messenger, Instagram, Facebook, WhatsApp.
 
 📍 HOVÁ MENJ MA?
 • A gyakori helyeid kártyákon: mai horgászidő, legjobb órák, a víz iránya, ott bevált csali.
@@ -83,7 +83,7 @@ A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-8.png` (1080×1920). 
 | # | Felirat | Alcím | Mit mutat |
 |---|---|---|---|
 | 1 | Jó horgászidő ma? | Légnyomás, szél, eső és a folyó vízállása, egy pillantásra. | Horgászidő-panel, napsáv, napív, vízhozam (tavasz) |
-| 2 | Horgászat folyamatban | Idő, fogások, egy koppintás. A fogás nélküli nap is számít. | Élő horgászat-kártya (nyár) |
+| 2 | Oszd meg a fogásod | Fotó, trófea vagy napló stílusú kártya, posztnak vagy sztorinak. | Fogáskártya-szerkesztő, trófea stílus (tél) |
 | 3 | Mivel horgássz ma? | A legjobb 3 csali a saját dobozodból, halra és napszakra. | Csaliajánló csalifotókkal |
 | 4 | Hová menj ma? | A helyeid mai horgászideje, a legjobb órákkal. | Helyeim kártyák |
 | 5 | Tilalmi idők, mindig frissen | Fogható, hamarosan tilos, tilalom: fajonként. | Halfaj-kártyák állapotcímkékkel |
@@ -111,7 +111,7 @@ A kész képek: `store/kepek/kepernyo-1.png` … `kepernyo-8.png` (1080×1920). 
 ## Első kiadás – „Újdonságok” szöveg (max. 500 karakter)
 
 ```
-Az első kiadás! Fogásnapló egy koppintással, horgászat-mód stopperrel, tilalmi idők a magyar szabályok szerint, horgászidő a folyó vízállásával, a helyeid mai horgászideje, csaliajánló a saját dobozodból, hivatalos fogási napló, widget, mentés a saját Google Drive-odra. Jó kapást!
+Az első kiadás! Fogásnapló egy koppintással, megosztható fogáskártyák, tilalmi idők a magyar szabályok szerint, horgászidő a folyó vízállásával, a helyeid mai horgászideje, csaliajánló a saját dobozodból, hivatalos fogási napló, widget, mentés a saját Google Drive-odra. Jó kapást!
 ```
 
 ## Adatbiztonság (Data safety) – válaszok

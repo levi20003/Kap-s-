@@ -54,7 +54,7 @@ function wxMock(now){
       localStorage.setItem('fogasnaplo.vtk',JSON.stringify({'Tisza, Csongrád':'06-077','Holt-Maros':'06-042','Körös, Kunszentmárton':'16-108','Duna, Ráckeve':'13-020','Tisza-tó, Poroszló':'10-002'}));
       for(const k in extra)localStorage.setItem(k,extra[k]);if(extra.__bridge)eval(extra.__bridge)},
       {d:{species,catches,lures:LURES},wx:wxMock(now),theme,water:waterMock(now,i=>i<5?210:210-(i-5)*9),extra:arguments[3]||{}});
-    await q.route('https://**',r=>r.abort());
+    await q.route('https://**/*',r=>r.abort());
     await q.goto(PAGE);await q.waitForTimeout(800);return{q,ctx};
   }
   const april=new Date('2026-04-24T15:10:00+02:00'),dec=new Date('2026-12-12T11:00:00+01:00');
@@ -66,14 +66,10 @@ function wxMock(now){
   {const june=new Date('2026-06-12T17:40:00+02:00');
    ({q,ctx}=await app(june,year.filter(c=>c.at<'2026-06-12'),'light',{'fogasnaplo.terv':JSON.stringify({sp:['b','s'],day:0,parts:['alkony']})}));
    await top(q,'#planSec',-14);await q.screenshot({path:TMP+'/s2.png'});await ctx.close()}
-  // a running fishing trip (June evening, 1 h 42 min in, two catches) and the Helyeim cards with each spot's own forecast
-  {const june=new Date('2026-06-12T19:22:00+02:00'),st=new Date(june.getTime()-102*6e4);
-   const jc=year.filter(c=>c.at<'2026-06-12').concat([
-     {id:'tr1',sp:'b',at:new Date(st.getTime()+38*6e4).toISOString(),y:2026,t:true,l:54,lure:'Spintail',place:P.tisza},
-     {id:'tr2',sp:'s',at:new Date(st.getTime()+81*6e4).toISOString(),y:2026,t:true,l:47,lure:'Gumihal 8 cm',place:P.tisza}]);
-   const trips=[{id:'t0',start:'2026-06-05T16:00:00.000Z',end:'2026-06-05T19:00:00.000Z',place:P.maros},{id:'t1',start:st.toISOString(),place:P.tisza,sp:['b','s']}];
-   ({q,ctx}=await app(june,jc,'light',{'fogasnaplo.v1':JSON.stringify({species,catches:jc,lures:LURES,trips})}));
-   await q.evaluate(()=>scrollTo(0,0));await q.waitForTimeout(200);await q.screenshot({path:TMP+'/t1.png'});
+  // the Helyeim cards with each spot's own forecast (June evening)
+  {const june=new Date('2026-06-12T19:22:00+02:00');
+   const jc=year.filter(c=>c.at<'2026-06-12');
+   ({q,ctx}=await app(june,jc,'light'));
    const W=wxMock(june);await q.route('https://api.open-meteo.com/**',r=>{const u=new URL(r.request().url()),n=(u.searchParams.get('latitude')||'').split(',').length;
      const slope=[-0.25,0.15,1.1,-0.1,0.5];r.fulfill({contentType:'application/json',body:JSON.stringify(Array.from({length:n},(_,k)=>({hourly:{...W.h,pressure_msl:W.h.time.map((_,i)=>1016+i*slope[k%5])},daily:W.d})))})});
    await q.locator('.tabbar button[data-tab="map"]').click();
@@ -82,7 +78,11 @@ function wxMock(now){
   ({q,ctx}=await app(dec,year));
   await q.locator('.tabbar button[data-tab="list"]').click();await q.waitForTimeout(300);
   await q.evaluate(()=>{const c=[...document.querySelectorAll('.citem')].find(e=>e.textContent.includes('66 cm'));c.click()});await q.waitForTimeout(400);
-  await q.screenshot({path:TMP+'/s4.png'});await q.evaluate(()=>window.__fnBack());
+  await q.screenshot({path:TMP+'/s4.png'});
+  // the catch card maker: the record as a trophy card
+  await q.locator('#sheet .btn-ghost',{hasText:'Kártya megosztása'}).click();await q.waitForTimeout(300);
+  await q.locator('#sheet .pill',{hasText:'Trófea'}).click();await q.waitForSelector('#sheet .cm-preview img');await q.waitForTimeout(500);
+  await q.screenshot({path:TMP+'/t1.png'});await q.evaluate(()=>{window.__fnBack();window.__fnBack()});
   await q.locator('.tabbar button[data-tab="stats"]').click();await q.waitForTimeout(400);
   await top(q,'#patSec',-16);await q.screenshot({path:TMP+'/s5.png'});
   await top(q,'#offSec',-16);await q.screenshot({path:TMP+'/s6.png'});
@@ -95,12 +95,12 @@ function wxMock(now){
   // year story picture through the app's own share path
   {const c2=await b.newContext({viewport:{width:390,height:780},deviceScaleFactor:1,reducedMotion:'reduce',locale:'hu-HU',timezoneId:'Europe/Budapest'});const q2=await c2.newPage();await q2.clock.setFixedTime(dec);
    await q2.addInitScript(({d})=>{localStorage.setItem('fogasnaplo.theme','light');localStorage.setItem('fogasnaplo.welcome','1');localStorage.setItem('fogasnaplo.v1',JSON.stringify(d));window.FogasnaploAndroid={saveThumb(){return''},cleanup(){},getLocation(){},pickPhoto(){},shareImage(u){window.__card=u}}},{d:{species,catches:year}});
-   await q2.route('https://**',r=>r.abort());await q2.goto(PAGE);await q2.waitForTimeout(600);
+   await q2.route('https://**/*',r=>r.abort());await q2.goto(PAGE);await q2.waitForTimeout(600);
    await q2.locator('.tabbar button[data-tab="stats"]').click();await q2.waitForTimeout(300);await q2.locator('#yearCard .hero-go').click();await q2.waitForTimeout(1200);
    const card=await q2.evaluate(()=>window.__card);fs.writeFileSync(TMP+'/s8.jpg',Buffer.from(card.split(',')[1],'base64'));await c2.close()}
   // ---------- compositions ----------
   const caps=[['Jó horgászidő ma?','Légnyomás, szél, eső és a folyó vízállása, egy pillantásra.','s1.png'],
-    ['Horgászat folyamatban','Idő, fogások, egy koppintás. A fogás nélküli nap is számít.','t1.png'],
+    ['Oszd meg a fogásod','Fotó, trófea vagy napló stílusú kártya, posztnak vagy sztorinak.','t1.png'],
     ['Mivel horgássz ma?','A legjobb 3 csali a saját dobozodból, halra és napszakra.','s2.png'],
     ['Hová menj ma?','A helyeid mai horgászideje, a legjobb órákkal.','t2.png'],
     ['Tilalmi idők, mindig frissen','Fogható, hamarosan tilos, tilalom: fajonként.','s3.png'],

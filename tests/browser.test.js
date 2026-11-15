@@ -380,9 +380,21 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     await q.locator('#sheet .media-add button', { hasText: 'Fotó' }).click(); await q.waitForTimeout(100);
     await q.locator('#sheet .btn-ghost', { hasText: 'Mégse' }).click(); await q.waitForTimeout(100);
     ok((await st()).media.length === 2 && (await q.evaluate(() => window.__m.deleted)).includes('file:///data/photos/p3.jpg') && await q.locator('#sheet .vhead').isVisible(), 'Mégse: az új fotó fájlja törlődik, vissza a kártyára');
-    await q.locator('#sheet .btn-ghost', { hasText: 'Megosztás' }).click(); await q.waitForTimeout(600);
+    await q.locator('#sheet .btn-ghost', { hasText: 'Kártya megosztása' }).click(); await q.waitForTimeout(800);
+    ok(await q.locator('#sheet .cm-preview img').count() === 1 && (await q.locator('#sheet .cm-preview img').getAttribute('src')).startsWith('data:image/jpeg') &&
+      await q.locator('#sheet .pill', { hasText: 'Trófea' }).count() === 1 && await q.locator('#sheet .pill', { hasText: 'Sztori 9:16' }).count() === 1,
+      'fogáskártya: élő előnézet, 3 stílus és 2 formátum');
+    for (const st of ['Trófea', 'Napló']) { await q.locator('#sheet .pill', { hasText: st }).click(); await q.waitForTimeout(500);
+      ok((await q.locator('#sheet .cm-preview img').getAttribute('src') || '').length > 5000, 'fogáskártya: ' + st + ' stílus elkészül'); }
+    await q.locator('#sheet .pill', { hasText: 'Sztori 9:16' }).click(); await q.waitForTimeout(500);
+    ok(await q.evaluate(() => new Promise(r => { const i = new Image(); i.onload = () => r(i.width === 1080 && i.height === 1920); i.src = document.querySelector('#sheet .cm-preview img').src; })),
+      'fogáskártya: a sztori formátum 1080×1920');
+    ok(JSON.parse(await q.evaluate(() => localStorage.getItem('fogasnaplo.kartya'))).style === 'paper', 'fogáskártya: a választott stílust megjegyzi');
+    await q.locator('#sheet .pill', { hasText: 'Fotó' }).click(); await q.locator('#sheet .pill', { hasText: 'Poszt 4:5' }).click(); await q.waitForTimeout(500);
+    await q.locator('#sheet .btn-main', { hasText: 'Megosztás' }).click(); await q.waitForTimeout(300);
     const sh = await q.evaluate(() => window.__m.share);
     ok(sh && sh.u.startsWith('data:image/jpeg') && sh.u.length > 5000 && sh.t.includes('Csuka') && sh.t.includes('62 cm'), 'megosztás: fogáskártya kép + szöveg');
+    ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#sheet .vclose').isVisible(), 'vissza gomb: a kártyaszerkesztőből vissza a fogáshoz');
     ok(await q.evaluate(() => window.__fnBack()) && await q.locator('#sheetWrap').isHidden(), 'vissza gomb: bezárja a kártyát');
     ok((await q.locator('.citem .mcount').textContent()) === '2', 'listában: a bélyegképen a darabszám');
     await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
@@ -466,7 +478,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const xp = +(await q.locator('#gameSec .gm-level .gm-num').innerText());
     ok(xp >= 80 && /Novícius Pergető|Kezdő Pergető/.test(g), 'kihívások: XP és szint (' + xp + ' XP)');
     ok((await q.locator('#gameSec .gm-streak .gm-num').innerText()) === '3' && g.includes('Leghosszabb: 3 hét'), 'kihívások: 3 hetes sorozat egymást követő hetekből');
-    ok(await q.locator('#gameSec .gm-quest').count() === 3, 'kihívások: 3 heti küldetés');
+    ok(await q.locator('#gameSec .gm-quest').count() === 0 && !g.includes('küldetés'), 'kihívások: nincs heti küldetés (egyszerűbb app)');
     const balin = q.locator('#gameSec .gm-badge', { hasText: 'Balin' }), rel = q.locator('#gameSec .gm-badge', { hasText: 'Fogd és engedd' });
     ok(await balin.evaluate(e => e.classList.contains('t1')) && await rel.evaluate(e => e.classList.contains('t1')) && await q.locator('#gameSec .gm-badge.locked', { hasText: 'Harcsa' }).count() === 1,
       'kihívások: Balin és fogd-és-engedd bronz, Harcsa még zárva');
@@ -762,55 +774,26 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     ok(t.includes('legújabb 3 fotó a 4-ból') && t.includes('25 MB'), 'Google-mentés: a Beállítások kiírja, hány fotó fért bele');
     await ctx.close();
   }
-  // fishing trips: start, live card, catches inside, ongoing notification, end summary, trips without a catch, statistics, backup
+  // the Horgászat mode is gone from the app (2026-11): no start card, no statistics; a trip an older version left running is finished;
+  // old trips stay in the log and still come back from a backup
   {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
-    const Y = new Date().getFullYear();
-    await q.addInitScript(Y => { if (sessionStorage.getItem('seed')) return; sessionStorage.setItem('seed', 1);
-      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }, { id: 's2', name: 'Süllő' }],
-        catches: [{ id: 'old', sp: 's1', at: new Date(Y, 0, 3, 9).toISOString(), y: Y, place: { name: 'Bertalan híd', lat: 46.25, lng: 20.15 } }] })); }, Y);
-    await q.addInitScript(() => { window.__t = { notif: [], asked: 0 }; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {},
-      setTripNotification(j) { window.__t.notif.push(j); }, canNotify() { return false; }, askNotifyPermission() { window.__t.asked++; } }; });
+    const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+    await q.addInitScript(() => { if (sessionStorage.getItem('seed')) return; sessionStorage.setItem('seed', 1);
+      localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }], catches: [{ id: 'k1', sp: 's1', at: new Date(Date.now() - 2 * 36e5).toISOString(), y: new Date().getFullYear() }],
+        trips: [{ id: 'old', start: '2026-05-01T05:00:00.000Z', end: '2026-05-01T08:00:00.000Z' }, { id: 'run', start: new Date(Date.now() - 3 * 36e5).toISOString() }] })); });
+    await q.addInitScript(() => { window.__tn = []; window.FogasnaploAndroid = { saveThumb() { return ''; }, cleanup() {}, getLocation() {}, setTripNotification(j) { window.__tn.push(j); } }; });
     await q.route('https://**/*', r => r.abort());
     await q.goto(PAGE); await q.waitForTimeout(300);
-    ok((await q.locator('#tripSec .trip-start').innerText()).includes('Horgászat indítása'), 'horgászat: a Kezdőlapon indító sor');
-    await q.locator('#tripSec .trip-start').click(); await q.waitForTimeout(100);
-    const sh = (await q.locator('#tripSheet').innerText()).replace(/\s+/g, ' ');
-    ok(sh.includes('Bertalan híd') && sh.includes('Jelenlegi helyem') && await q.locator('#tripSheet .pill.on', { hasText: 'Bertalan híd' }).count() === 1, 'horgászat: a legutóbbi hely előre kiválasztva');
-    await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(200);
-    let d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
-    ok(d.trips.length === 1 && !d.trips[0].end && d.trips[0].place.name === 'Bertalan híd' && d.trips[0].sp.join() === 's1,s2', 'horgászat: elindul, hellyel és célhalakkal');
-    ok(await q.locator('#tripSec.live .trip-clock').innerText() === '0:00' && (await q.locator('#tripSec').innerText()).includes('Még nincs fogás'), 'horgászat: élő kártya órával');
-    let n = JSON.parse(await q.evaluate(() => window.__t.notif[window.__t.notif.length - 1]));
-    ok(n.title === 'Horgászat · Bertalan híd' && n.sp.map(x => x.name).join() === 'Balin,Süllő' && n.start > 0 && await q.evaluate(() => window.__t.asked) === 1,
-      'horgászat: állandó értesítés stopperrel és „+ hal” gombokkal (engedélyt kér, ha nincs)');
-    await q.locator('#tripSec .trip-add .pill', { hasText: '+ Süllő' }).click(); await q.waitForTimeout(150);
-    await q.evaluate(() => window.__fnBack()); await q.waitForTimeout(100);
-    ok((await q.locator('#tripSec').innerText()).includes('1 fogás · Süllő 1'), 'horgászat: a fogás a horgászathoz számít');
-    n = JSON.parse(await q.evaluate(() => window.__t.notif[window.__t.notif.length - 1]));
-    ok(n.text === '1 fogás · Süllő 1', 'horgászat: az értesítés is frissül');
-    await q.evaluate(() => window.__fnTripEnd()); await q.waitForTimeout(100);
-    const es = (await q.locator('#tripSheet').innerText()).replace(/\s+/g, ' ');
-    ok(es.includes('Horgászat vége') && es.includes('1 fogás') && es.includes('Süllő'), 'horgászat: az értesítés „Befejezés” gombja az összefoglalót nyitja');
-    await q.locator('#tripSheet textarea').fill('zavaros víz'); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(150);
-    d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
-    ok(d.trips[0].end && d.trips[0].note === 'zavaros víz' && await q.evaluate(() => window.__t.notif[window.__t.notif.length - 1]) === '' && await q.locator('#tripSec .trip-start').count() === 1,
-      'horgászat: befejezve, megjegyzéssel; az értesítés eltűnik');
-    // a trip without a catch, then the statistics
-    await q.locator('#tripSec .trip-start').click(); await q.locator('#tripSheet .pill', { hasText: 'Hely nélkül' }).click(); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
-    await q.locator('#tripSec .trip-end').click(); await q.waitForTimeout(100);
-    ok((await q.locator('#tripSheet').innerText()).includes('Fogás nélküli alkalom'), 'horgászat: fogás nélküli alkalom is menthető, biztató szöveggel');
-    await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
-    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(150);
-    const st = (await q.locator('#tripStatSec').innerText()).replace(/\s+/g, ' ');
-    ok(st.includes('2 horgászat') && st.includes('50% sikeres') && st.includes('1 alkalom fogás nélkül') && await q.locator('#tripStats .trip-row').count() === 2 && await q.locator('#tripStats .trip-row.blank').count() === 1,
-      'horgászat: statisztika (alkalmak, siker %, fogás nélküliek, legutóbbiak)');
-    await q.locator('#tripStats .trip-row').last().click(); await q.waitForTimeout(100);
-    ok(await q.locator('#tripSheet textarea').inputValue() === 'zavaros víz' && (await q.locator('#tripSheet').innerText()).includes('Süllő'), 'horgászat: a korábbi horgászat megnyitható, a fogásaival és a megjegyzésével');
-    await q.evaluate(() => window.__fnBack());
-    ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'horgászat: nincs vízszintes túlcsordulás');
+    ok(await q.locator('#tripSec').count() === 0 && !(await q.locator('#tab-home').innerText()).includes('Horgászat indítása'), 'horgászat-mód: nincs a Kezdőlapon');
+    const d = await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.v1')));
+    const run = d.trips.find(t => t.id === 'run');
+    ok(d.trips.length === 2 && run.end && Math.abs(new Date(run.end) - (Date.now() - 2 * 36e5 + 30 * 6e4)) < 6e4, 'horgászat-mód: a régi, futva maradt horgászat lezárul (utolsó fogás + 30 perc), az adatok megmaradnak');
+    ok((await q.evaluate(() => window.__tn)).includes(''), 'horgászat-mód: a régi stopperes értesítés eltűnik');
+    await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(100);
+    ok(await q.locator('#tripStatSec').count() === 0 && !(await q.locator('#tab-stats').innerText()).includes('Horgászataid'), 'horgászat-mód: nincs a Statisztikában');
+    await q.evaluate(() => window.__fnTripStart()); await q.waitForTimeout(100);
+    ok(await q.locator('#tripWrap').isHidden() && await q.locator('#tab-home').isVisible(), 'horgászat-mód: egy régi widget „Horgászat” gombja csak megnyitja az appot');
     await ctx.close();
-    // a backup brings finished trips back (and never a running one)
     const c2 = await b.newContext(); const q2 = await c2.newPage(); q2.on('pageerror', e => errs.push(e.message));
     await q2.route('https://**/*', r => r.abort());
     await q2.goto(PAGE); await q2.waitForTimeout(200);
@@ -819,7 +802,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       { id: 't1', start: '2026-05-01T05:00:00.000Z', end: '2026-05-01T08:00:00.000Z', place: { name: 'Holt-Maros', lat: 46.2, lng: 20.3 }, sp: ['s1'] },
       { id: 't2', start: '2026-05-02T05:00:00.000Z' }] }));
     await q2.locator('.tabbar button[data-tab="more"]').click(); await q2.locator('#importFile').setInputFiles(f); await q2.waitForTimeout(300);
-    ok((await q2.locator('#importAsk').innerText()).includes('1 horgászat'), 'horgászat: a visszaállítás a befejezett horgászatot hozza, a futót nem');
+    ok((await q2.locator('#importAsk').innerText()).includes('1 horgászat'), 'horgászat-mód: a régi mentés horgászatai (a befejezettek) visszajönnek');
     await c2.close();
   }
   // feel: haptics, record celebration, swipe on the catch list, skeleton while the forecast loads
@@ -1040,11 +1023,6 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(w.cfg.wind === false && w.cfg.temp === true && !(await q.locator('#widgetBox .wpv').textContent()).includes('km/h') &&
         (await q.evaluate(() => JSON.parse(localStorage.getItem('fogasnaplo.widget')).wind)) === false, 'widget szerkesztése: a szél kikapcsolva, az előnézet és a widget is követi');
       await q.locator('#widgetBox .pill', { hasText: 'Szél és lökés' }).click(); await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(100);
-      await q.evaluate(() => window.__fnTripStart()); await q.waitForTimeout(100);
-      ok(await q.locator('#tripWrap').isVisible(), 'widget: a „Horgászat” gomb az indító lapot nyitja');
-      await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(150);
-      w = JSON.parse(await q.evaluate(() => window.__wg[window.__wg.length - 1]));
-      ok(w.trip && w.trip.start > 0 && w.trip.n === 0, 'widget: futó horgászatnál a kezdés ideje (stopperhez) és a fogásszám');
       const calls = await q.evaluate(() => window.__wg.length);
       await q.evaluate(() => window.render && 0); await q.locator('.tabbar button[data-tab="stats"]').click(); await q.locator('.tabbar button[data-tab="home"]').click(); await q.waitForTimeout(100);
       ok(await q.evaluate(() => window.__wg.length) === calls, 'widget: csak változáskor frissül (fülváltásra nem)');
@@ -1078,13 +1056,6 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       const st = ev.find(e => e.title.includes('hetes sorozatod'));
       ok(sun <= new Date() ? !st : (st && new Date(st.at).getDay() === 0 && new Date(st.at).getHours() === 17 && st.title.includes('1 hetes')), 'okos értesítés: sorozat-mentő vasárnap 17-kor, ha a héten még nem horgásztál');
       ok((await q.locator('#smartBox').innerText()).includes('Következő:'), 'okos értesítés: a Beállítások mutatja a következőt');
-      // a trip without a catch keeps the weekly streak alive
-      await q.locator('.tabbar button[data-tab="home"]').click(); await q.locator('#tripSec .trip-start').click(); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
-      await q.locator('#tripSec .trip-end').click(); await q.locator('#tripSheet .btn-main').click(); await q.waitForTimeout(100);
-      await q.locator('.tabbar button[data-tab="stats"]').click(); await q.waitForTimeout(100);
-      ok((await q.locator('#gameSec').innerText()).includes('ezen a héten is horgásztál'), 'sorozat: egy fogás nélküli horgászat is tartja a heti sorozatot');
-      ev = JSON.parse(await q.evaluate(() => window.__rm[window.__rm.length - 1]));
-      ok(!ev.some(e => e.title.includes('hetes sorozatod')), 'sorozat-mentő: horgászat után már nem szól');
       await ctx.close();
     }
     // Kezdőlap momentum card: streak, level ring, next quest, tip of the day; a tap opens the challenges
@@ -1149,13 +1120,11 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       const fy = (await q.locator('#forYou').innerText()).replace(/\s+/g, ' ');
       ok(await q.locator('#forYouSec').isVisible() && fy.startsWith('Ma Holt-Maros') && fy.includes('óra') && fy.includes('Bertalan híd ('),
         'ma neked: a ma legjobb helyed, a legjobb órákkal, a többi hely röviden (' + fy.slice(0, 120) + ')');
-      await q.locator('#forYou .btn-main').click(); await q.waitForTimeout(100);
-      ok(await q.locator('#tripSheet .pill.on', { hasText: 'Holt-Maros' }).count() === 1, 'ma neked: „Horgászat indítása itt” a hellyel előre kiválasztva');
-      await q.evaluate(() => window.__fnBack());
+      ok((await q.locator('#forYou .btn-main').innerText()).includes('térképen'), 'ma neked: a hely a térképen nézhető meg');
       await q.locator('.tabbar button[data-tab="map"]').click(); await q.waitForTimeout(400);
       const cards = q.locator('#spots .spot');
       const c1 = (await cards.first().innerText()).replace(/\s+/g, ' ');
-      ok(await cards.count() === 2 && c1.startsWith('Holt-Maros') && c1.includes('3 fogás') && c1.includes('siker 0/1') && c1.includes('Legjobb csali: Spintail (3)') && /Ma \d+–\d+ óra/.test(c1),
+      ok(await cards.count() === 2 && c1.startsWith('Holt-Maros') && c1.includes('3 fogás') && !c1.includes('siker') && c1.includes('Legjobb csali: Spintail (3)') && /Ma \d+–\d+ óra/.test(c1),
         'helyeim: kártyánként a mai értékelés, legjobb órák, fogások, siker, legjobb csali (' + c1 + ')');
       ok(await cards.first().locator('.spot-lv').count() === 1 && await cards.nth(1).locator('.spot-lv').count() === 1, 'helyeim: mindkét helynek saját mai értékelése');
       ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'helyeim: nincs vízszintes túlcsordulás');
