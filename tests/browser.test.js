@@ -1087,6 +1087,23 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
       ok(!ev.some(e => e.title.includes('hetes sorozatod')), 'sorozat-mentő: horgászat után már nem szól');
       await ctx.close();
     }
+    // Kezdőlap momentum card: streak, level ring, next quest, tip of the day; a tap opens the challenges
+    {
+      const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
+      await q.addInitScript(() => { if (!sessionStorage.s) { sessionStorage.s = 1; localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Balin' }],
+        catches: [{ id: 'm1', sp: 's1', at: new Date().toISOString(), y: new Date().getFullYear(), l: 40 }] })); } });
+      await q.route('https://**/*', r => r.abort());
+      await q.goto(PAGE); await q.waitForTimeout(300);
+      const mo = await q.locator('#momentumSec').textContent();
+      ok(await q.locator('#momentumSec').isVisible() && /1\s*hét/.test(mo) && mo.includes('a sorozat él') && await q.locator('#momentumSec .mo-ring svg').count() === 1 && mo.includes('Napi tipp'),
+        'kezdőlap: lendület-kártya (sorozat, szint, napi tipp) (' + mo.slice(0, 120) + ')');
+      await q.locator('#momentumSec .mo-card').click(); await q.waitForTimeout(200);
+      ok(await q.locator('#tab-stats').isVisible() && await q.locator('#gameSec').isVisible(), 'lendület-kártya: koppintásra a Kihívások');
+      await ctx.close();
+      const c2 = await b.newContext(); const q2 = await c2.newPage(); await q2.route('https://**/*', r => r.abort());
+      await q2.goto(PAGE); await q2.evaluate(() => { localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [], catches: [] })); }); await q2.reload(); await q2.waitForTimeout(300);
+      ok(await q2.locator('#momentumSec').isHidden(), 'lendület-kártya: üres naplónál nem látszik'); await c2.close();
+    }
     // the optional always-on card (PinnedCard): off by default, a switch in Beállítások → Értesítések, kept in step on every start
     {
       const ctx = await b.newContext(); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));

@@ -236,6 +236,42 @@
 
   /* Értesítések: jó horgászidő kapcsoló */
   .autobk.smart { @apply mb-3 flex-col items-stretch; }
+  /* Kezdőlap: momentum card (streak, level ring, next quest) and the tip of the day */
+  .momentum { @apply flex flex-col gap-2.5; }
+  .mo-card { @apply flex w-full flex-col gap-3 rounded-3xl border p-4 text-left; border-color: var(--edge); color: var(--fg); font: inherit;
+    background: radial-gradient(120% 140% at 0% 0%, var(--glow-accent), transparent 60%), linear-gradient(160deg, var(--surface-2), var(--surface)); box-shadow: var(--shadow-card); }
+  .mo-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mo-row { @apply flex items-center gap-3; }
+  .mo-streak { @apply flex flex-none items-center gap-2 rounded-2xl px-3 py-2; background: var(--tint-2); }
+  .mo-flame { @apply flex h-9 w-9 items-center justify-center rounded-full; background: var(--tint); color: var(--faint); }
+  .mo-flame svg { @apply h-5 w-5; }
+  .mo-streak.on .mo-flame { background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 18px 2px var(--glow-accent); }
+  .mo-streak.risk .mo-flame { color: var(--accent-txt); }
+  .mo-num { @apply flex flex-col leading-none; }
+  .mo-num b { @apply text-2xl font-extrabold; font-family: var(--f-display); }
+  .mo-num span { @apply text-xs; color: var(--muted); }
+  .mo-level { @apply flex min-w-0 flex-1 items-center gap-2.5; }
+  .mo-ring { @apply relative h-14 w-14 flex-none; }
+  .mo-ring svg { @apply h-full w-full; }
+  .mo-ring .rg-track { fill: none; stroke: var(--track); stroke-width: 6; }
+  .mo-ring .rg-val { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray .6s ease; }
+  .mo-ring b { @apply absolute inset-0 flex items-center justify-center text-lg font-extrabold; font-family: var(--f-display); }
+  .mo-ltxt { @apply flex min-w-0 flex-col; }
+  .mo-ltxt b { @apply truncate text-base font-bold; }
+  .mo-ltxt span { @apply text-sm; color: var(--muted); }
+  .mo-msg { @apply text-sm; color: var(--muted); }
+  .mo-msg.warn { @apply font-semibold; color: var(--accent-txt); }
+  .mo-quest { @apply flex flex-col gap-1.5 rounded-2xl px-3 py-2.5; background: var(--tint); }
+  .mo-qtxt { @apply flex items-center justify-between gap-2 text-sm; }
+  .mo-qtxt b { @apply flex-none rounded-full px-2 py-0.5 text-xs font-bold; background: var(--ok-soft); color: var(--ok); }
+  .mo-bar { @apply h-1.5 overflow-hidden rounded-full; background: var(--track); }
+  .mo-bar i { @apply block h-full rounded-full; background: var(--accent); }
+  .mo-tip { @apply flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm; border-color: var(--edge); background: var(--surface); }
+  .mo-tip > div { @apply flex min-w-0 flex-col gap-0.5; }
+  .mo-tip b { @apply text-xs font-bold uppercase tracking-wider; color: var(--accent-txt); }
+  .mo-tipic { @apply flex h-8 w-8 flex-none items-center justify-center rounded-full; background: var(--glow-accent); color: var(--accent-txt); }
+  .mo-tipic .ic, .mo-tipic svg { @apply h-4 w-4; }
+  @media (prefers-reduced-motion: reduce) { .mo-ring .rg-val { transition: none; } }
   /* widget preview in Beállítások: the same Evergreen panel as the home-screen widget */
   .wpv { @apply mb-3 flex flex-col gap-1.5 rounded-3xl p-4; background: linear-gradient(150deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c)); color: var(--hero-side); box-shadow: var(--shadow-pop); }
   .wpv-top { @apply flex items-center justify-between gap-2 text-xs; color: var(--hero-lbl); }

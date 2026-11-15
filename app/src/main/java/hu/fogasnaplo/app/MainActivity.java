@@ -136,7 +136,7 @@ public class MainActivity extends Activity {
         restoreBackupPhotos(); // before the page asks for any picture
         web = new WebView(this);
         root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF121915); // shows behind the status and navigation bars; the page sets it per theme
+        root.setBackgroundColor(0xFF0D120F); // shows behind the status and navigation bars; the page sets it per theme
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 35) {
@@ -492,7 +492,7 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void applyWindowTheme(boolean light) {
-        root.setBackgroundColor(light ? 0xFFF4F0E8 : 0xFF121915);
+        root.setBackgroundColor(light ? 0xFFEDE7DE : 0xFF0D120F);
         if (Build.VERSION.SDK_INT >= 30) {
             int bars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
             WindowInsetsController c = getWindow().getInsetsController();
@@ -503,7 +503,7 @@ public class MainActivity extends Activity {
             d.setSystemUiVisibility(light ? f | m : f & ~m);
         }
         if (Build.VERSION.SDK_INT < 35) { // before edge to edge the bars have their own colour
-            getWindow().setStatusBarColor(light ? 0xFFF0EBE1 : 0xFF151E18);
+            getWindow().setStatusBarColor(light ? 0xFFF0EBE1 : 0xFF101612);
             getWindow().setNavigationBarColor(light ? 0xFFFDFBF7 : 0xFF18211B);
         }
     }

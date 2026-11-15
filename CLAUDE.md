@@ -103,10 +103,15 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   a következő 7 nap értékelését adja (`days:[{d,lv,label,win}]`), így a widget egy hétig az app megnyitása nélkül is a jó napot mutatja; ezen kívül
   a hely, a 2 „+ hal” (a gyorsrögzítés útján) és a futó horgászat (stopper `setChronometer`, „Befejezés”). Gombok: „Horgászat” → `TRIP_START`
   → `__fnTripStart`. A rendszer 3 óránként újrarajzolja (`updatePeriodMillis`), változáskor az app. RemoteViews-ban csak egyszerű nézetek lehetnek.
+- Widget-tartalom (`fogasnaplo.widget` = `{rating, temp, wind, rain, sun, water, btns}`, alapból mind be; Beállítások → Kezdőképernyő-widget
+  `#widgetSec`, `renderWidgetBox`, élő előnézet `.wpv`): a napokhoz `widgetWx` adja a `tx, tn, now, sky, w, g, r, rp, sun, wat` mezőket (null nem megy át).
+  Szerkesztés a widgetről: `WidgetConfig` activity (azonnal OK, majd `WIDGET_SETTINGS` → `__fnWidgetSettings`), Android 12+ `reconfigurable`. Alapméret 4×3.
 - **Állandó kártya** (Beállítások → Értesítések `#pinBox`, `renderPin`; `fogasnaplo.pinned` = "1"; natív: `PinnedCard.java`): opcionális, csendes,
   folyamatos értesítés (csatorna `allando`, IMPORTANCE_LOW): mai értékelés pöttyökkel, esti rablás, hely, holnap; gombok „+ hal” ×2 és „Horgászat”.
   A widget adatából dolgozik (`KapasWidget.push` → `PinnedCard.refresh`), riasztás 3 óránként és éjfél után, újraindítás/frissítés után a
   `ReminderReceiver` hozza vissza. Futó horgászatnál eltűnik (a horgászat-értesítés van helyette). Induláskor a JS `ANDROID.setPinned(pinOn())`-nal szinkronizál.
+- **Lendület-kártya** (Kezdőlap `#momentumSec`, `renderMomentum`, a köszöntés alatt; csak az idei nézetben, ha van fogás/horgászat): heti sorozat lánggal,
+  szintgyűrű (`ringSvg`), a következő heti küldetés sávval, „Napi tipp” (`DAILY_TIPS`, az év napja szerint); koppintásra a Kihívások.
 - **Okos értesítés** (Beállítások → Értesítések `#smartBox`, `renderSmart`; `fogasnaplo.smart` = `{on, h, streak}`): `smartEvents` a betöltött
   előrejelzésből a „Nagyon jó”/„Kiváló” napokra (`dayLevel` ≥ 4), naponta egyet, legfeljebb ~3 nappal előre, a választott órában (7/12/15/18);
   szöveg: a napnyugta órájának pozitív okai (`scoreToday`), esti rablás, a csalitár legjobb csalija (`rankLures`, nyitott halra). `streakEvents`:
@@ -235,6 +240,8 @@ a `<head>` apró szkriptje az első rajzolás előtt beállítja. `ANDROID.setTh
   körvonalas, a kiválasztott teli zöld), alatta a kiválasztott nap fejléce (`.selday`), napív, eső/szél, óránkénti sáv.
 - Alsó fülsáv: az aktív ikon mögött csúszó pirula (`.tabind`).
 - Halfaj-kártya: kerek jelvény (talpas kezdőbetű), számláló, zöld + gomb; bal csík csak tilalomnál / közelgő tilalomnál. Rekord: vízszintes trófea-sor, az első arany.
+- Szakaszcímek színes ikon-csippel (`.sechead h2 .ic`, a `data-ic` szerint `--hue-sky/gold/amber/leaf/teal/rose`; csak a két alapblokkban, az évszakok öröklik).
+  2026. nov.: nagyobb kontraszt (sötétebb `--bg`, világosabb `--surface`, erősebb `--edge`/`--shadow-card`); a natív ablakszín `#0D120F` / `#EDE7DE`.
 - Minden szín token a két `:root` blokkban (`:root` = sötét, `:root[data-theme="light"]` = világos). **Ne írj kézzel hexet a CSS-be**:
   ha új szín kell, vegyél fel tokent mindkét blokkba – és a három évszak-blokkba is (lent).
 - **Évszak-színvilágok** (`<html data-season>`: `tavasz` / `nyar` / `osz` / `tel`), mindegyik világos és sötét változattal (8 kombináció).
