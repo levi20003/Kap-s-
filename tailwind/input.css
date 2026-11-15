@@ -282,6 +282,9 @@
   .wpv-line { @apply text-xs; color: var(--hero-lbl); }
   .wpv-btns { @apply mt-1 flex gap-1.5; }
   .wpv-btns span.main { background: var(--hero-btn); color: var(--hero-btn-ink); }
+  /* Google account: a long name or address wraps instead of widening the page; "Kijelentkezés" is a full-size tap target */
+  #gAcct .g-head > div { min-width: 0; overflow-wrap: anywhere; }
+  #gAcct .btnrow .no { min-height: 44px; }
   .smart-head { @apply flex items-start gap-3; }
   .smart-head > div { @apply flex min-w-0 flex-1 flex-col gap-0.5; }
   .smart-head .hint { @apply m-0; }

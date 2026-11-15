@@ -176,6 +176,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .logo{width:2.25rem;height:2.25rem;flex:none;object-fit:cover;border-radius:24%;box-shadow:0 0 0 1.5px var(--logo-ring),0 0 18px 2px var(--logo-glow),var(--logo-shadow)}
 .brand{display:flex;align-items:center;gap:.5rem;font-family:var(--f-display);font-weight:600;font-size:1.5rem;letter-spacing:-.01em;line-height:1}
 .hright{display:flex;align-items:center;gap:8px}
+/* the smallest phones (320 px): the header must not push the page wider */
+@media (max-width:340px){header{gap:6px}.brand{font-size:1.3rem;gap:.4rem}.hright{gap:6px}}
 .yearbar{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--edge);border-radius:999px;padding:3px;box-shadow:var(--shadow-card)}
 .yearbar button{border:0;background:none;width:34px;height:34px;border-radius:50%;font-size:1.2rem;display:grid;place-items:center;color:var(--muted)}
 .yearbar button:active{background:var(--water-soft)}
@@ -3769,7 +3771,7 @@ button{transition:transform .15s}
     box.append(el("p",cls?"note "+cls:"hint",msg));
     if(i.state==="restored"&&i.missing)box.append(el("p","note warn",i.missing+" fájl nem volt meg a Drive-on (régebbi mentésből hiányzott)."));
     var row=el("div","btnrow");
-    if(i.state==="remote")btn("btn-main","Visszaállítás a Drive-ról",driveRestore);
+    if(i.state==="remote")btn("btn-main","Visszaállítás a Drive-ról",driveRestore).disabled=!!gLive; // no second restore while one runs
     else if(i.state==="needsLogin")btn("btn-main","Bejelentkezés",()=>ANDROID.googleSignIn());
     else btn("btn-main","Mentés most",driveSyncNow).disabled=!!gLive;
     if(i.state!=="remote")btn("btn-ghost","Visszaállítás a Drive-ról",driveRestore).disabled=!!gLive;

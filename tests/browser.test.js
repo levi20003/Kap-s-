@@ -1281,12 +1281,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); 
     const Y = new Date().getFullYear(), lures = ['Wobbler', 'Gumihal', 'Támolygó'];
     const cs = Array.from({ length: 22 }, (_, i) => ({ id: 'l' + i, sp: ['s1', 's2', 's3'][i % 3], at: new Date(Y, 3 + (i % 6), 2 + i, 7 + i % 10).toISOString(), y: Y, t: true,
       lure: lures[i % 3], l: 38 + i * 2, w: i % 3 === 0 ? 1.2 + i / 10 : undefined, kept: i % 4 === 0 ? true : undefined, place: { name: 'Tisza, Szeged felső', lat: 46.25, lng: 20.15 } }));
-    for (const W of [360, 412]) for (const scheme of ['light', 'dark']) {
+    for (const W of [320, 360, 412]) for (const scheme of ['light', 'dark']) {
       const ctx = await b.newContext({ viewport: { width: W, height: 915 }, colorScheme: scheme }); const q = await ctx.newPage(); q.on('pageerror', e => errs.push(e.message));
       await q.addInitScript(cs => localStorage.setItem('fogasnaplo.v1', JSON.stringify({ species: [{ id: 's1', name: 'Sebes pisztráng' }, { id: 's2', name: 'Szilvaorrú keszeg' }, { id: 's3', name: 'Balin' }], catches: cs })), cs);
       await q.goto(PAGE); await q.waitForTimeout(300);
       const wide = [];
-      for (const t of ['home', 'list', 'stats', 'more']) {
+      for (const t of ['home', 'list', 'stats', 'map', 'more']) {
         await q.locator(`.tabbar button[data-tab="${t}"]`).click(); await q.waitForTimeout(100);
         const over = await q.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         if (over > 1) wide.push(t + ' +' + over + 'px');

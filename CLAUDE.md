@@ -155,6 +155,10 @@ Horgász fogásnapló (pergetés). A felület egyetlen WebView-ban futó HTML/JS
   elveszíti a localStorage-ot (a telefon WebView-ja nem); `TEST_FILE_URL=1` a régi módra vált.
 - Hálózat tiltása tesztben: `route('https://**/*', …)`. A `'https://**'` minta a Playwright 1.56-ban **semmit nem fog meg** (a tesztek egy része emiatt
   korábban a valódi Open-Meteót hívta).
+- `login.test.js` (az `npm test` része): a Google-bejelentkezés és Drive-mentés minden állapota és folyamata (ki/be, mégse, nincs beállítva, nincs Play,
+  nincs net, feltöltés, kész, hosszú név, másik telefon, letöltés, visszaállítva, újra kéri, megtelt, kijelentkezés, új telefon, üdvözlő) 320–800 px-en,
+  világos és sötét témában: szöveg, gombok (és tiltásuk), 40 px-es érintési cél, túlcsordulás, a híd hívásai. `node login.test.js <mappa>` képet is ment.
+  A túlcsordulás-teszt 320 px-en is fut (a fejléc 340 px alatt összébb húzódik).
 - Új funkcióhoz tegyél tesztet a `browser.test.js`-be. A GitHub Actions (`.github/workflows/ci.yml`) minden pushnál lefuttatja, és a `build.sh`-val egy eldobható CI-kulccsal megépíti az APK-t.
 
 ## Adattárolás
